@@ -13,6 +13,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const dayjs = require('dayjs');
 const crypto = require('crypto');
+const { setupTournamentRoutes } = require('./tournaments');
 
 /* ====== Config ====== */
 const PORT = parseInt(process.env.PORT || '3005', 10);
@@ -1134,6 +1135,9 @@ app.delete('/duels/:id', auth, adminOnly, async (req,res)=>{
     bad(res,500,'Server error');
   }
 });
+
+/* ====== TOURNOIS ====== */
+setupTournamentRoutes(app, pool, auth, io);
 
 /* ====== WebSockets (no handoff) ====== */
 io.on('connection', (socket)=>{
