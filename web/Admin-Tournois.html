@@ -138,7 +138,7 @@
   .bracket-match.in_progress{border-color:var(--warn);animation:pulse 2s ease-in-out infinite}
   .bracket-match.pending{border-style:dashed}
   .bracket-match.editable:hover::after{
-    content:'✏️ Cliquez pour entrer le score';
+    content:'Cliquez pour entrer le score';
     position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);
     background:rgba(37,99,235,.95);color:#fff;padding:6px 12px;
     border-radius:6px;font-size:11px;font-weight:600;
@@ -161,8 +161,8 @@
     font-weight:800;color:var(--ok)
   }
   .match-player.winner::before{
-    content:'🏆';position:absolute;left:4px;font-size:14px;
-    animation:bounceIn .5s ease
+    content:'';position:absolute;left:8px;width:6px;height:100%;
+    background:var(--ok);border-radius:3px 0 0 3px;
   }
   .match-player.loser{opacity:.5}
 
@@ -240,9 +240,9 @@
 
   <div class="spacer"></div>
 
-  <a href="Tournois.html" class="btn info">🏆 Voir Tournois</a>
-  <a href="Accueil.html" class="btn">🏠 Accueil</a>
-  <button class="btn danger" onclick="logout()">🚪 Quitter</button>
+  <a href="Tournois.html" class="btn info">Voir Tournois</a>
+  <a href="Accueil.html" class="btn">Accueil</a>
+  <button class="btn danger" onclick="logout()">Déconnexion</button>
 </div>
 
 <!-- Main Content -->
@@ -251,7 +251,7 @@
   <!-- Create/Edit Tournament -->
   <div class="panel">
     <h2 class="panel-title">
-      <span id="formTitle">➕ Créer un Tournoi</span>
+      <span id="formTitle">Créer un Tournoi</span>
     </h2>
 
     <form id="tournamentForm" onsubmit="saveTournament(event)">
@@ -303,7 +303,7 @@
       </div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button type="submit" class="btn primary" id="saveBtn">💾 Enregistrer</button>
+        <button type="submit" class="btn primary" id="saveBtn">Enregistrer</button>
         <button type="button" class="btn" onclick="resetForm()">🔄 Réinitialiser</button>
         <button type="button" class="btn danger" id="deleteBtn" onclick="deleteTournament()" style="display:none">🗑️ Supprimer</button>
       </div>
@@ -328,22 +328,25 @@
 <div id="participantsModal" class="modal" hidden>
   <div class="modal-content" style="max-width:800px">
     <div class="modal-header">
-      <h3 class="modal-title" id="participantsModalTitle">👥 Gérer les Participants</h3>
+      <h3 class="modal-title" id="participantsModalTitle">Gérer les Participants</h3>
       <button class="modal-close" onclick="closeParticipantsModal()">×</button>
     </div>
 
     <div style="margin-bottom:16px">
-      <input type="text" id="playerSearch" class="form-input" placeholder="🔍 Rechercher un joueur..." oninput="filterPlayers()">
+      <input type="text" id="playerSearch" class="form-input" placeholder="Rechercher un joueur..." oninput="filterPlayers()">
     </div>
 
     <!-- Ajout manuel de participant -->
-    <div style="margin-bottom:20px;padding:16px;background:var(--panel);border:2px dashed var(--border);border-radius:12px">
-      <div style="display:flex;gap:12px;align-items:center">
-        <input type="text" id="manualPlayerName" class="form-input" placeholder="✍️ Nom du joueur (séparer par des virgules pour plusieurs)" style="flex:1">
-        <button class="btn primary" onclick="addManualParticipant()" style="white-space:nowrap">➕ Ajouter</button>
+    <div style="margin-bottom:20px;padding:16px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);border-radius:12px">
+      <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px">
+        Ajout manuel de participants
       </div>
-      <div style="margin-top:8px;font-size:12px;color:var(--text-muted)">
-        💡 Pour ajouter un ou plusieurs joueurs non inscrits. Ex: "Joueur1, Joueur2, Joueur3"
+      <div style="display:flex;gap:12px;align-items:center">
+        <input type="text" id="manualPlayerName" class="form-input" placeholder="Nom du joueur (séparer par des virgules pour plusieurs)" style="flex:1">
+        <button class="btn primary" onclick="addManualParticipant()" style="white-space:nowrap">Ajouter</button>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--muted)">
+        Pour ajouter un ou plusieurs joueurs non inscrits dans la base de données. Exemple: "Joueur1, Joueur2, Joueur3"
       </div>
     </div>
 
@@ -365,7 +368,7 @@
 
     <div style="margin-top:20px;display:flex;gap:8px;justify-content:flex-end">
       <button class="btn" onclick="closeParticipantsModal()">Fermer</button>
-      <button class="btn primary" onclick="generateBracket()">🎯 Générer le Bracket</button>
+      <button class="btn primary" onclick="generateBracket()">Générer le Bracket</button>
     </div>
   </div>
 </div>
@@ -374,7 +377,7 @@
 <div id="matchesModal" class="modal" hidden>
   <div class="modal-content" style="max-width:95vw;max-height:90vh">
     <div class="modal-header">
-      <h3 class="modal-title" id="bracketModalTitle">⚔️ Bracket & Gestion des Matchs</h3>
+      <h3 class="modal-title" id="bracketModalTitle">Bracket & Gestion des Matchs</h3>
       <button class="modal-close" onclick="closeMatchesModal()">×</button>
     </div>
 
@@ -390,7 +393,7 @@
 <div id="scoreModal" class="modal score-modal" hidden>
   <div class="modal-content">
     <div class="modal-header">
-      <h3 class="modal-title">⚔️ Entrer le Résultat</h3>
+      <h3 class="modal-title">Entrer le Résultat du Match</h3>
       <button class="modal-close" onclick="closeScoreModal()">×</button>
     </div>
 
@@ -411,8 +414,8 @@
     </div>
 
     <div class="score-actions">
-      <button class="btn" onclick="closeScoreModal()">❌ Annuler</button>
-      <button class="btn primary" onclick="submitMatchScore()">💾 Enregistrer</button>
+      <button class="btn" onclick="closeScoreModal()">Annuler</button>
+      <button class="btn primary" onclick="submitMatchScore()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -510,10 +513,10 @@ async function loadTournaments() {
           <td style="text-align:center">${progress}%</td>
           <td>
             <div style="display:flex;gap:4px;flex-wrap:wrap">
-              <button class="btn" style="font-size:11px;padding:4px 8px" onclick="editTournament(${t.id})">✏️ Éditer</button>
-              <button class="btn info" style="font-size:11px;padding:4px 8px" onclick="manageParticipants(${t.id})">👥 Participants</button>
-              ${t.total_matches > 0 ? `<button class="btn warn" style="font-size:11px;padding:4px 8px" onclick="manageMatches(${t.id})">⚔️ Matchs</button>` : ''}
-              ${progress === 100 && t.status === 'in_progress' ? `<button class="btn primary" style="font-size:11px;padding:4px 8px" onclick="closeTournament(${t.id})">🏁 Clôturer</button>` : ''}
+              <button class="btn" style="font-size:11px;padding:4px 8px" onclick="editTournament(${t.id})">Éditer</button>
+              <button class="btn info" style="font-size:11px;padding:4px 8px" onclick="manageParticipants(${t.id})">Participants</button>
+              ${t.total_matches > 0 ? `<button class="btn warn" style="font-size:11px;padding:4px 8px" onclick="manageMatches(${t.id})">Matchs</button>` : ''}
+              ${progress === 100 && t.status === 'in_progress' ? `<button class="btn primary" style="font-size:11px;padding:4px 8px" onclick="closeTournament(${t.id})">Clôturer</button>` : ''}
             </div>
           </td>
         </tr>
@@ -587,7 +590,7 @@ async function saveTournament(e) {
     alert('Erreur: ' + (err.message || 'Erreur inconnue'));
   } finally {
     document.getElementById('saveBtn').disabled = false;
-    document.getElementById('saveBtn').textContent = '💾 Enregistrer';
+    document.getElementById('saveBtn').textContent = 'Enregistrer';
   }
 }
 
@@ -597,7 +600,7 @@ async function editTournament(id) {
     const data = await apiGet(`/tournaments/${id}`);
     const t = data.tournament;
 
-    document.getElementById('formTitle').textContent = '✏️ Modifier le Tournoi';
+    document.getElementById('formTitle').textContent = 'Modifier le Tournoi';
     document.getElementById('tournamentId').value = t.id;
     document.getElementById('tournamentName').value = t.name;
     document.getElementById('tournamentDescription').value = t.description || '';
@@ -637,7 +640,7 @@ async function deleteTournament() {
 
 // === Reset Form ===
 function resetForm() {
-  document.getElementById('formTitle').textContent = '➕ Créer un Tournoi';
+  document.getElementById('formTitle').textContent = 'Créer un Tournoi';
   document.getElementById('tournamentForm').reset();
   document.getElementById('tournamentId').value = '';
   document.getElementById('deleteBtn').style.display = 'none';
@@ -653,7 +656,7 @@ async function manageParticipants(tournamentId) {
     const tournament = data.tournament;
     const participants = data.participants || [];
 
-    document.getElementById('participantsModalTitle').textContent = `👥 Participants - ${tournament.name}`;
+    document.getElementById('participantsModalTitle').textContent = `Participants - ${tournament.name}`;
 
     participants.forEach(p => selectedParticipants.add(p.player_id));
 
@@ -710,7 +713,7 @@ function renderPlayerLists() {
           <div class="player-name">${escapeHtml(p.name)}</div>
           <div class="player-seed">${p.player_id}</div>
         </div>
-        <span style="color:var(--ok)">➕</span>
+        <span style="color:var(--ok)"></span>
       </div>
     `).join('');
   }
@@ -729,7 +732,7 @@ function renderPlayerLists() {
           <div class="player-name">${escapeHtml(p.name)}</div>
           <div class="player-seed">${p.player_id}</div>
         </div>
-        <span style="color:var(--ko)">➖</span>
+        <span style="color:var(--ko)"></span>
       </div>
     `).join('');
   }
@@ -764,7 +767,7 @@ async function addManualParticipant() {
   const input = nameInput.value.trim();
 
   if (!input) {
-    alert('⚠️ Veuillez entrer un ou plusieurs noms de joueurs');
+    alert('Veuillez entrer un ou plusieurs noms de joueurs');
     return;
   }
 
@@ -772,7 +775,7 @@ async function addManualParticipant() {
   const playerNames = input.split(',').map(name => name.trim()).filter(name => name.length > 0);
 
   if (playerNames.length === 0) {
-    alert('⚠️ Veuillez entrer un nom de joueur valide');
+    alert('Veuillez entrer un nom de joueur valide');
     return;
   }
 
@@ -809,11 +812,11 @@ async function addManualParticipant() {
 
   // Afficher le résumé
   if (successCount > 0 && errorCount === 0) {
-    showToast(`✅ ${successCount} joueur(s) ajouté(s) avec succès !`, 'success');
+    showToast(`${successCount} joueur(s) ajouté(s) avec succès !`, 'success');
   } else if (successCount > 0 && errorCount > 0) {
-    showToast(`⚠️ ${successCount} ajouté(s), ${errorCount} échec(s)`, 'warning');
+    showToast(`${successCount} ajouté(s), ${errorCount} échec(s)`, 'warning');
   } else {
-    alert(`❌ Erreur: Impossible d'ajouter les joueurs`);
+    alert(`Erreur: Impossible d'ajouter les joueurs`);
   }
 }
 
@@ -855,22 +858,22 @@ let currentTournamentData = null;
 
 // === Calculer les noms de rounds ===
 function getRoundName(bracketType, round, totalRounds, isThirdPlace = false) {
-  if (isThirdPlace) return '🥉 Match 3ème Place';
-  if (bracketType === 'finals') return '👑 FINALE';
-  if (bracketType === 'third_place') return '🥉 3ème Place';
+  if (isThirdPlace) return 'Match 3ème Place';
+  if (bracketType === 'finals') return 'FINALE';
+  if (bracketType === 'third_place') return '3ème Place';
 
   if (bracketType === 'losers') {
-    return `💔 Losers Round ${round}`;
+    return `Loser's Bracket - Round ${round}`;
   }
 
   // Winners bracket ou single elimination
   const roundsFromEnd = totalRounds - round;
 
-  if (roundsFromEnd === 0) return '👑 FINALE';
-  if (roundsFromEnd === 1) return '🏅 DEMI-FINALES';
-  if (roundsFromEnd === 2) return '⚔️ QUARTS DE FINALE';
-  if (roundsFromEnd === 3) return '🎯 8èmes DE FINALE';
-  if (roundsFromEnd === 4) return '📊 16èmes DE FINALE';
+  if (roundsFromEnd === 0) return 'FINALE';
+  if (roundsFromEnd === 1) return 'DEMI-FINALES';
+  if (roundsFromEnd === 2) return 'QUARTS DE FINALE';
+  if (roundsFromEnd === 3) return '8èmes DE FINALE';
+  if (roundsFromEnd === 4) return '16èmes DE FINALE';
 
   return `Round ${round}`;
 }
@@ -891,7 +894,7 @@ async function manageMatches(tournamentId) {
     }
 
     document.getElementById('bracketModalTitle').textContent =
-      `⚔️ ${tournament.name} - Bracket & Matchs`;
+      `${tournament.name} - Bracket & Matchs`;
 
     renderBracketView(matches, tournament.format);
     document.getElementById('matchesModal').removeAttribute('hidden');
@@ -978,9 +981,12 @@ function renderBracketView(matches, format) {
   // Losers Bracket (double elimination) - AFFICHÉ EN DESSOUS
   if (hasLosers) {
     html += `
-      <div style="height:2px;background:var(--border);margin:30px 0;opacity:0.5"></div>
-      <div style="text-align:center;margin:20px 0;color:var(--text-muted);font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px">
-        💔 Bracket des Perdants (Loser's Bracket)
+      <div style="height:2px;background:var(--border);margin:40px 0"></div>
+      <div style="text-align:center;margin:24px 0">
+        <div style="display:inline-flex;align-items:center;gap:12px;padding:10px 20px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);border-radius:8px">
+          <div style="width:8px;height:8px;background:var(--ko);border-radius:50%"></div>
+          <span style="color:var(--ko);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1px">Loser's Bracket</span>
+        </div>
       </div>
     `;
 
@@ -1003,8 +1009,11 @@ function renderBracketView(matches, format) {
   if (rounds['finals-1']) {
     html += `
       <div style="height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);margin:40px 0"></div>
-      <div style="text-align:center;margin:20px 0;color:var(--accent);font-weight:800;font-size:16px;text-transform:uppercase;letter-spacing:1.5px">
-        👑 GRANDE FINALE
+      <div style="text-align:center;margin:24px 0">
+        <div style="display:inline-flex;align-items:center;gap:12px;padding:12px 24px;background:rgba(37,99,235,.15);border:2px solid var(--accent);border-radius:8px">
+          <div style="width:10px;height:10px;background:var(--accent);border-radius:50%;box-shadow:0 0 12px var(--accent)"></div>
+          <span style="color:var(--accent);font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:1.5px">Grande Finale</span>
+        </div>
       </div>
       <div class="bracket" style="justify-content:center">
         <div class="bracket-round">
@@ -1169,7 +1178,7 @@ async function submitMatchScore() {
     }
 
     // Notif visuelle
-    showToast('✅ Résultat enregistré ! Le gagnant progresse automatiquement.', 'success');
+    showToast('Résultat enregistré ! Le gagnant progresse automatiquement.', 'success');
 
     // Rafraîchir la liste des tournois en arrière-plan
     loadTournaments();
@@ -1235,14 +1244,14 @@ async function closeTournament(tournamentId) {
     const top5 = sorted.slice(0, 5);
 
     // Créer le message de confirmation avec le top 5
-    let confirmMsg = `🏁 CLÔTURER LE TOURNOI\n\n`;
+    let confirmMsg = `CLÔTURER LE TOURNOI\n\n`;
     confirmMsg += `Tournoi: ${tournament.name}\n`;
     confirmMsg += `Matchs complétés: ${tournament.completed_matches}/${tournament.total_matches}\n\n`;
-    confirmMsg += `🏆 TOP 5 FINAL:\n\n`;
+    confirmMsg += `TOP 5 FINAL:\n\n`;
 
     top5.forEach((p, idx) => {
-      const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
-      confirmMsg += `${medals[idx]} ${p.player_name} - ${p.wins}V ${p.losses}D\n`;
+      const positions = ['1er', '2ème', '3ème', '4ème', '5ème'];
+      confirmMsg += `${positions[idx]} - ${p.player_name} - ${p.wins}V ${p.losses}D\n`;
     });
 
     confirmMsg += `\nVoulez-vous vraiment clôturer ce tournoi ?\nCette action est irréversible.`;
@@ -1256,7 +1265,7 @@ async function closeTournament(tournamentId) {
       status: 'completed'
     });
 
-    showToast('🏆 Tournoi clôturé avec succès !', 'success');
+    showToast('Tournoi clôturé avec succès !', 'success');
     await loadTournaments();
 
   } catch (err) {
