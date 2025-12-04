@@ -1026,10 +1026,11 @@ async function submitMatchScore() {
   }
 
   const winnerId = score1 > score2 ? currentMatchData.player1_id : currentMatchData.player2_id;
+  const matchId = currentMatchData.id; // Sauvegarder l'ID avant de fermer le modal
 
   try {
     // Enregistrer le résultat via l'API
-    await apiPut(`/tournaments/${currentTournamentId}/matches/${currentMatchData.id}`, {
+    await apiPut(`/tournaments/${currentTournamentId}/matches/${matchId}`, {
       player1_score: score1,
       player2_score: score2,
       winner_id: winnerId
@@ -1045,8 +1046,8 @@ async function submitMatchScore() {
     // Mettre à jour le bracket visuellement avec animation
     renderBracketView(data.matches, data.tournament.format);
 
-    // Animation de succès
-    const matchElement = document.querySelector(`[data-match-id="${currentMatchData.id}"]`);
+    // Animation de succès sur le match complété
+    const matchElement = document.querySelector(`[data-match-id="${matchId}"]`);
     if (matchElement) {
       matchElement.style.animation = 'bounceIn 0.5s ease';
       setTimeout(() => {

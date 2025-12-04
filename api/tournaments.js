@@ -753,6 +753,41 @@ function setupTournamentRoutes(app, pool, auth, io) {
         insertedMatches.push(result.rows[0]);
       }
 
+      // Mettre à jour les liens de progression entre matchs
+      console.log('📊 Mise à jour des liens de progression...');
+      for (let i = 0; i < insertedMatches.length; i++) {
+        const match = insertedMatches[i];
+        const originalMatch = matches[i];
+
+        // Calculer le match suivant pour le gagnant
+        if (match.bracket_type === 'winners' || match.bracket_type === 'losers') {
+          const nextRound = match.round + 1;
+          const nextMatchNumber = Math.ceil(match.match_number / 2);
+          const winnerSlot = match.match_number % 2 === 1 ? 'player1' : 'player2';
+
+          // Trouver le match suivant dans la BDD
+          const nextMatch = insertedMatches.find(m =>
+            m.round === nextRound &&
+            m.match_number === nextMatchNumber &&
+            m.bracket_type === match.bracket_type
+          );
+
+          if (nextMatch) {
+            await client.query(`
+              UPDATE tournament_matches
+              SET next_match_winner_id = $1, next_match_winner_slot = $2
+              WHERE id = $3
+            `, [nextMatch.id, winnerSlot, match.id]);
+          }
+        }
+
+        // Pour double elimination, gérer aussi le loser's bracket
+        if (tournament.format === 'double_elimination' && match.bracket_type === 'winners') {
+          // Le perdant va au loser's bracket
+          // Logique à implémenter selon les besoins spécifiques
+        }
+      }
+
       // Mettre à jour le compteur de matchs du tournoi
       await client.query(
         'UPDATE tournaments SET total_matches = $1, status = $2 WHERE id = $3',
