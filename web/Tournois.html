@@ -616,9 +616,21 @@ function renderBracket(matches, format) {
     maxRound = Math.max(maxRound, match.round);
   });
 
-  let html = '<div class="bracket-container"><div class="bracket">';
+  // Vérifier s'il y a des losers rounds (double elimination)
+  const losersRounds = Object.keys(rounds)
+    .filter(k => k.startsWith('losers-'))
+    .sort((a, b) => {
+      const aRound = parseInt(a.split('-')[1]);
+      const bRound = parseInt(b.split('-')[1]);
+      return aRound - bRound;
+    });
+
+  const hasLosers = losersRounds.length > 0;
+
+  let html = '<div class="bracket-container">';
 
   // Winners Bracket
+  html += '<div class="bracket">';
   const winnersRounds = Object.keys(rounds)
     .filter(k => k.startsWith('winners-'))
     .sort((a, b) => {
@@ -639,17 +651,29 @@ function renderBracket(matches, format) {
     `;
   });
 
-  // Losers Bracket (double elimination)
-  const losersRounds = Object.keys(rounds)
-    .filter(k => k.startsWith('losers-'))
-    .sort((a, b) => {
-      const aRound = parseInt(a.split('-')[1]);
-      const bRound = parseInt(b.split('-')[1]);
-      return aRound - bRound;
-    });
-
-  if (losersRounds.length > 0) {
+  // Third Place (si single elimination avec match 3ème place)
+  if (rounds['third_place-1'] && !hasLosers) {
     html += '<div style="width:2px;background:var(--border);margin:0 20px"></div>';
+    html += `
+      <div class="bracket-round">
+        <div class="bracket-round-title">${getRoundName('third_place', 1, maxRound)}</div>
+        ${rounds['third_place-1'].map(m => renderBracketMatch(m)).join('')}
+      </div>
+    `;
+  }
+
+  html += '</div>'; // Ferme le bracket Winners
+
+  // Losers Bracket (double elimination) - AFFICHÉ EN DESSOUS
+  if (hasLosers) {
+    html += `
+      <div style="height:2px;background:var(--border);margin:30px 0;opacity:0.5"></div>
+      <div style="text-align:center;margin:20px 0;color:var(--text-muted);font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px">
+        💔 Bracket des Perdants (Loser's Bracket)
+      </div>
+    `;
+
+    html += '<div class="bracket">';
     losersRounds.forEach(key => {
       const roundNum = parseInt(key.split('-')[1]);
       const roundName = getRoundName('losers', roundNum, maxRound);
@@ -661,30 +685,26 @@ function renderBracket(matches, format) {
         </div>
       `;
     });
+    html += '</div>'; // Ferme le bracket Losers
   }
 
-  // Finals
+  // Finals (affichée à la fin, après les deux brackets)
   if (rounds['finals-1']) {
-    html += '<div style="width:2px;background:var(--border);margin:0 20px"></div>';
     html += `
-      <div class="bracket-round">
-        <div class="bracket-round-title">${getRoundName('finals', 1, maxRound)}</div>
-        ${rounds['finals-1'].map(m => renderBracketMatch(m)).join('')}
+      <div style="height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);margin:40px 0"></div>
+      <div style="text-align:center;margin:20px 0;color:var(--accent);font-weight:800;font-size:16px;text-transform:uppercase;letter-spacing:1.5px">
+        👑 GRANDE FINALE
+      </div>
+      <div class="bracket" style="justify-content:center">
+        <div class="bracket-round">
+          <div class="bracket-round-title">${getRoundName('finals', 1, maxRound)}</div>
+          ${rounds['finals-1'].map(m => renderBracketMatch(m)).join('')}
+        </div>
       </div>
     `;
   }
 
-  // Third Place
-  if (rounds['third_place-1']) {
-    html += `
-      <div class="bracket-round">
-        <div class="bracket-round-title">${getRoundName('third_place', 1, maxRound)}</div>
-        ${rounds['third_place-1'].map(m => renderBracketMatch(m)).join('')}
-      </div>
-    `;
-  }
-
-  html += '</div></div>';
+  html += '</div>'; // Ferme bracket-container
   container.innerHTML = html;
 }
 

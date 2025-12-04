@@ -212,17 +212,18 @@ function linkMatches(matches, type) {
       }
     }
   } else if (type === 'double') {
-    // Logique plus complexe pour double elimination
-    // À implémenter complètement selon les besoins
-    // Pour l'instant, on lie uniquement le winner's bracket
     const winnerMatches = matches.filter(m => m.bracket_type === 'winners');
+    const loserMatches = matches.filter(m => m.bracket_type === 'losers');
+    const finalsMatch = matches.find(m => m.bracket_type === 'finals');
 
+    // 1. Lier le Winner's Bracket (les gagnants progressent)
     for (let i = 0; i < winnerMatches.length; i++) {
       const match = winnerMatches[i];
       const nextRound = match.round + 1;
       const nextMatchNumber = Math.ceil(match.match_number / 2);
       const slotInNextMatch = match.match_number % 2 === 1 ? 'player1' : 'player2';
 
+      // Prochain match pour le gagnant dans le winner's bracket
       const nextMatch = winnerMatches.find(
         m => m.round === nextRound && m.match_number === nextMatchNumber
       );
@@ -230,6 +231,85 @@ function linkMatches(matches, type) {
       if (nextMatch) {
         match.next_match_winner_id = winnerMatches.indexOf(nextMatch);
         match.next_match_winner_slot = slotInNextMatch;
+      } else if (finalsMatch) {
+        // Le dernier match du winner's bracket va aux finales
+        match.next_match_winner_id = matches.indexOf(finalsMatch);
+        match.next_match_winner_slot = 'player1'; // Champion du winner's bracket en player1
+      }
+    }
+
+    // 2. Lier le Loser's Bracket (structure complexe)
+    // Les perdants du winner's bracket tombent dans le loser's bracket
+    // Pattern: Round 1 winners → Losers Round 1, Round 2 winners → Losers Round 3, etc.
+    for (let i = 0; i < winnerMatches.length; i++) {
+      const match = winnerMatches[i];
+
+      // Calculer dans quel round du loser's bracket le perdant va tomber
+      // Round 1 winners → Losers R1, Round 2 winners → Losers R3, Round 3 winners → Losers R5
+      const loserRound = match.round === 1 ? 1 : (match.round - 1) * 2 + 1;
+
+      // Pour les rounds impairs du loser's bracket, les perdants entrent en player2
+      // Pour le round 1, c'est différent car c'est le premier round
+      if (match.round === 1) {
+        // Les perdants du WR1 vont directement en position dans LR1
+        const loserMatchNumber = Math.ceil(match.match_number / 2);
+        const loserSlot = match.match_number % 2 === 1 ? 'player1' : 'player2';
+
+        const loserMatch = loserMatches.find(
+          m => m.round === loserRound && m.match_number === loserMatchNumber
+        );
+
+        if (loserMatch) {
+          match.next_match_loser_id = matches.indexOf(loserMatch);
+          match.next_match_loser_slot = loserSlot;
+        }
+      } else {
+        // Pour les rounds suivants du winner's, les perdants vont aux rounds impairs du loser's
+        const loserMatchNumber = match.match_number;
+
+        const loserMatch = loserMatches.find(
+          m => m.round === loserRound && m.match_number === loserMatchNumber
+        );
+
+        if (loserMatch) {
+          match.next_match_loser_id = matches.indexOf(loserMatch);
+          match.next_match_loser_slot = 'player2'; // Les perdants du winner's entrent en player2
+        }
+      }
+    }
+
+    // 3. Lier les matchs du Loser's Bracket entre eux
+    for (let i = 0; i < loserMatches.length; i++) {
+      const match = loserMatches[i];
+      const nextRound = match.round + 1;
+
+      // Dans le loser's bracket:
+      // - Rounds impairs → rounds pairs: même nombre de match
+      // - Rounds pairs → rounds impairs: division par 2
+      let nextMatchNumber;
+      let slotInNextMatch;
+
+      if (match.round % 2 === 1) {
+        // Round impair → round pair (même match number)
+        nextMatchNumber = match.match_number;
+        slotInNextMatch = 'player1'; // Les gagnants des rounds impairs vont en player1
+      } else {
+        // Round pair → round impair (division)
+        nextMatchNumber = Math.ceil(match.match_number / 2);
+        slotInNextMatch = match.match_number % 2 === 1 ? 'player1' : 'player2';
+      }
+
+      const nextMatch = loserMatches.find(
+        m => m.round === nextRound && m.match_number === nextMatchNumber
+      );
+
+      if (nextMatch) {
+        match.next_match_winner_id = matches.indexOf(nextMatch);
+        match.next_match_winner_slot = slotInNextMatch;
+      } else if (finalsMatch) {
+        // Le dernier match du loser's bracket va aux finales
+        match.next_match_winner_id = matches.indexOf(finalsMatch);
+        match.next_match_winner_slot = 'player2'; // Champion du loser's bracket en player2
       }
     }
   }
@@ -759,32 +839,34 @@ function setupTournamentRoutes(app, pool, auth, io) {
         const match = insertedMatches[i];
         const originalMatch = matches[i];
 
-        // Calculer le match suivant pour le gagnant
-        if (match.bracket_type === 'winners' || match.bracket_type === 'losers') {
-          const nextRound = match.round + 1;
-          const nextMatchNumber = Math.ceil(match.match_number / 2);
-          const winnerSlot = match.match_number % 2 === 1 ? 'player1' : 'player2';
+        // Utiliser les liens calculés par linkMatches
+        let nextMatchWinnerId = null;
+        let nextMatchWinnerSlot = null;
+        let nextMatchLoserId = null;
+        let nextMatchLoserSlot = null;
 
-          // Trouver le match suivant dans la BDD
-          const nextMatch = insertedMatches.find(m =>
-            m.round === nextRound &&
-            m.match_number === nextMatchNumber &&
-            m.bracket_type === match.bracket_type
-          );
-
-          if (nextMatch) {
-            await client.query(`
-              UPDATE tournament_matches
-              SET next_match_winner_id = $1, next_match_winner_slot = $2
-              WHERE id = $3
-            `, [nextMatch.id, winnerSlot, match.id]);
-          }
+        if (originalMatch.next_match_winner_id !== undefined) {
+          const nextMatchIndex = originalMatch.next_match_winner_id;
+          nextMatchWinnerId = insertedMatches[nextMatchIndex]?.id || null;
+          nextMatchWinnerSlot = originalMatch.next_match_winner_slot;
         }
 
-        // Pour double elimination, gérer aussi le loser's bracket
-        if (tournament.format === 'double_elimination' && match.bracket_type === 'winners') {
-          // Le perdant va au loser's bracket
-          // Logique à implémenter selon les besoins spécifiques
+        if (originalMatch.next_match_loser_id !== undefined) {
+          const nextMatchIndex = originalMatch.next_match_loser_id;
+          nextMatchLoserId = insertedMatches[nextMatchIndex]?.id || null;
+          nextMatchLoserSlot = originalMatch.next_match_loser_slot;
+        }
+
+        // Mettre à jour la BDD avec les liens
+        if (nextMatchWinnerId || nextMatchLoserId) {
+          await client.query(`
+            UPDATE tournament_matches
+            SET next_match_winner_id = $1,
+                next_match_winner_slot = $2,
+                next_match_loser_id = $3,
+                next_match_loser_slot = $4
+            WHERE id = $5
+          `, [nextMatchWinnerId, nextMatchWinnerSlot, nextMatchLoserId, nextMatchLoserSlot, match.id]);
         }
       }
 
