@@ -203,6 +203,9 @@
   .placement-2{background:linear-gradient(135deg, #c0c0c0, #e8e8e8);color:#000}
   .placement-3{background:linear-gradient(135deg, #cd7f32, #e9a968);color:#000}
 
+  .top-three-row{background:rgba(37,99,235,.05);border-left:3px solid var(--accent)}
+  .top-three-row:hover{background:rgba(37,99,235,.1)}
+
   /* === TABS === */
   .tabs{display:flex;gap:8px;border-bottom:2px solid var(--border);margin:20px 0}
   .tab{
@@ -570,6 +573,26 @@ function renderTournamentDetails(data) {
 }
 
 // === Render Bracket ===
+function getRoundName(bracketType, round, totalRounds) {
+  if (bracketType === 'finals') return '👑 FINALE';
+  if (bracketType === 'third_place') return '🥉 Match 3ème Place';
+
+  if (bracketType === 'losers') {
+    return `💔 Losers Round ${round}`;
+  }
+
+  // Winners bracket ou single elimination
+  const roundsFromEnd = totalRounds - round;
+
+  if (roundsFromEnd === 0) return '👑 FINALE';
+  if (roundsFromEnd === 1) return '🏅 DEMI-FINALES';
+  if (roundsFromEnd === 2) return '⚔️ QUARTS DE FINALE';
+  if (roundsFromEnd === 3) return '🎯 8èmes DE FINALE';
+  if (roundsFromEnd === 4) return '📊 16èmes DE FINALE';
+
+  return `Round ${round}`;
+}
+
 function renderBracket(matches, format) {
   const container = document.getElementById('bracketContainer');
 
@@ -579,40 +602,61 @@ function renderBracket(matches, format) {
   }
 
   if (format === 'round_robin') {
-    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔄</div><p>Format Round Robin - Voir l\'onglet Matchs pour les détails</p></div>';
+    renderRoundRobinBracket(matches, container);
     return;
   }
 
   const rounds = {};
+  let maxRound = 0;
+
   matches.forEach(match => {
     const key = `${match.bracket_type}-${match.round}`;
     if (!rounds[key]) rounds[key] = [];
     rounds[key].push(match);
+    maxRound = Math.max(maxRound, match.round);
   });
 
   let html = '<div class="bracket-container"><div class="bracket">';
 
   // Winners Bracket
-  const winnersRounds = Object.keys(rounds).filter(k => k.startsWith('winners-')).sort();
+  const winnersRounds = Object.keys(rounds)
+    .filter(k => k.startsWith('winners-'))
+    .sort((a, b) => {
+      const aRound = parseInt(a.split('-')[1]);
+      const bRound = parseInt(b.split('-')[1]);
+      return aRound - bRound;
+    });
+
   winnersRounds.forEach(key => {
-    const roundNum = key.split('-')[1];
+    const roundNum = parseInt(key.split('-')[1]);
+    const roundName = getRoundName('winners', roundNum, maxRound);
+
     html += `
       <div class="bracket-round">
-        <div class="bracket-round-title">Round ${roundNum}</div>
+        <div class="bracket-round-title">${roundName}</div>
         ${rounds[key].map(m => renderBracketMatch(m)).join('')}
       </div>
     `;
   });
 
   // Losers Bracket (double elimination)
-  const losersRounds = Object.keys(rounds).filter(k => k.startsWith('losers-')).sort();
+  const losersRounds = Object.keys(rounds)
+    .filter(k => k.startsWith('losers-'))
+    .sort((a, b) => {
+      const aRound = parseInt(a.split('-')[1]);
+      const bRound = parseInt(b.split('-')[1]);
+      return aRound - bRound;
+    });
+
   if (losersRounds.length > 0) {
     html += '<div style="width:2px;background:var(--border);margin:0 20px"></div>';
     losersRounds.forEach(key => {
-      const roundNum = key.split('-')[1];
+      const roundNum = parseInt(key.split('-')[1]);
+      const roundName = getRoundName('losers', roundNum, maxRound);
+
       html += `
         <div class="bracket-round">
-          <div class="bracket-round-title">Losers ${roundNum}</div>
+          <div class="bracket-round-title">${roundName}</div>
           ${rounds[key].map(m => renderBracketMatch(m)).join('')}
         </div>
       `;
@@ -624,7 +668,7 @@ function renderBracket(matches, format) {
     html += '<div style="width:2px;background:var(--border);margin:0 20px"></div>';
     html += `
       <div class="bracket-round">
-        <div class="bracket-round-title">Finale</div>
+        <div class="bracket-round-title">${getRoundName('finals', 1, maxRound)}</div>
         ${rounds['finals-1'].map(m => renderBracketMatch(m)).join('')}
       </div>
     `;
@@ -634,13 +678,39 @@ function renderBracket(matches, format) {
   if (rounds['third_place-1']) {
     html += `
       <div class="bracket-round">
-        <div class="bracket-round-title">3ème place</div>
+        <div class="bracket-round-title">${getRoundName('third_place', 1, maxRound)}</div>
         ${rounds['third_place-1'].map(m => renderBracketMatch(m)).join('')}
       </div>
     `;
   }
 
   html += '</div></div>';
+  container.innerHTML = html;
+}
+
+function renderRoundRobinBracket(matches, container) {
+  const byRound = {};
+  matches.forEach(m => {
+    if (!byRound[m.round]) byRound[m.round] = [];
+    byRound[m.round].push(m);
+  });
+
+  let html = '<div style="display:grid;gap:16px;padding:16px">';
+
+  Object.keys(byRound).sort((a, b) => parseInt(a) - parseInt(b)).forEach(round => {
+    html += `
+      <div>
+        <h3 style="margin:0 0 12px;font-size:18px;font-weight:800;color:var(--accent)">
+          🔄 Round ${round}
+        </h3>
+        <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+          ${byRound[round].map(m => renderBracketMatch(m)).join('')}
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div>';
   container.innerHTML = html;
 }
 
@@ -679,6 +749,27 @@ function renderStandings(participants) {
     return;
   }
 
+  // Trier par : 1) Placement final, 2) Victoires, 3) Différence, 4) Points pour
+  const sorted = [...participants].sort((a, b) => {
+    // Si placement final existe, l'utiliser en priorité
+    if (a.final_placement && b.final_placement) {
+      return a.final_placement - b.final_placement;
+    }
+    if (a.final_placement) return -1;
+    if (b.final_placement) return 1;
+
+    // Sinon trier par victoires
+    if (b.wins !== a.wins) return b.wins - a.wins;
+
+    // Puis par différence de points
+    const diffA = (a.points_for || 0) - (a.points_against || 0);
+    const diffB = (b.points_for || 0) - (b.points_against || 0);
+    if (diffB !== diffA) return diffB - diffA;
+
+    // Puis par points pour
+    return (b.points_for || 0) - (a.points_for || 0);
+  });
+
   let html = `
     <table class="standings-table">
       <thead>
@@ -695,21 +786,27 @@ function renderStandings(participants) {
       <tbody>
   `;
 
-  participants.forEach((p, idx) => {
-    const placement = p.final_placement || (idx + 1);
+  sorted.forEach((p, idx) => {
+    const placement = idx + 1;
     const placementClass = placement <= 3 ? `placement-${placement}` : '';
-    const diff = p.points_for - p.points_against;
+    const diff = (p.points_for || 0) - (p.points_against || 0);
+    const rowClass = placement <= 3 ? 'top-three-row' : '';
 
     html += `
-      <tr>
+      <tr class="${rowClass}">
         <td><span class="placement ${placementClass}">${placement}</span></td>
-        <td><strong>${escapeHtml(p.player_name)}</strong></td>
-        <td style="text-align:center">${p.wins}</td>
-        <td style="text-align:center">${p.losses}</td>
-        <td style="text-align:center;color:${diff > 0 ? 'var(--ok)' : diff < 0 ? 'var(--ko)' : 'var(--muted)'}">
+        <td>
+          <strong>${escapeHtml(p.player_name)}</strong>
+          ${placement === 1 ? '<span style="margin-left:8px">🏆</span>' : ''}
+          ${placement === 2 ? '<span style="margin-left:8px">🥈</span>' : ''}
+          ${placement === 3 ? '<span style="margin-left:8px">🥉</span>' : ''}
+        </td>
+        <td style="text-align:center;font-weight:700;color:var(--ok)">${p.wins || 0}</td>
+        <td style="text-align:center;color:var(--muted)">${p.losses || 0}</td>
+        <td style="text-align:center;font-weight:600;color:${diff > 0 ? 'var(--ok)' : diff < 0 ? 'var(--ko)' : 'var(--muted)'}">
           ${diff > 0 ? '+' : ''}${diff}
         </td>
-        <td style="text-align:center">${p.points_for}</td>
+        <td style="text-align:center">${p.points_for || 0}</td>
         <td style="text-align:center">${p.points_against}</td>
       </tr>
     `;

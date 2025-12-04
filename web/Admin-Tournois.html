@@ -502,6 +502,7 @@ async function loadTournaments() {
               <button class="btn" style="font-size:11px;padding:4px 8px" onclick="editTournament(${t.id})">✏️ Éditer</button>
               <button class="btn info" style="font-size:11px;padding:4px 8px" onclick="manageParticipants(${t.id})">👥 Participants</button>
               ${t.total_matches > 0 ? `<button class="btn warn" style="font-size:11px;padding:4px 8px" onclick="manageMatches(${t.id})">⚔️ Matchs</button>` : ''}
+              ${progress === 100 && t.status === 'in_progress' ? `<button class="btn primary" style="font-size:11px;padding:4px 8px" onclick="closeTournament(${t.id})">🏁 Clôturer</button>` : ''}
             </div>
           </td>
         </tr>
@@ -1095,6 +1096,61 @@ function showToast(message, type = 'info') {
 function closeMatchesModal() {
   document.getElementById('matchesModal').setAttribute('hidden', '');
   currentTournamentId = null;
+}
+
+// === Close Tournament ===
+async function closeTournament(tournamentId) {
+  try {
+    // Charger les données du tournoi
+    const data = await apiGet(`/tournaments/${tournamentId}`);
+    const tournament = data.tournament;
+    const participants = data.participants || [];
+
+    if (!tournament) {
+      alert('Tournoi non trouvé');
+      return;
+    }
+
+    // Trier par victoires, puis différence, puis points pour
+    const sorted = [...participants].sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      const diffA = (a.points_for || 0) - (a.points_against || 0);
+      const diffB = (b.points_for || 0) - (b.points_against || 0);
+      if (diffB !== diffA) return diffB - diffA;
+      return (b.points_for || 0) - (a.points_for || 0);
+    });
+
+    const top5 = sorted.slice(0, 5);
+
+    // Créer le message de confirmation avec le top 5
+    let confirmMsg = `🏁 CLÔTURER LE TOURNOI\n\n`;
+    confirmMsg += `Tournoi: ${tournament.name}\n`;
+    confirmMsg += `Matchs complétés: ${tournament.completed_matches}/${tournament.total_matches}\n\n`;
+    confirmMsg += `🏆 TOP 5 FINAL:\n\n`;
+
+    top5.forEach((p, idx) => {
+      const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+      confirmMsg += `${medals[idx]} ${p.player_name} - ${p.wins}V ${p.losses}D\n`;
+    });
+
+    confirmMsg += `\nVoulez-vous vraiment clôturer ce tournoi ?\nCette action est irréversible.`;
+
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+
+    // Clôturer le tournoi
+    await apiPut(`/tournaments/${tournamentId}`, {
+      status: 'completed'
+    });
+
+    showToast('🏆 Tournoi clôturé avec succès !', 'success');
+    await loadTournaments();
+
+  } catch (err) {
+    console.error('Error closing tournament:', err);
+    alert('Erreur lors de la clôture: ' + (err.message || 'Erreur inconnue'));
+  }
 }
 
 // === Helper ===
