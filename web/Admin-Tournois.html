@@ -289,9 +289,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   try {
     const me = await apiGet('/auth/me');
-    currentUser = me;
+    currentUser = me.user;
 
-    if (me.role !== 'admin') {
+    if (me.user.role !== 'admin') {
       alert('Accès refusé - Admin uniquement');
       window.location.href = 'Accueil.html';
       return;
