@@ -620,74 +620,9 @@ function setupTournamentRoutes(app, pool, auth, io) {
   });
 
   /**
-   * POST /tournaments/:id/participants
-   * Ajouter un participant à un tournoi
-   */
-  app.post('/tournaments/:id/participants', auth, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { player_id, seed } = req.body;
-
-      if (!player_id) {
-        return res.status(400).json({ error: 'player_id requis' });
-      }
-
-      // Vérifier que le tournoi existe et accepte les inscriptions
-      const tournamentResult = await pool.query(
-        'SELECT * FROM tournaments WHERE id = $1',
-        [id]
-      );
-
-      if (tournamentResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Tournoi non trouvé' });
-      }
-
-      const tournament = tournamentResult.rows[0];
-
-      if (tournament.status === 'completed' || tournament.status === 'cancelled') {
-        return res.status(400).json({ error: 'Le tournoi est terminé' });
-      }
-
-      if (tournament.status === 'in_progress') {
-        return res.status(400).json({ error: 'Le tournoi a déjà commencé' });
-      }
-
-      // Vérifier le nombre max de participants
-      if (tournament.max_participants) {
-        const countResult = await pool.query(
-          'SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = $1',
-          [id]
-        );
-
-        if (parseInt(countResult.rows[0].count) >= tournament.max_participants) {
-          return res.status(400).json({ error: 'Tournoi complet' });
-        }
-      }
-
-      // Ajouter le participant
-      const result = await pool.query(`
-        INSERT INTO tournament_participants (tournament_id, player_id, seed)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (tournament_id, player_id) DO UPDATE
-        SET seed = EXCLUDED.seed
-        RETURNING *
-      `, [id, player_id, seed || null]);
-
-      const participant = result.rows[0];
-
-      // Émettre un événement Socket.IO
-      io.to(`tournament:${id}`).emit('tournament:participant_added', { participant });
-
-      res.status(201).json({ participant });
-    } catch (error) {
-      console.error('Erreur lors de l\'ajout du participant:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
-  /**
    * POST /tournaments/:id/participants/manual
    * Ajouter un participant manuel (guest) au tournoi
+   * IMPORTANT: Cette route doit être AVANT la route générale /participants
    */
   app.post('/tournaments/:id/participants/manual', auth, async (req, res) => {
     if (req.user.role !== 'admin') {
@@ -784,6 +719,72 @@ function setupTournamentRoutes(app, pool, auth, io) {
       res.status(500).json({ error: 'Erreur serveur' });
     } finally {
       client.release();
+    }
+  });
+
+  /**
+   * POST /tournaments/:id/participants
+   * Ajouter un participant à un tournoi
+   */
+  app.post('/tournaments/:id/participants', auth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { player_id, seed } = req.body;
+
+      if (!player_id) {
+        return res.status(400).json({ error: 'player_id requis' });
+      }
+
+      // Vérifier que le tournoi existe et accepte les inscriptions
+      const tournamentResult = await pool.query(
+        'SELECT * FROM tournaments WHERE id = $1',
+        [id]
+      );
+
+      if (tournamentResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Tournoi non trouvé' });
+      }
+
+      const tournament = tournamentResult.rows[0];
+
+      if (tournament.status === 'completed' || tournament.status === 'cancelled') {
+        return res.status(400).json({ error: 'Le tournoi est terminé' });
+      }
+
+      if (tournament.status === 'in_progress') {
+        return res.status(400).json({ error: 'Le tournoi a déjà commencé' });
+      }
+
+      // Vérifier le nombre max de participants
+      if (tournament.max_participants) {
+        const countResult = await pool.query(
+          'SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = $1',
+          [id]
+        );
+
+        if (parseInt(countResult.rows[0].count) >= tournament.max_participants) {
+          return res.status(400).json({ error: 'Tournoi complet' });
+        }
+      }
+
+      // Ajouter le participant
+      const result = await pool.query(`
+        INSERT INTO tournament_participants (tournament_id, player_id, seed)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (tournament_id, player_id) DO UPDATE
+        SET seed = EXCLUDED.seed
+        RETURNING *
+      `, [id, player_id, seed || null]);
+
+      const participant = result.rows[0];
+
+      // Émettre un événement Socket.IO
+      io.to(`tournament:${id}`).emit('tournament:participant_added', { participant });
+
+      res.status(201).json({ participant });
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du participant:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
     }
   });
 

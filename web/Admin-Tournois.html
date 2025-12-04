@@ -339,11 +339,11 @@
     <!-- Ajout manuel de participant -->
     <div style="margin-bottom:20px;padding:16px;background:var(--panel);border:2px dashed var(--border);border-radius:12px">
       <div style="display:flex;gap:12px;align-items:center">
-        <input type="text" id="manualPlayerName" class="form-input" placeholder="✍️ Nom du joueur (ajout manuel)" style="flex:1">
+        <input type="text" id="manualPlayerName" class="form-input" placeholder="✍️ Nom du joueur (séparer par des virgules pour plusieurs)" style="flex:1">
         <button class="btn primary" onclick="addManualParticipant()" style="white-space:nowrap">➕ Ajouter</button>
       </div>
       <div style="margin-top:8px;font-size:12px;color:var(--text-muted)">
-        💡 Pour ajouter un joueur qui n'est pas inscrit dans la base de données
+        💡 Pour ajouter un ou plusieurs joueurs non inscrits. Ex: "Joueur1, Joueur2, Joueur3"
       </div>
     </div>
 
@@ -761,38 +761,59 @@ async function removeParticipant(playerId) {
 
 async function addManualParticipant() {
   const nameInput = document.getElementById('manualPlayerName');
-  const playerName = nameInput.value.trim();
+  const input = nameInput.value.trim();
 
-  if (!playerName) {
-    alert('⚠️ Veuillez entrer un nom de joueur');
+  if (!input) {
+    alert('⚠️ Veuillez entrer un ou plusieurs noms de joueurs');
     return;
   }
 
-  try {
-    // Créer un joueur guest et l'ajouter au tournoi en une seule requête
-    const response = await apiPost(`/tournaments/${currentTournamentId}/participants/manual`, {
-      player_name: playerName
-    });
+  // Séparer par des virgules et nettoyer
+  const playerNames = input.split(',').map(name => name.trim()).filter(name => name.length > 0);
 
-    // Ajouter le nouveau joueur à la liste locale
-    const newPlayer = {
-      player_id: response.player_id,
-      name: playerName,
-      profile_pic_url: null,
-      role: 'GUEST'
-    };
+  if (playerNames.length === 0) {
+    alert('⚠️ Veuillez entrer un nom de joueur valide');
+    return;
+  }
 
-    allPlayers.push(newPlayer);
-    selectedParticipants.add(response.player_id);
+  let successCount = 0;
+  let errorCount = 0;
 
-    // Vider le champ et rafraîchir l'affichage
-    nameInput.value = '';
-    renderPlayerLists();
+  for (const playerName of playerNames) {
+    try {
+      // Créer un joueur guest et l'ajouter au tournoi en une seule requête
+      const response = await apiPost(`/tournaments/${currentTournamentId}/participants/manual`, {
+        player_name: playerName
+      });
 
-    showToast(`✅ ${playerName} ajouté avec succès !`, 'success');
-  } catch (err) {
-    console.error('Error adding manual participant:', err);
-    alert('Erreur: ' + (err.message || 'Erreur inconnue'));
+      // Ajouter le nouveau joueur à la liste locale
+      const newPlayer = {
+        player_id: response.player_id,
+        name: playerName,
+        profile_pic_url: null,
+        role: 'GUEST'
+      };
+
+      allPlayers.push(newPlayer);
+      selectedParticipants.add(response.player_id);
+      successCount++;
+    } catch (err) {
+      console.error(`Error adding ${playerName}:`, err);
+      errorCount++;
+    }
+  }
+
+  // Vider le champ et rafraîchir l'affichage
+  nameInput.value = '';
+  renderPlayerLists();
+
+  // Afficher le résumé
+  if (successCount > 0 && errorCount === 0) {
+    showToast(`✅ ${successCount} joueur(s) ajouté(s) avec succès !`, 'success');
+  } else if (successCount > 0 && errorCount > 0) {
+    showToast(`⚠️ ${successCount} ajouté(s), ${errorCount} échec(s)`, 'warning');
+  } else {
+    alert(`❌ Erreur: Impossible d'ajouter les joueurs`);
   }
 }
 
