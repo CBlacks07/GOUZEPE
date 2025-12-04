@@ -128,14 +128,31 @@ function generateDoubleEliminationBracket(participants) {
     const matchesInRound = r === 1 ? bracketSize / 4 : Math.pow(2, Math.floor((losersRounds - r) / 2));
 
     for (let m = 1; m <= matchesInRound; m++) {
+      // Déterminer d'où viennent les joueurs
+      let player1From, player2From;
+
+      if (r === 1) {
+        // Round 1 du LB: les deux joueurs sont des perdants du WB R1
+        player1From = 'loser';
+        player2From = 'loser';
+      } else if (r % 2 === 0) {
+        // Rounds PAIRS: gagnant du LB précédent vs perdant du WB
+        player1From = 'winner';
+        player2From = 'loser';
+      } else {
+        // Rounds IMPAIRS (après R1): gagnant du LB précédent vs gagnant du LB précédent
+        player1From = 'winner';
+        player2From = 'winner';
+      }
+
       matches.push({
         round: r,
         match_number: m,
         bracket_type: 'losers',
         player1_id: null,
         player2_id: null,
-        player1_from: r % 2 === 1 ? 'loser' : 'winner',
-        player2_from: r % 2 === 1 ? 'loser' : 'winner',
+        player1_from: player1From,
+        player2_from: player2From,
         status: 'pending'
       });
     }
@@ -240,18 +257,18 @@ function linkMatches(matches, type) {
 
     // 2. Lier le Loser's Bracket (structure complexe)
     // Les perdants du winner's bracket tombent dans le loser's bracket
-    // Pattern: Round 1 winners → Losers Round 1, Round 2 winners → Losers Round 3, etc.
+    // Pattern CORRECT: WB R1 → LB R1, WB R2 → LB R2, WB R3 → LB R4
     for (let i = 0; i < winnerMatches.length; i++) {
       const match = winnerMatches[i];
 
-      // Calculer dans quel round du loser's bracket le perdant va tomber
-      // Round 1 winners → Losers R1, Round 2 winners → Losers R3, Round 3 winners → Losers R5
-      const loserRound = match.round === 1 ? 1 : (match.round - 1) * 2 + 1;
+      // FORMULE CORRECTE pour calculer dans quel round du loser's bracket le perdant va tomber
+      // WB R1 → LB R1, WB R2 → LB R2, WB R3 → LB R4, etc.
+      // Formule: round 1 → 1, sinon → 2*(round-1)
+      const loserRound = match.round === 1 ? 1 : (match.round - 1) * 2;
 
-      // Pour les rounds impairs du loser's bracket, les perdants entrent en player2
-      // Pour le round 1, c'est différent car c'est le premier round
       if (match.round === 1) {
-        // Les perdants du WR1 vont directement en position dans LR1
+        // WB R1: Les perdants vont au LB R1 - 2 perdants par match du LB
+        // WB M1 et M2 → LB M1, WB M3 et M4 → LB M2, etc.
         const loserMatchNumber = Math.ceil(match.match_number / 2);
         const loserSlot = match.match_number % 2 === 1 ? 'player1' : 'player2';
 
@@ -264,7 +281,8 @@ function linkMatches(matches, type) {
           match.next_match_loser_slot = loserSlot;
         }
       } else {
-        // Pour les rounds suivants du winner's, les perdants vont aux rounds impairs du loser's
+        // WB R2+ : Les perdants vont aux rounds PAIRS du LB en player2
+        // WB R2 M1 → LB R2 M1 [p2], WB R2 M2 → LB R2 M2 [p2]
         const loserMatchNumber = match.match_number;
 
         const loserMatch = loserMatches.find(
@@ -273,7 +291,7 @@ function linkMatches(matches, type) {
 
         if (loserMatch) {
           match.next_match_loser_id = matches.indexOf(loserMatch);
-          match.next_match_loser_slot = 'player2'; // Les perdants du winner's entrent en player2
+          match.next_match_loser_slot = 'player2'; // Les perdants du WB entrent toujours en player2 des rounds pairs
         }
       }
     }
