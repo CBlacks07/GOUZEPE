@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   initMobileMenu();
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('efoot.token');
   if (!token) {
     window.location.href = 'login.html';
     return;
@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadTournaments();
   } catch (err) {
     console.error('Auth error:', err);
-    localStorage.removeItem('token');
+    localStorage.removeItem('efoot.token');
     window.location.href = 'login.html';
   }
 });
