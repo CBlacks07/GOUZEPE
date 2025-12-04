@@ -336,6 +336,17 @@
       <input type="text" id="playerSearch" class="form-input" placeholder="🔍 Rechercher un joueur..." oninput="filterPlayers()">
     </div>
 
+    <!-- Ajout manuel de participant -->
+    <div style="margin-bottom:20px;padding:16px;background:var(--panel);border:2px dashed var(--border);border-radius:12px">
+      <div style="display:flex;gap:12px;align-items:center">
+        <input type="text" id="manualPlayerName" class="form-input" placeholder="✍️ Nom du joueur (ajout manuel)" style="flex:1">
+        <button class="btn primary" onclick="addManualParticipant()" style="white-space:nowrap">➕ Ajouter</button>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:var(--text-muted)">
+        💡 Pour ajouter un joueur qui n'est pas inscrit dans la base de données
+      </div>
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <!-- Available Players -->
       <div>
@@ -655,6 +666,23 @@ async function manageParticipants(tournamentId) {
   }
 }
 
+// Helper function pour obtenir l'URL de la photo de profil avec fallback
+function getProfilePicUrl(player) {
+  const defaultPic = 'assets/icons/apple-touch-icon.png';
+
+  if (!player.profile_pic_url) {
+    return defaultPic;
+  }
+
+  // Si l'URL commence par http:// ou https://, l'utiliser tel quel
+  if (player.profile_pic_url.startsWith('http://') || player.profile_pic_url.startsWith('https://')) {
+    return player.profile_pic_url;
+  }
+
+  // Sinon, supposer que c'est un chemin relatif
+  return player.profile_pic_url;
+}
+
 function renderPlayerLists() {
   const available = document.getElementById('availablePlayers');
   const selected = document.getElementById('selectedPlayers');
@@ -674,7 +702,10 @@ function renderPlayerLists() {
   } else {
     available.innerHTML = availableList.map(p => `
       <div class="player-item" onclick="addParticipant('${p.player_id}')">
-        <img src="${p.profile_pic_url || 'assets/icons/apple-touch-icon.png'}" class="player-pic" alt="${p.name}">
+        <img src="${getProfilePicUrl(p)}"
+             class="player-pic"
+             alt="${escapeHtml(p.name)}"
+             onerror="this.src='assets/icons/apple-touch-icon.png'">
         <div class="player-info">
           <div class="player-name">${escapeHtml(p.name)}</div>
           <div class="player-seed">${p.player_id}</div>
@@ -690,7 +721,10 @@ function renderPlayerLists() {
   } else {
     selected.innerHTML = selectedList.map(p => `
       <div class="player-item selected" onclick="removeParticipant('${p.player_id}')">
-        <img src="${p.profile_pic_url || 'assets/icons/apple-touch-icon.png'}" class="player-pic" alt="${p.name}">
+        <img src="${getProfilePicUrl(p)}"
+             class="player-pic"
+             alt="${escapeHtml(p.name)}"
+             onerror="this.src='assets/icons/apple-touch-icon.png'">
         <div class="player-info">
           <div class="player-name">${escapeHtml(p.name)}</div>
           <div class="player-seed">${p.player_id}</div>
@@ -721,6 +755,43 @@ async function removeParticipant(playerId) {
     renderPlayerLists();
   } catch (err) {
     console.error('Error removing participant:', err);
+    alert('Erreur: ' + (err.message || 'Erreur inconnue'));
+  }
+}
+
+async function addManualParticipant() {
+  const nameInput = document.getElementById('manualPlayerName');
+  const playerName = nameInput.value.trim();
+
+  if (!playerName) {
+    alert('⚠️ Veuillez entrer un nom de joueur');
+    return;
+  }
+
+  try {
+    // Créer un joueur guest et l'ajouter au tournoi en une seule requête
+    const response = await apiPost(`/tournaments/${currentTournamentId}/participants/manual`, {
+      player_name: playerName
+    });
+
+    // Ajouter le nouveau joueur à la liste locale
+    const newPlayer = {
+      player_id: response.player_id,
+      name: playerName,
+      profile_pic_url: null,
+      role: 'GUEST'
+    };
+
+    allPlayers.push(newPlayer);
+    selectedParticipants.add(response.player_id);
+
+    // Vider le champ et rafraîchir l'affichage
+    nameInput.value = '';
+    renderPlayerLists();
+
+    showToast(`✅ ${playerName} ajouté avec succès !`, 'success');
+  } catch (err) {
+    console.error('Error adding manual participant:', err);
     alert('Erreur: ' + (err.message || 'Erreur inconnue'));
   }
 }

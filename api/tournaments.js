@@ -668,6 +668,108 @@ function setupTournamentRoutes(app, pool, auth, io) {
   });
 
   /**
+   * POST /tournaments/:id/participants/manual
+   * Ajouter un participant manuel (guest) au tournoi
+   */
+  app.post('/tournaments/:id/participants/manual', auth, async (req, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const { id } = req.params;
+      const { player_name } = req.body;
+
+      if (!player_name || !player_name.trim()) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Nom du joueur requis' });
+      }
+
+      // Vérifier que le tournoi existe et accepte les inscriptions
+      const tournamentResult = await client.query(
+        'SELECT * FROM tournaments WHERE id = $1',
+        [id]
+      );
+
+      if (tournamentResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Tournoi non trouvé' });
+      }
+
+      const tournament = tournamentResult.rows[0];
+
+      if (tournament.status === 'completed' || tournament.status === 'cancelled') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Le tournoi est terminé' });
+      }
+
+      if (tournament.status === 'in_progress') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Le tournoi a déjà commencé' });
+      }
+
+      // Vérifier le nombre max de participants
+      if (tournament.max_participants) {
+        const countResult = await client.query(
+          'SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = $1',
+          [id]
+        );
+
+        if (parseInt(countResult.rows[0].count) >= tournament.max_participants) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Tournoi complet' });
+        }
+      }
+
+      // Générer un player_id unique pour le joueur guest
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const playerId = `GUEST_${timestamp}_${randomSuffix}`;
+
+      // Créer le joueur guest dans la table players
+      await client.query(`
+        INSERT INTO players (player_id, name, role)
+        VALUES ($1, $2, 'GUEST')
+      `, [playerId, player_name.trim()]);
+
+      // Ajouter le participant au tournoi
+      const participantResult = await client.query(`
+        INSERT INTO tournament_participants (tournament_id, player_id)
+        VALUES ($1, $2)
+        RETURNING *
+      `, [id, playerId]);
+
+      await client.query('COMMIT');
+
+      const participant = participantResult.rows[0];
+
+      // Émettre un événement Socket.IO
+      io.to(`tournament:${id}`).emit('tournament:participant_added', {
+        participant: {
+          ...participant,
+          player_name: player_name.trim()
+        }
+      });
+
+      res.status(201).json({
+        player_id: playerId,
+        name: player_name.trim(),
+        participant
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Erreur lors de l\'ajout du participant manuel:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    } finally {
+      client.release();
+    }
+  });
+
+  /**
    * DELETE /tournaments/:id/participants/:playerId
    * Retirer un participant d'un tournoi
    */
