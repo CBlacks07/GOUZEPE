@@ -387,7 +387,7 @@ async function loadTournaments() {
 async function loadPlayers() {
   try {
     const data = await apiGet('/players');
-    allPlayers = data || [];
+    allPlayers = data.players || [];
   } catch (err) {
     console.error('Error loading players:', err);
     allPlayers = [];
