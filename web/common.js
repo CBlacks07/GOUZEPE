@@ -188,7 +188,7 @@
       return;
     }
     sessionStorage.setItem('_guard_running', '1');
-    setTimeout(() => sessionStorage.removeItem('_guard_running'), 500);
+    setTimeout(() => sessionStorage.removeItem('_guard_running'), 1000);
 
     // Vérification du token et redirection si nécessaire
     const tok = getTok(), exp = getExp();

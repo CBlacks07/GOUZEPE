@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug Authentification</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+    .section { margin: 20px 0; padding: 15px; border: 1px solid #0f0; }
+    .error { color: #f00; }
+    .success { color: #0f0; }
+    .warning { color: #ff0; }
+    button { background: #0f0; color: #000; border: none; padding: 10px 20px; margin: 5px; cursor: pointer; }
+    button:hover { background: #0c0; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Debug Authentification</h1>
+
+  <div class="section">
+    <h2>Token Info</h2>
+    <div id="tokenInfo"></div>
+  </div>
+
+  <div class="section">
+    <h2>API Test</h2>
+    <div id="apiTest"></div>
+    <button onclick="testAPI()">Tester API /tournaments</button>
+    <button onclick="testHealth()">Tester /health</button>
+  </div>
+
+  <div class="section">
+    <h2>Actions</h2>
+    <button onclick="clearAuth()">Nettoyer auth et recharger</button>
+    <button onclick="goToLogin()">Aller au login</button>
+    <button onclick="goToTournois()">Aller aux Tournois</button>
+  </div>
+
+  <script>
+    function getAPI() {
+      return (localStorage.getItem('efoot.api') || 'http://localhost:3005').replace(/\/+$/, '');
+    }
+
+    function getTok() {
+      return localStorage.getItem('efoot.token') || '';
+    }
+
+    function displayTokenInfo() {
+      const token = getTok();
+      const role = localStorage.getItem('efoot.role');
+      const expAt = localStorage.getItem('efoot.expAt');
+      const api = getAPI();
+
+      const now = Date.now();
+      const expired = expAt && now >= parseInt(expAt);
+
+      let html = '<pre>';
+      html += 'API Base: ' + api + '\n';
+      html += 'Token: ' + (token ? token.substring(0, 20) + '...' : '<span class="error">MANQUANT</span>') + '\n';
+      html += 'Role: ' + (role || '<span class="error">MANQUANT</span>') + '\n';
+      html += 'ExpAt: ' + (expAt || '<span class="error">MANQUANT</span>') + '\n';
+
+      if (expAt) {
+        const expDate = new Date(parseInt(expAt));
+        html += 'Expire le: ' + expDate.toLocaleString() + '\n';
+        html += 'Expiré: ' + (expired ? '<span class="error">OUI ⚠️</span>' : '<span class="success">NON ✅</span>') + '\n';
+      }
+
+      html += '</pre>';
+
+      document.getElementById('tokenInfo').innerHTML = html;
+    }
+
+    async function testAPI() {
+      const apiTest = document.getElementById('apiTest');
+      apiTest.innerHTML = '<p class="warning">Test en cours...</p>';
+
+      try {
+        const response = await fetch(getAPI() + '/tournaments', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getTok()
+          }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          apiTest.innerHTML = `
+            <p class="success">✅ API fonctionne !</p>
+            <pre>Status: ${response.status}\nData: ${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          apiTest.innerHTML = `
+            <p class="error">❌ Erreur API</p>
+            <pre>Status: ${response.status}\nError: ${JSON.stringify(data, null, 2)}</pre>
+          `;
+        }
+      } catch (error) {
+        apiTest.innerHTML = `
+          <p class="error">❌ Erreur de connexion</p>
+          <pre>${error.message}</pre>
+        `;
+      }
+    }
+
+    async function testHealth() {
+      const apiTest = document.getElementById('apiTest');
+      apiTest.innerHTML = '<p class="warning">Test en cours...</p>';
+
+      try {
+        const response = await fetch(getAPI() + '/health');
+        const data = await response.json();
+
+        if (response.ok) {
+          apiTest.innerHTML = `
+            <p class="success">✅ Serveur fonctionne !</p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          apiTest.innerHTML = `<p class="error">❌ Serveur ne répond pas correctement</p>`;
+        }
+      } catch (error) {
+        apiTest.innerHTML = `
+          <p class="error">❌ Serveur inaccessible</p>
+          <pre>${error.message}</pre>
+        `;
+      }
+    }
+
+    function clearAuth() {
+      localStorage.clear();
+      sessionStorage.clear();
+      alert('Auth nettoyée ! Redirection vers login...');
+      location.href = 'login.html';
+    }
+
+    function goToLogin() {
+      location.href = 'login.html';
+    }
+
+    function goToTournois() {
+      location.href = 'Tournois.html';
+    }
+
+    // Afficher les infos au chargement
+    displayTokenInfo();
+  </script>
+</body>
+</html>
