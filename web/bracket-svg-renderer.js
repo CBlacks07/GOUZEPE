@@ -130,13 +130,15 @@ function renderBracketSVG(matches, format, tournament) {
 
   // Construire le HTML avec SVG
   let html = `
-    <div class="svg-bracket-container" style="background:#2a2a2a;padding:20px;overflow:auto;">
-      <svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
-        <!-- Titre -->
-        <text x="20" y="30" fill="#fff" font-size="18" font-weight="700">
+    <div class="svg-bracket-container" style="background:#2a2a2a;padding:20px;overflow:auto;border-radius:12px;">
+      <!-- Titre en HTML pour éviter overlap -->
+      <div style="padding:16px 20px;margin-bottom:20px;background:linear-gradient(90deg, rgba(37,99,235,0.2), rgba(37,99,235,0.05));border-left:4px solid #2563eb;border-radius:8px;">
+        <h3 style="margin:0;color:#fff;font-size:18px;font-weight:700;">
           ${escapeHtml(tournament?.name || 'Tournament')} - ${format.toUpperCase()}
-        </text>
+        </h3>
+      </div>
 
+      <svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="display:block;">
         <!-- Headers Winners -->
         ${renderRoundHeaders(wRoundKeys, 'winners', LEFT_OFFSET, TOP_OFFSET - 40, COL_W)}
 
