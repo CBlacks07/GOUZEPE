@@ -65,6 +65,61 @@
     if (getRole() !== 'admin') location.replace('Accueil.html');
   }
 
+  // Helpers API
+  function getApiBase() {
+    return getAPI();
+  }
+
+  async function apiGet(endpoint) {
+    const response = await fetch(getAPI() + endpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + getTok()
+      }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  }
+
+  async function apiPost(endpoint, data) {
+    const response = await fetch(getAPI() + endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + getTok()
+      },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  }
+
+  async function apiPut(endpoint, data) {
+    const response = await fetch(getAPI() + endpoint, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + getTok()
+      },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  }
+
+  async function apiDelete(endpoint) {
+    const response = await fetch(getAPI() + endpoint, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + getTok()
+      }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  }
+
   // Expose minimal API globale
   window.$ = $;
   window.$$ = $$;
@@ -73,6 +128,14 @@
   window.role = getRole();
   window.expAt = getExp();
   window.App = { $, $$, getAPI, getToken: getTok, getRole, getExp, toast, safeFetch, logout, requireAdmin };
+
+  // Expose API helpers globalement
+  window.getApiBase = getApiBase;
+  window.apiGet = apiGet;
+  window.apiPost = apiPost;
+  window.apiPut = apiPut;
+  window.apiDelete = apiDelete;
+  window.logout = logout;
 
   // ---------- Inject favicon/logo pour toutes les pages ----------
   (function ensureFavicon() {
@@ -125,7 +188,7 @@
       return;
     }
     sessionStorage.setItem('_guard_running', '1');
-    setTimeout(() => sessionStorage.removeItem('_guard_running'), 500);
+    setTimeout(() => sessionStorage.removeItem('_guard_running'), 1000);
 
     // Vérification du token et redirection si nécessaire
     const tok = getTok(), exp = getExp();

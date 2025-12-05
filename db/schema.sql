@@ -109,19 +109,23 @@ CREATE TABLE IF NOT EXISTS tournaments (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT,
-  format TEXT NOT NULL CHECK (format IN ('single_elimination', 'double_elimination', 'round_robin')),
-  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'registration', 'in_progress', 'completed', 'cancelled')),
+  format TEXT NOT NULL CHECK (format IN ('single_elimination', 'double_elimination', 'round_robin', 'swiss')),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'registration', 'check_in', 'in_progress', 'completed', 'cancelled')),
 
   -- Dates
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   registration_start TIMESTAMPTZ,
   registration_end TIMESTAMPTZ,
+  check_in_opens_at TIMESTAMPTZ,
+  check_in_closes_at TIMESTAMPTZ,
   start_date TIMESTAMPTZ,
   end_date TIMESTAMPTZ,
 
   -- Configuration
   max_participants INTEGER,
   third_place_match BOOLEAN DEFAULT false,
+  require_check_in BOOLEAN DEFAULT true,
+  auto_dq_no_checkin BOOLEAN DEFAULT true,
 
   -- Métadonnées
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -142,6 +146,7 @@ CREATE TABLE IF NOT EXISTS tournament_participants (
 
   -- Statut
   registered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  checked_in_at TIMESTAMPTZ,
   seed INTEGER,
   status TEXT NOT NULL DEFAULT 'registered' CHECK (status IN ('registered', 'checked_in', 'disqualified', 'withdrawn')),
 
@@ -202,6 +207,71 @@ CREATE TABLE IF NOT EXISTS tournament_matches (
   UNIQUE(tournament_id, round, match_number, bracket_type)
 );
 
+-- Table des litiges de matchs (Disputes System)
+CREATE TABLE IF NOT EXISTS match_disputes (
+  id SERIAL PRIMARY KEY,
+  match_id INTEGER NOT NULL REFERENCES tournament_matches(id) ON DELETE CASCADE,
+  tournament_id INTEGER NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+
+  -- Parties impliquées
+  reported_by_player_id TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+  disputed_against_player_id TEXT REFERENCES players(player_id) ON DELETE CASCADE,
+
+  -- Scores rapportés
+  reporter_score1 INTEGER,
+  reporter_score2 INTEGER,
+  opponent_score1 INTEGER,
+  opponent_score2 INTEGER,
+
+  -- Détails du litige
+  reason TEXT,
+  reporter_comment TEXT,
+  opponent_comment TEXT,
+
+  -- Statut et résolution
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'under_review', 'resolved', 'cancelled')),
+  resolved_by_admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  admin_notes TEXT,
+  resolution_comment TEXT,
+  final_score1 INTEGER,
+  final_score2 INTEGER,
+
+  -- Timestamps
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  resolved_at TIMESTAMPTZ,
+
+  -- Priorité
+  priority TEXT DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent'))
+);
+
+-- Table des preuves de matchs (Evidence System)
+CREATE TABLE IF NOT EXISTS match_evidence (
+  id SERIAL PRIMARY KEY,
+  match_id INTEGER NOT NULL REFERENCES tournament_matches(id) ON DELETE CASCADE,
+  dispute_id INTEGER REFERENCES match_disputes(id) ON DELETE CASCADE,
+
+  -- Soumis par
+  submitted_by_player_id TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+
+  -- Type de preuve
+  evidence_type TEXT NOT NULL CHECK (evidence_type IN ('screenshot', 'video', 'replay_file', 'external_link', 'text_note')),
+
+  -- Données
+  file_path TEXT,
+  file_name TEXT,
+  file_size INTEGER,
+  external_url TEXT,
+  text_content TEXT,
+
+  -- Métadonnées
+  description TEXT,
+  verified_by_admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  is_verified BOOLEAN DEFAULT false,
+
+  -- Timestamps
+  uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Index pour les tournois
 CREATE INDEX IF NOT EXISTS idx_tournaments_status ON tournaments(status);
 CREATE INDEX IF NOT EXISTS idx_tournaments_created_at ON tournaments(created_at DESC);
@@ -210,3 +280,8 @@ CREATE INDEX IF NOT EXISTS idx_tournament_participants_player ON tournament_part
 CREATE INDEX IF NOT EXISTS idx_tournament_matches_tournament ON tournament_matches(tournament_id);
 CREATE INDEX IF NOT EXISTS idx_tournament_matches_status ON tournament_matches(status);
 CREATE INDEX IF NOT EXISTS idx_tournament_matches_round ON tournament_matches(tournament_id, round);
+CREATE INDEX IF NOT EXISTS idx_match_disputes_match ON match_disputes(match_id);
+CREATE INDEX IF NOT EXISTS idx_match_disputes_status ON match_disputes(status);
+CREATE INDEX IF NOT EXISTS idx_match_disputes_tournament ON match_disputes(tournament_id);
+CREATE INDEX IF NOT EXISTS idx_match_evidence_match ON match_evidence(match_id);
+CREATE INDEX IF NOT EXISTS idx_match_evidence_dispute ON match_evidence(dispute_id);

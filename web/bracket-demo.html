@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Challonge Bracket - Example EXACT</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #2b2b2b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  color: #fff;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.bracket-wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 60px;
+  min-width: max-content;
+}
+
+/* SECTION */
+.bracket-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.section-title {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+  padding: 10px 20px;
+  border-radius: 6px;
+  display: inline-block;
+  align-self: center;
+}
+
+.section-title.losers {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.section-title.finals {
+  background: rgba(37, 99, 235, 0.2);
+  color: #3b82f6;
+  border: 2px solid #3b82f6;
+}
+
+/* ROUNDS CONTAINER */
+.rounds-container {
+  display: flex;
+  gap: 80px;
+  position: relative;
+}
+
+/* ROUND COLUMN */
+.round {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+.round-header {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  padding: 8px;
+  background: #374151;
+  border-radius: 4px;
+}
+
+.matches {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* MATCH BOX */
+.match {
+  background: #3a3a3a;
+  border: 1px solid #4f4f4f;
+  border-radius: 3px;
+  width: 200px;
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.match-id {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: 9px;
+  color: #666;
+  font-weight: 600;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  font-size: 13px;
+  border-bottom: 1px solid #4f4f4f;
+  gap: 8px;
+}
+
+.player:last-child {
+  border-bottom: none;
+}
+
+.player.winner {
+  background: rgba(34, 197, 94, 0.1);
+  border-left: 3px solid #22c55e;
+}
+
+.player .seed {
+  font-size: 10px;
+  color: #888;
+  min-width: 16px;
+}
+
+.player .name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player .score {
+  font-weight: 700;
+  min-width: 20px;
+  text-align: right;
+}
+
+/* SPACING PAR ROUND */
+.round[data-round="1"] .match { margin-bottom: 15px; }
+.round[data-round="2"] .match { margin-bottom: 105px; }
+.round[data-round="3"] .match { margin-bottom: 260px; }
+.round[data-round="4"] .match { margin-bottom: 600px; }
+
+/* LOSERS SPACING */
+.losers .round[data-round="1"] .match { margin-bottom: 15px; }
+.losers .round[data-round="2"] .match { margin-bottom: 105px; }
+.losers .round[data-round="3"] .match { margin-bottom: 260px; }
+.losers .round[data-round="4"] .match { margin-bottom: 105px; }
+.losers .round[data-round="5"] .match { margin-bottom: 260px; }
+
+/* CONNEXIONS SVG */
+.connector {
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.connector line {
+  stroke: #4f4f4f;
+  stroke-width: 2;
+}
+
+/* FINALS */
+.finals-matches {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.finals-matches .match {
+  width: 250px;
+}
+
+.reset-note {
+  font-size: 11px;
+  color: #888;
+  font-style: italic;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+
+<div class="bracket-wrapper">
+
+  <!-- WINNERS BRACKET -->
+  <div class="bracket-section winners">
+    <div class="rounds-container">
+
+      <!-- ROUND 1 -->
+      <div class="round" data-round="1">
+        <div class="round-header">Round 1</div>
+        <div class="matches">
+          <div class="match">
+            <div class="match-id">1</div>
+            <div class="player"><span class="seed">1</span><span class="name">Burlington</span></div>
+            <div class="player"><span class="seed">16</span><span class="name">Sarnia</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">2</div>
+            <div class="player"><span class="seed">8</span><span class="name">Guelph</span></div>
+            <div class="player"><span class="seed">9</span><span class="name">Stoney Creek</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">3</div>
+            <div class="player"><span class="seed">4</span><span class="name">Cambridge</span></div>
+            <div class="player"><span class="seed">13</span><span class="name">Hamilton</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">4</div>
+            <div class="player"><span class="seed">5</span><span class="name">Haldimand</span></div>
+            <div class="player"><span class="seed">12</span><span class="name">Brampton</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">5</div>
+            <div class="player"><span class="seed">2</span><span class="name">Oakville</span></div>
+            <div class="player"><span class="seed">15</span><span class="name">Brantford</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">6</div>
+            <div class="player"><span class="seed">7</span><span class="name">Etobicoke</span></div>
+            <div class="player"><span class="seed">10</span><span class="name">Kitchener</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">7</div>
+            <div class="player"><span class="seed">3</span><span class="name">Caledonia</span></div>
+            <div class="player"><span class="seed">14</span><span class="name">Mississauga</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">8</div>
+            <div class="player"><span class="seed">6</span><span class="name">Waterloo</span></div>
+            <div class="player"><span class="seed">11</span><span class="name">St. Catherines</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROUND 2 -->
+      <div class="round" data-round="2">
+        <div class="round-header">Round 2</div>
+        <div class="matches">
+          <div class="match">
+            <div class="match-id">13</div>
+            <div class="player"><span class="name">TBD</span></div>
+            <div class="player"><span class="name">TBD</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">14</div>
+            <div class="player"><span class="name">TBD</span></div>
+            <div class="player"><span class="name">TBD</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">15</div>
+            <div class="player"><span class="name">TBD</span></div>
+            <div class="player"><span class="name">TBD</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">16</div>
+            <div class="player"><span class="name">TBD</span></div>
+            <div class="player"><span class="name">TBD</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROUND 3 -->
+      <div class="round" data-round="3">
+        <div class="round-header">Round 3</div>
+        <div class="matches">
+          <div class="match">
+            <div class="match-id">23</div>
+            <div class="player"><span class="name">TBD</span></div>
+            <div class="player"><span class="name">TBD</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">24</div>
+            <div class="player"><span class="name">TBD</span></div>
+            <div class="player"><span class="name">TBD</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEMIFINALS -->
+      <div class="round" data-round="4">
+        <div class="round-header">Semifinals</div>
+        <div class="matches">
+          <div class="match">
+            <div class="match-id">28</div>
+            <div class="player"><span class="name">TBD</span></div>
+            <div class="player"><span class="name">TBD</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LOSERS BRACKET -->
+  <div class="bracket-section losers">
+    <div class="section-title losers">Losers Bracket</div>
+    <div class="rounds-container">
+
+      <!-- LOSERS ROUND 1 -->
+      <div class="round" data-round="1">
+        <div class="round-header">Losers Round 1</div>
+        <div class="matches">
+          <div class="match">
+            <div class="match-id">9</div>
+            <div class="player"><span class="name">Loser of 1</span></div>
+            <div class="player"><span class="name">Loser of 2</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">10</div>
+            <div class="player"><span class="name">Loser of 3</span></div>
+            <div class="player"><span class="name">Loser of 4</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">11</div>
+            <div class="player"><span class="name">Loser of 5</span></div>
+            <div class="player"><span class="name">Loser of 6</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">12</div>
+            <div class="player"><span class="name">Loser of 7</span></div>
+            <div class="player"><span class="name">Loser of 8</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOSERS ROUND 2 -->
+      <div class="round" data-round="2">
+        <div class="round-header">Losers Round 2</div>
+        <div class="matches">
+          <div class="match">
+            <div class="match-id">17</div>
+            <div class="player"><span class="name">Winner of 9</span></div>
+            <div class="player"><span class="name">Loser of 16</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">18</div>
+            <div class="player"><span class="name">Winner of 10</span></div>
+            <div class="player"><span class="name">Loser of 15</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">19</div>
+            <div class="player"><span class="name">Winner of 11</span></div>
+            <div class="player"><span class="name">Loser of 14</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">20</div>
+            <div class="player"><span class="name">Winner of 12</span></div>
+            <div class="player"><span class="name">Loser of 13</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOSERS ROUND 3 -->
+      <div class="round" data-round="3">
+        <div class="round-header">Losers Round 3</div>
+        <div class="matches">
+          <div class="match">
+            <div class="match-id">21</div>
+            <div class="player"><span class="name">TBD</span></div>
+            <div class="player"><span class="name">TBD</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">22</div>
+            <div class="player"><span class="name">TBD</span></div>
+            <div class="player"><span class="name">TBD</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOSERS ROUND 4 -->
+      <div class="round" data-round="4">
+        <div class="round-header">Losers Round 4</div>
+        <div class="matches">
+          <div class="match">
+            <div class="match-id">25</div>
+            <div class="player"><span class="name">Winner of 21</span></div>
+            <div class="player"><span class="name">Loser of 23</span></div>
+          </div>
+          <div class="match">
+            <div class="match-id">26</div>
+            <div class="player"><span class="name">Winner of 22</span></div>
+            <div class="player"><span class="name">Loser of 24</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOSERS ROUND 5 -->
+      <div class="round" data-round="5">
+        <div class="round-header">Losers Round 5</div>
+        <div class="matches">
+          <div class="match">
+            <div class="match-id">27</div>
+            <div class="player"><span class="name">TBD</span></div>
+            <div class="player"><span class="name">TBD</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOSERS ROUND 6 -->
+      <div class="round" data-round="6">
+        <div class="round-header">Losers Round 6</div>
+        <div class="matches">
+          <div class="match">
+            <div class="match-id">29</div>
+            <div class="player"><span class="name">Winner of 27</span></div>
+            <div class="player"><span class="name">Loser of 28</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FINALS -->
+  <div class="bracket-section finals">
+    <div class="section-title finals">Finals</div>
+    <div class="finals-matches">
+      <div class="match">
+        <div class="match-id">30</div>
+        <div class="player"><span class="name">Winner of Loser's Bracket</span></div>
+        <div class="player"><span class="name">Winner of Winner's Bracket</span></div>
+      </div>
+      <div class="match">
+        <div class="match-id">31</div>
+        <div class="player"><span class="name">TBD</span></div>
+        <div class="player"><span class="name">TBD</span></div>
+      </div>
+      <div class="reset-note">Loser of 30 (if necessary)</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
