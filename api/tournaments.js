@@ -264,7 +264,7 @@ function setupTournamentRoutes(app, pool, auth, io) {
           p3.name as third_place_name,
           (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id) as participant_count
         FROM tournaments t
-        LEFT JOIN users u ON t.created_by = u.user_id
+        LEFT JOIN users u ON t.created_by = u.id
         LEFT JOIN players p1 ON t.winner_id = p1.player_id
         LEFT JOIN players p2 ON t.runner_up_id = p2.player_id
         LEFT JOIN players p3 ON t.third_place_id = p3.player_id
@@ -300,7 +300,7 @@ function setupTournamentRoutes(app, pool, auth, io) {
       const tResult = await pool.query(`
         SELECT t.*, u.email as creator_email
         FROM tournaments t
-        LEFT JOIN users u ON t.created_by = u.user_id
+        LEFT JOIN users u ON t.created_by = u.id
         WHERE t.id = $1
       `, [id]);
 
