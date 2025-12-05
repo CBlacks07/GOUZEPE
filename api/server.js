@@ -572,6 +572,45 @@ app.put('/admin/players/:oldId', auth, adminOnly, async (req, res) => {
   }
 });
 
+// POST /admin/players - Créer un nouveau joueur
+app.post('/admin/players', auth, adminOnly, async (req, res) => {
+  try {
+    const { player_id, name, role } = req.body || {};
+
+    if (!player_id || !player_id.trim()) {
+      return bad(res, 400, 'player_id requis');
+    }
+
+    if (!name || !name.trim()) {
+      return bad(res, 400, 'name requis');
+    }
+
+    const trimmedId = player_id.trim();
+    const trimmedName = name.trim();
+    const playerRole = (role || 'MEMBRE').toUpperCase();
+
+    // Vérifier que le player_id n'existe pas déjà
+    const existing = await q(`SELECT player_id FROM players WHERE player_id = $1`, [trimmedId]);
+    if (existing.rowCount > 0) {
+      return bad(res, 409, 'Ce player_id existe déjà');
+    }
+
+    // Créer le joueur
+    const result = await q(
+      `INSERT INTO players (player_id, name, role) VALUES ($1, $2, $3) RETURNING *`,
+      [trimmedId, trimmedName, playerRole]
+    );
+
+    ok(res, {
+      message: 'Joueur créé',
+      player: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error creating player:', error);
+    bad(res, 500, error.message || 'Erreur serveur');
+  }
+});
+
 // POST /admin/players/:playerId/attach_user - Lier/créer un compte utilisateur
 app.post('/admin/players/:playerId/attach_user', auth, adminOnly, async (req, res) => {
   try {
@@ -641,12 +680,8 @@ app.delete('/admin/players/:playerId', auth, adminOnly, async (req, res) => {
 
     const player = playerCheck.rows[0];
 
-    // Ne pas permettre la suppression de joueurs réels (seulement GUEST)
-    if (player.role !== 'GUEST') {
-      return bad(res, 403, 'Seuls les joueurs GUEST peuvent être supprimés. Pour les autres, utilisez la désactivation.');
-    }
-
     // Supprimer le joueur (CASCADE supprimera les dépendances)
+    // ATTENTION: Supprime toutes les références dans matchdays, stats, tournois, etc.
     await q(`DELETE FROM players WHERE player_id = $1`, [playerId]);
 
     // Retirer de la présence
