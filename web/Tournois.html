@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="theme.css">
 <link rel="stylesheet" href="mobile.css">
 <script src="common.js"></script>
+<script src="bracket-svg-renderer.js"></script>
 
 <style>
   :root{
@@ -567,197 +568,17 @@ function renderTournamentDetails(data) {
     document.getElementById('detailWinner').innerHTML = '';
   }
 
-  renderBracket(matches, tournament.format);
-  renderStandings(participants);
-  renderMatchesList(matches);
-}
-
-// === Render Bracket ===
-function getRoundName(bracketType, round, totalRounds) {
-  if (bracketType === 'finals') return '👑 FINALE';
-  if (bracketType === 'third_place') return '🥉 Match 3ème Place';
-
-  if (bracketType === 'losers') {
-    return `💔 Losers Round ${round}`;
-  }
-
-  // Winners bracket ou single elimination
-  const roundsFromEnd = totalRounds - round;
-
-  if (roundsFromEnd === 0) return '👑 FINALE';
-  if (roundsFromEnd === 1) return '🏅 DEMI-FINALES';
-  if (roundsFromEnd === 2) return '⚔️ QUARTS DE FINALE';
-  if (roundsFromEnd === 3) return '🎯 8èmes DE FINALE';
-  if (roundsFromEnd === 4) return '📊 16èmes DE FINALE';
-
-  return `Round ${round}`;
-}
-
-function renderBracket(matches, format) {
+  // Utiliser le renderer SVG pour le bracket
   const container = document.getElementById('bracketContainer');
-
   if (!matches || matches.length === 0) {
     container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏆</div><p>Le bracket n\'a pas encore été généré</p></div>';
-    return;
+  } else {
+    const html = renderBracketSVG(matches, tournament.format, tournament);
+    container.innerHTML = html;
   }
 
-  if (format === 'round_robin') {
-    renderRoundRobinBracket(matches, container);
-    return;
-  }
-
-  const rounds = {};
-  let maxRound = 0;
-
-  matches.forEach(match => {
-    const key = `${match.bracket_type}-${match.round}`;
-    if (!rounds[key]) rounds[key] = [];
-    rounds[key].push(match);
-    maxRound = Math.max(maxRound, match.round);
-  });
-
-  // Vérifier s'il y a des losers rounds (double elimination)
-  const losersRounds = Object.keys(rounds)
-    .filter(k => k.startsWith('losers-'))
-    .sort((a, b) => {
-      const aRound = parseInt(a.split('-')[1]);
-      const bRound = parseInt(b.split('-')[1]);
-      return aRound - bRound;
-    });
-
-  const hasLosers = losersRounds.length > 0;
-
-  let html = '<div class="bracket-container">';
-
-  // Winners Bracket
-  html += '<div class="bracket">';
-  const winnersRounds = Object.keys(rounds)
-    .filter(k => k.startsWith('winners-'))
-    .sort((a, b) => {
-      const aRound = parseInt(a.split('-')[1]);
-      const bRound = parseInt(b.split('-')[1]);
-      return aRound - bRound;
-    });
-
-  winnersRounds.forEach(key => {
-    const roundNum = parseInt(key.split('-')[1]);
-    const roundName = getRoundName('winners', roundNum, maxRound);
-
-    html += `
-      <div class="bracket-round">
-        <div class="bracket-round-title">${roundName}</div>
-        ${rounds[key].map(m => renderBracketMatch(m)).join('')}
-      </div>
-    `;
-  });
-
-  // Third Place (si single elimination avec match 3ème place)
-  if (rounds['third_place-1'] && !hasLosers) {
-    html += '<div style="width:2px;background:var(--border);margin:0 20px"></div>';
-    html += `
-      <div class="bracket-round">
-        <div class="bracket-round-title">${getRoundName('third_place', 1, maxRound)}</div>
-        ${rounds['third_place-1'].map(m => renderBracketMatch(m)).join('')}
-      </div>
-    `;
-  }
-
-  html += '</div>'; // Ferme le bracket Winners
-
-  // Losers Bracket (double elimination) - AFFICHÉ EN DESSOUS
-  if (hasLosers) {
-    html += `
-      <div style="height:2px;background:var(--border);margin:30px 0;opacity:0.5"></div>
-      <div style="text-align:center;margin:20px 0;color:var(--text-muted);font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1px">
-        💔 Bracket des Perdants (Loser's Bracket)
-      </div>
-    `;
-
-    html += '<div class="bracket">';
-    losersRounds.forEach(key => {
-      const roundNum = parseInt(key.split('-')[1]);
-      const roundName = getRoundName('losers', roundNum, maxRound);
-
-      html += `
-        <div class="bracket-round">
-          <div class="bracket-round-title">${roundName}</div>
-          ${rounds[key].map(m => renderBracketMatch(m)).join('')}
-        </div>
-      `;
-    });
-    html += '</div>'; // Ferme le bracket Losers
-  }
-
-  // Finals (affichée à la fin, après les deux brackets)
-  if (rounds['finals-1']) {
-    html += `
-      <div style="height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);margin:40px 0"></div>
-      <div style="text-align:center;margin:20px 0;color:var(--accent);font-weight:800;font-size:16px;text-transform:uppercase;letter-spacing:1.5px">
-        👑 GRANDE FINALE
-      </div>
-      <div class="bracket" style="justify-content:center">
-        <div class="bracket-round">
-          <div class="bracket-round-title">${getRoundName('finals', 1, maxRound)}</div>
-          ${rounds['finals-1'].map(m => renderBracketMatch(m)).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  html += '</div>'; // Ferme bracket-container
-  container.innerHTML = html;
-}
-
-function renderRoundRobinBracket(matches, container) {
-  const byRound = {};
-  matches.forEach(m => {
-    if (!byRound[m.round]) byRound[m.round] = [];
-    byRound[m.round].push(m);
-  });
-
-  let html = '<div style="display:grid;gap:16px;padding:16px">';
-
-  Object.keys(byRound).sort((a, b) => parseInt(a) - parseInt(b)).forEach(round => {
-    html += `
-      <div>
-        <h3 style="margin:0 0 12px;font-size:18px;font-weight:800;color:var(--accent)">
-          🔄 Round ${round}
-        </h3>
-        <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
-          ${byRound[round].map(m => renderBracketMatch(m)).join('')}
-        </div>
-      </div>
-    `;
-  });
-
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-function renderBracketMatch(match) {
-  const statusClass = match.status === 'completed' ? 'completed' : match.status === 'in_progress' ? 'in_progress' : '';
-
-  const p1Class = match.winner_id === match.player1_id ? 'winner' : match.status === 'completed' ? 'loser' : '';
-  const p2Class = match.winner_id === match.player2_id ? 'winner' : match.status === 'completed' ? 'loser' : '';
-
-  return `
-    <div class="bracket-match ${statusClass}">
-      <div class="match-player ${p1Class}">
-        <span class="player-name ${!match.player1_name ? 'empty' : ''}">
-          ${match.player1_name || 'TBD'}
-        </span>
-        ${match.player1_score !== null ? `<span class="player-score">${match.player1_score}</span>` : ''}
-      </div>
-      <div class="match-player ${p2Class}">
-        <span class="player-name ${!match.player2_name ? 'empty' : ''}">
-          ${match.player2_name || 'TBD'}
-        </span>
-        ${match.player2_score !== null ? `<span class="player-score">${match.player2_score}</span>` : ''}
-      </div>
-      ${match.status === 'pending' ? '<div class="match-info">En attente</div>' : ''}
-      ${match.status === 'in_progress' ? '<div class="match-info">En cours</div>' : ''}
-    </div>
-  `;
+  renderStandings(participants);
+  renderMatchesList(matches);
 }
 
 // === Render Standings ===
