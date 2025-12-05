@@ -115,7 +115,8 @@
   @keyframes spin{to{transform:rotate(360deg)}}
 
   /* === BRACKET VISUEL INTERACTIF === */
-  .bracket-container{margin:20px 0;overflow-x:auto;padding:20px;background:var(--panel);border:1px solid var(--border);border-radius:16px}
+  .bracket-container{margin:0;overflow-x:auto;padding:20px;background:transparent;border:none}
+  #bracketView svg{max-width:100%;height:auto;display:block}
   .bracket{display:flex;gap:40px;min-width:max-content;align-items:center}
   .bracket-round{display:flex;flex-direction:column;justify-content:space-around;gap:20px}
   .bracket-round-title{
@@ -376,15 +377,15 @@
 
 <!-- Modal: Bracket Visuel -->
 <div id="matchesModal" class="modal" hidden>
-  <div class="modal-content" style="max-width:95vw;max-height:90vh">
-    <div class="modal-header">
+  <div class="modal-content" style="max-width:98vw;width:98vw;max-height:92vh;overflow:auto">
+    <div class="modal-header" style="position:sticky;top:0;background:var(--panel);z-index:10;padding-bottom:16px;border-bottom:1px solid var(--border)">
       <h3 class="modal-title" id="bracketModalTitle">Bracket & Gestion des Matchs</h3>
       <button class="modal-close" onclick="closeMatchesModal()">×</button>
     </div>
 
-    <div id="bracketView"></div>
+    <div id="bracketView" style="overflow-x:auto;overflow-y:visible;padding:20px 0"></div>
 
-    <div style="margin-top:20px;text-align:right">
+    <div style="margin-top:20px;padding-top:16px;text-align:right;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--panel);z-index:10">
       <button class="btn" onclick="closeMatchesModal()">Fermer</button>
     </div>
   </div>

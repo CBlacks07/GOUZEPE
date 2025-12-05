@@ -657,13 +657,11 @@ function setupTournamentRoutes(app, pool, auth, io) {
 
       if (tournament.status === 'completed' || tournament.status === 'cancelled') {
         await client.query('ROLLBACK');
-        return res.status(400).json({ error: 'Le tournoi est terminé' });
+        return res.status(400).json({ error: 'Le tournoi est terminé ou annulé' });
       }
 
-      if (tournament.status === 'in_progress') {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ error: 'Le tournoi a déjà commencé' });
-      }
+      // Note: On permet l'ajout de participants manuels même si le tournoi est en cours
+      // car l'admin peut vouloir ajouter un remplaçant ou corriger une erreur
 
       // Vérifier le nombre max de participants
       if (tournament.max_participants) {
