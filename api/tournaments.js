@@ -400,6 +400,127 @@ function setupTournamentRoutes(app, pool, auth, io) {
     }
   });
 
+  // POST /tournaments/:id/participants - Ajouter un joueur existant
+  app.post('/tournaments/:id/participants', auth, async (req, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin only' });
+    }
+
+    try {
+      const { id } = req.params;
+      const { player_id } = req.body;
+
+      if (!player_id) {
+        return res.status(400).json({ error: 'player_id requis' });
+      }
+
+      // Vérifier que le tournoi existe et n'est pas terminé
+      const tResult = await pool.query(
+        'SELECT status FROM tournaments WHERE id = $1',
+        [id]
+      );
+
+      if (tResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Tournoi non trouvé' });
+      }
+
+      const status = tResult.rows[0].status;
+      if (status === 'completed' || status === 'cancelled') {
+        return res.status(400).json({ error: 'Tournoi terminé ou annulé' });
+      }
+
+      // Vérifier que le joueur existe
+      const playerCheck = await pool.query(
+        'SELECT player_id, name FROM players WHERE player_id = $1',
+        [player_id]
+      );
+
+      if (playerCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Joueur non trouvé' });
+      }
+
+      // Vérifier que le joueur n'est pas déjà inscrit
+      const existingCheck = await pool.query(
+        'SELECT id FROM tournament_participants WHERE tournament_id = $1 AND player_id = $2',
+        [id, player_id]
+      );
+
+      if (existingCheck.rows.length > 0) {
+        return res.status(400).json({ error: 'Joueur déjà inscrit' });
+      }
+
+      // Seed automatique (dernier + 1)
+      const seedRes = await pool.query(
+        'SELECT COALESCE(MAX(seed), 0) as s FROM tournament_participants WHERE tournament_id=$1',
+        [id]
+      );
+      const nextSeed = seedRes.rows[0].s + 1;
+
+      // Ajouter le participant
+      await pool.query(
+        `INSERT INTO tournament_participants (tournament_id, player_id, seed, status)
+         VALUES ($1, $2, $3, 'registered')`,
+        [id, player_id, nextSeed]
+      );
+
+      // Émettre l'événement WebSocket
+      io.to(`tournament:${id}`).emit('participant:added', { player_id });
+
+      res.json({
+        message: 'Participant ajouté',
+        player_id,
+        seed: nextSeed
+      });
+    } catch (error) {
+      console.error('Error adding participant:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // DELETE /tournaments/:id/participants/:playerId - Retirer un participant
+  app.delete('/tournaments/:id/participants/:playerId', auth, async (req, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin only' });
+    }
+
+    try {
+      const { id, playerId } = req.params;
+
+      // Vérifier que le tournoi existe
+      const tResult = await pool.query(
+        'SELECT status FROM tournaments WHERE id = $1',
+        [id]
+      );
+
+      if (tResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Tournoi non trouvé' });
+      }
+
+      const status = tResult.rows[0].status;
+      if (status === 'in_progress' || status === 'completed') {
+        return res.status(400).json({ error: 'Impossible de retirer un participant d\'un tournoi en cours ou terminé' });
+      }
+
+      // Supprimer le participant
+      const deleteResult = await pool.query(
+        'DELETE FROM tournament_participants WHERE tournament_id = $1 AND player_id = $2 RETURNING id',
+        [id, playerId]
+      );
+
+      if (deleteResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Participant non trouvé' });
+      }
+
+      // Émettre l'événement WebSocket
+      io.to(`tournament:${id}`).emit('participant:removed', { player_id: playerId });
+
+      res.json({ message: 'Participant retiré' });
+    } catch (error) {
+      console.error('Error removing participant:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
   // POST /tournaments/:id/participants/manual - Ajout manuel CORRIGÉ
   app.post('/tournaments/:id/participants/manual', auth, async (req, res) => {
     if (req.user.role !== 'admin') {
