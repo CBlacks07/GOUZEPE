@@ -128,14 +128,31 @@ function generateDoubleEliminationBracket(participants) {
     const matchesInRound = r === 1 ? bracketSize / 4 : Math.pow(2, Math.floor((losersRounds - r) / 2));
 
     for (let m = 1; m <= matchesInRound; m++) {
+      // Déterminer d'où viennent les joueurs
+      let player1From, player2From;
+
+      if (r === 1) {
+        // Round 1 du LB: les deux joueurs sont des perdants du WB R1
+        player1From = 'loser';
+        player2From = 'loser';
+      } else if (r % 2 === 0) {
+        // Rounds PAIRS: gagnant du LB précédent vs perdant du WB
+        player1From = 'winner';
+        player2From = 'loser';
+      } else {
+        // Rounds IMPAIRS (après R1): gagnant du LB précédent vs gagnant du LB précédent
+        player1From = 'winner';
+        player2From = 'winner';
+      }
+
       matches.push({
         round: r,
         match_number: m,
         bracket_type: 'losers',
         player1_id: null,
         player2_id: null,
-        player1_from: r % 2 === 1 ? 'loser' : 'winner',
-        player2_from: r % 2 === 1 ? 'loser' : 'winner',
+        player1_from: player1From,
+        player2_from: player2From,
         status: 'pending'
       });
     }
@@ -212,17 +229,18 @@ function linkMatches(matches, type) {
       }
     }
   } else if (type === 'double') {
-    // Logique plus complexe pour double elimination
-    // À implémenter complètement selon les besoins
-    // Pour l'instant, on lie uniquement le winner's bracket
     const winnerMatches = matches.filter(m => m.bracket_type === 'winners');
+    const loserMatches = matches.filter(m => m.bracket_type === 'losers');
+    const finalsMatch = matches.find(m => m.bracket_type === 'finals');
 
+    // 1. Lier le Winner's Bracket (les gagnants progressent)
     for (let i = 0; i < winnerMatches.length; i++) {
       const match = winnerMatches[i];
       const nextRound = match.round + 1;
       const nextMatchNumber = Math.ceil(match.match_number / 2);
       const slotInNextMatch = match.match_number % 2 === 1 ? 'player1' : 'player2';
 
+      // Prochain match pour le gagnant dans le winner's bracket
       const nextMatch = winnerMatches.find(
         m => m.round === nextRound && m.match_number === nextMatchNumber
       );
@@ -230,6 +248,86 @@ function linkMatches(matches, type) {
       if (nextMatch) {
         match.next_match_winner_id = winnerMatches.indexOf(nextMatch);
         match.next_match_winner_slot = slotInNextMatch;
+      } else if (finalsMatch) {
+        // Le dernier match du winner's bracket va aux finales
+        match.next_match_winner_id = matches.indexOf(finalsMatch);
+        match.next_match_winner_slot = 'player1'; // Champion du winner's bracket en player1
+      }
+    }
+
+    // 2. Lier le Loser's Bracket (structure complexe)
+    // Les perdants du winner's bracket tombent dans le loser's bracket
+    // Pattern CORRECT: WB R1 → LB R1, WB R2 → LB R2, WB R3 → LB R4
+    for (let i = 0; i < winnerMatches.length; i++) {
+      const match = winnerMatches[i];
+
+      // FORMULE CORRECTE pour calculer dans quel round du loser's bracket le perdant va tomber
+      // WB R1 → LB R1, WB R2 → LB R2, WB R3 → LB R4, etc.
+      // Formule: round 1 → 1, sinon → 2*(round-1)
+      const loserRound = match.round === 1 ? 1 : (match.round - 1) * 2;
+
+      if (match.round === 1) {
+        // WB R1: Les perdants vont au LB R1 - 2 perdants par match du LB
+        // WB M1 et M2 → LB M1, WB M3 et M4 → LB M2, etc.
+        const loserMatchNumber = Math.ceil(match.match_number / 2);
+        const loserSlot = match.match_number % 2 === 1 ? 'player1' : 'player2';
+
+        const loserMatch = loserMatches.find(
+          m => m.round === loserRound && m.match_number === loserMatchNumber
+        );
+
+        if (loserMatch) {
+          match.next_match_loser_id = matches.indexOf(loserMatch);
+          match.next_match_loser_slot = loserSlot;
+        }
+      } else {
+        // WB R2+ : Les perdants vont aux rounds PAIRS du LB en player2
+        // WB R2 M1 → LB R2 M1 [p2], WB R2 M2 → LB R2 M2 [p2]
+        const loserMatchNumber = match.match_number;
+
+        const loserMatch = loserMatches.find(
+          m => m.round === loserRound && m.match_number === loserMatchNumber
+        );
+
+        if (loserMatch) {
+          match.next_match_loser_id = matches.indexOf(loserMatch);
+          match.next_match_loser_slot = 'player2'; // Les perdants du WB entrent toujours en player2 des rounds pairs
+        }
+      }
+    }
+
+    // 3. Lier les matchs du Loser's Bracket entre eux
+    for (let i = 0; i < loserMatches.length; i++) {
+      const match = loserMatches[i];
+      const nextRound = match.round + 1;
+
+      // Dans le loser's bracket:
+      // - Rounds impairs → rounds pairs: même nombre de match
+      // - Rounds pairs → rounds impairs: division par 2
+      let nextMatchNumber;
+      let slotInNextMatch;
+
+      if (match.round % 2 === 1) {
+        // Round impair → round pair (même match number)
+        nextMatchNumber = match.match_number;
+        slotInNextMatch = 'player1'; // Les gagnants des rounds impairs vont en player1
+      } else {
+        // Round pair → round impair (division)
+        nextMatchNumber = Math.ceil(match.match_number / 2);
+        slotInNextMatch = match.match_number % 2 === 1 ? 'player1' : 'player2';
+      }
+
+      const nextMatch = loserMatches.find(
+        m => m.round === nextRound && m.match_number === nextMatchNumber
+      );
+
+      if (nextMatch) {
+        match.next_match_winner_id = matches.indexOf(nextMatch);
+        match.next_match_winner_slot = slotInNextMatch;
+      } else if (finalsMatch) {
+        // Le dernier match du loser's bracket va aux finales
+        match.next_match_winner_id = matches.indexOf(finalsMatch);
+        match.next_match_winner_slot = 'player2'; // Champion du loser's bracket en player2
       }
     }
   }
@@ -522,6 +620,107 @@ function setupTournamentRoutes(app, pool, auth, io) {
   });
 
   /**
+   * POST /tournaments/:id/participants/manual
+   * Ajouter un participant manuel (guest) au tournoi
+   * IMPORTANT: Cette route doit être AVANT la route générale /participants
+   */
+  app.post('/tournaments/:id/participants/manual', auth, async (req, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const { id } = req.params;
+      const { player_name } = req.body;
+
+      if (!player_name || !player_name.trim()) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Nom du joueur requis' });
+      }
+
+      // Vérifier que le tournoi existe et accepte les inscriptions
+      const tournamentResult = await client.query(
+        'SELECT * FROM tournaments WHERE id = $1',
+        [id]
+      );
+
+      if (tournamentResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Tournoi non trouvé' });
+      }
+
+      const tournament = tournamentResult.rows[0];
+
+      if (tournament.status === 'completed' || tournament.status === 'cancelled') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Le tournoi est terminé ou annulé' });
+      }
+
+      // Note: On permet l'ajout de participants manuels même si le tournoi est en cours
+      // car l'admin peut vouloir ajouter un remplaçant ou corriger une erreur
+
+      // Vérifier le nombre max de participants
+      if (tournament.max_participants) {
+        const countResult = await client.query(
+          'SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = $1',
+          [id]
+        );
+
+        if (parseInt(countResult.rows[0].count) >= tournament.max_participants) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Tournoi complet' });
+        }
+      }
+
+      // Générer un player_id unique pour le joueur guest
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const playerId = `GUEST_${timestamp}_${randomSuffix}`;
+
+      // Créer le joueur guest dans la table players
+      await client.query(`
+        INSERT INTO players (player_id, name, role)
+        VALUES ($1, $2, 'GUEST')
+      `, [playerId, player_name.trim()]);
+
+      // Ajouter le participant au tournoi
+      const participantResult = await client.query(`
+        INSERT INTO tournament_participants (tournament_id, player_id)
+        VALUES ($1, $2)
+        RETURNING *
+      `, [id, playerId]);
+
+      await client.query('COMMIT');
+
+      const participant = participantResult.rows[0];
+
+      // Émettre un événement Socket.IO
+      io.to(`tournament:${id}`).emit('tournament:participant_added', {
+        participant: {
+          ...participant,
+          player_name: player_name.trim()
+        }
+      });
+
+      res.status(201).json({
+        player_id: playerId,
+        name: player_name.trim(),
+        participant
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Erreur lors de l\'ajout du participant manuel:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    } finally {
+      client.release();
+    }
+  });
+
+  /**
    * POST /tournaments/:id/participants
    * Ajouter un participant à un tournoi
    */
@@ -751,6 +950,43 @@ function setupTournamentRoutes(app, pool, auth, io) {
         ]);
 
         insertedMatches.push(result.rows[0]);
+      }
+
+      // Mettre à jour les liens de progression entre matchs
+      console.log('📊 Mise à jour des liens de progression...');
+      for (let i = 0; i < insertedMatches.length; i++) {
+        const match = insertedMatches[i];
+        const originalMatch = matches[i];
+
+        // Utiliser les liens calculés par linkMatches
+        let nextMatchWinnerId = null;
+        let nextMatchWinnerSlot = null;
+        let nextMatchLoserId = null;
+        let nextMatchLoserSlot = null;
+
+        if (originalMatch.next_match_winner_id !== undefined) {
+          const nextMatchIndex = originalMatch.next_match_winner_id;
+          nextMatchWinnerId = insertedMatches[nextMatchIndex]?.id || null;
+          nextMatchWinnerSlot = originalMatch.next_match_winner_slot;
+        }
+
+        if (originalMatch.next_match_loser_id !== undefined) {
+          const nextMatchIndex = originalMatch.next_match_loser_id;
+          nextMatchLoserId = insertedMatches[nextMatchIndex]?.id || null;
+          nextMatchLoserSlot = originalMatch.next_match_loser_slot;
+        }
+
+        // Mettre à jour la BDD avec les liens
+        if (nextMatchWinnerId || nextMatchLoserId) {
+          await client.query(`
+            UPDATE tournament_matches
+            SET next_match_winner_id = $1,
+                next_match_winner_slot = $2,
+                next_match_loser_id = $3,
+                next_match_loser_slot = $4
+            WHERE id = $5
+          `, [nextMatchWinnerId, nextMatchWinnerSlot, nextMatchLoserId, nextMatchLoserSlot, match.id]);
+        }
       }
 
       // Mettre à jour le compteur de matchs du tournoi
