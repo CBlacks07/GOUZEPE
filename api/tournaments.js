@@ -277,8 +277,12 @@ function linkMatches(matches, type) {
         );
 
         if (loserMatch) {
-          match.next_match_loser_id = matches.indexOf(loserMatch);
+          const loserIndex = matches.indexOf(loserMatch);
+          console.log(`WB R${match.round} M${match.match_number} → LB R${loserRound} M${loserMatchNumber} (index: ${loserIndex})`);
+          match.next_match_loser_id = loserIndex;
           match.next_match_loser_slot = loserSlot;
+        } else {
+          console.log(`⚠️ WB R${match.round} M${match.match_number} → Pas de loser match trouvé pour LB R${loserRound} M${loserMatchNumber}`);
         }
       } else {
         // WB R2+ : Les perdants vont aux rounds PAIRS du LB en player2
@@ -290,8 +294,12 @@ function linkMatches(matches, type) {
         );
 
         if (loserMatch) {
-          match.next_match_loser_id = matches.indexOf(loserMatch);
+          const loserIndex = matches.indexOf(loserMatch);
+          console.log(`WB R${match.round} M${match.match_number} → LB R${loserRound} M${loserMatchNumber} [p2] (index: ${loserIndex})`);
+          match.next_match_loser_id = loserIndex;
           match.next_match_loser_slot = 'player2'; // Les perdants du WB entrent toujours en player2 des rounds pairs
+        } else {
+          console.log(`⚠️ WB R${match.round} M${match.match_number} → Pas de loser match trouvé pour LB R${loserRound} M${loserMatchNumber}`);
         }
       }
     }
@@ -1090,8 +1098,17 @@ function setupTournamentRoutes(app, pool, auth, io) {
       `, [loserScore, winnerScore, tournamentId, loserId]);
 
       // Faire progresser les joueurs dans le bracket
+      console.log(`📊 Match ${matchId} terminé (${match.bracket_type} R${match.round}):`, {
+        winner_id,
+        loser_id: loserId,
+        next_match_winner_id: match.next_match_winner_id,
+        next_match_loser_id: match.next_match_loser_id,
+        next_match_loser_slot: match.next_match_loser_slot
+      });
+
       if (match.next_match_winner_id) {
         const slot = match.next_match_winner_slot === 'player1' ? 'player1_id' : 'player2_id';
+        console.log(`  ✅ Gagnant ${winner_id} → Match ${match.next_match_winner_id} [${slot}]`);
         await client.query(`
           UPDATE tournament_matches
           SET ${slot} = $1
@@ -1101,11 +1118,14 @@ function setupTournamentRoutes(app, pool, auth, io) {
 
       if (match.next_match_loser_id && match.bracket_type !== 'round_robin') {
         const slot = match.next_match_loser_slot === 'player1' ? 'player1_id' : 'player2_id';
+        console.log(`  ✅ Perdant ${loserId} → Match ${match.next_match_loser_id} [${slot}]`);
         await client.query(`
           UPDATE tournament_matches
           SET ${slot} = $1
           WHERE id = $2
         `, [loserId, match.next_match_loser_id]);
+      } else if (!match.next_match_loser_id && match.bracket_type === 'winners') {
+        console.log(`  ⚠️ PROBLÈME: Match winner's bracket sans next_match_loser_id !`);
       }
 
       // Mettre à jour le compteur de matchs complétés
