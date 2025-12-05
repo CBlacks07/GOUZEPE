@@ -1,348 +1,271 @@
 /**
- * SVG Bracket Renderer - Basé sur l'approche React/SVG
- * Adaptation pour notre système existant
+ * bracket-svg-renderer.js
+ * Générateur de bracket visuel style "Challonge" avec connexions SVG.
+ * Version améliorée avec position: absolute et calcul de coordonnées
  */
 
-function renderBracketSVG(matches, format, tournament) {
+const BRACKET_CONFIG = {
+  cardWidth: 240,
+  cardHeight: 90,
+  gapX: 60,
+  gapY: 20,
+  padding: 40
+};
+
+/**
+ * Fonction principale appelée par les pages HTML
+ */
+function renderBracketSVG(matches, format, tournamentInfo) {
+  if (!matches || matches.length === 0) {
+    return '<div class="empty">Aucun match</div>';
+  }
+
   if (format === 'round_robin') {
     return renderRoundRobinSimple(matches);
   }
 
-  // Séparer par type de bracket
-  const winnersMatches = matches.filter(m => m.bracket_type === 'winners')
-    .sort((a, b) => a.round - b.round || a.match_number - b.match_number);
+  // 1. Organiser les données
+  const tree = buildBracketTree(matches, format);
 
-  const losersMatches = matches.filter(m => m.bracket_type === 'losers')
-    .sort((a, b) => a.round - b.round || a.match_number - b.match_number);
+  // 2. Calculer les positions (X, Y)
+  const layout = calculateCoordinates(tree, format);
 
-  const finalsMatches = matches.filter(m => m.bracket_type === 'finals')
-    .sort((a, b) => a.round - b.round);
+  // 3. Générer le HTML (Cartes + SVG)
+  return generateDOM(layout, tree, matches, tournamentInfo);
+}
 
-  // Grouper par rounds
-  const wRounds = groupByRound(winnersMatches);
-  const lRounds = groupByRound(losersMatches);
+// --- LOGIQUE DE POSITIONNEMENT ---
 
-  // Constantes de layout (comme dans l'exemple React)
-  const BOX_W = 220;
-  const BOX_H = 50;
-  const GAP_Y = 20;
-  const COL_W = 280;
-  const LEFT_OFFSET = 40;
-  const TOP_OFFSET = 60;
+function buildBracketTree(matches, format) {
+  const winners = matches.filter(m => m.bracket_type === 'winners');
+  const losers = matches.filter(m => m.bracket_type === 'losers');
+  const finals = matches.filter(m => m.bracket_type === 'finals');
+  const thirdPlace = matches.filter(m => m.bracket_type === 'third_place');
 
-  // Calculer hauteur totale nécessaire
-  const maxWinnersInRound = Math.max(...Object.values(wRounds).map(r => r.length));
-  const maxLosersInRound = Math.max(...Object.values(lRounds).map(r => r.length), 1);
+  const groupByRound = (arr) => {
+    const rounds = {};
+    arr.forEach(m => {
+      if (!rounds[m.round]) rounds[m.round] = [];
+      rounds[m.round].push(m);
+    });
+    Object.keys(rounds).forEach(r => {
+      rounds[r].sort((a, b) => a.match_number - b.match_number);
+    });
+    return rounds;
+  };
 
-  const winnersHeight = maxWinnersInRound * (BOX_H + GAP_Y) + 100;
-  const losersHeight = maxLosersInRound * (BOX_H + GAP_Y) + 100;
-  const svgHeight = winnersHeight + losersHeight + 200;
+  return {
+    winners: groupByRound(winners),
+    losers: groupByRound(losers),
+    finals: groupByRound(finals),
+    thirdPlace: groupByRound(thirdPlace),
+    allMatches: matches
+  };
+}
 
-  const wRoundKeys = Object.keys(wRounds).map(Number).sort((a, b) => a - b);
-  const lRoundKeys = Object.keys(lRounds).map(Number).sort((a, b) => a - b);
-
-  const svgWidth = Math.max(
-    (wRoundKeys.length * COL_W) + LEFT_OFFSET + 200,
-    (lRoundKeys.length * COL_W) + LEFT_OFFSET + 200,
-    1400
-  );
-
-  // Positionner les matchs et stocker leurs coordonnées
+function calculateCoordinates(tree, format) {
   const positions = new Map();
+  const roundX = {};
 
-  // Positionner Winners Bracket
-  wRoundKeys.forEach((round, colIdx) => {
-    const roundMatches = wRounds[round];
-    const x = LEFT_OFFSET + (colIdx * COL_W);
+  // --- WINNER BRACKET ---
+  const wRounds = Object.keys(tree.winners).map(Number).sort((a,b)=>a-b);
+  const maxWRound = Math.max(...wRounds, 0);
 
-    // Calculer l'espacement vertical qui double à chaque round
-    const totalSlots = Math.pow(2, wRoundKeys.length - colIdx);
-    const slotHeight = (BOX_H + GAP_Y);
-    const spacing = slotHeight * Math.pow(2, colIdx);
-
-    let y = TOP_OFFSET + (totalSlots * slotHeight - roundMatches.length * spacing) / 2;
-
-    roundMatches.forEach((match, idx) => {
-      positions.set(match.id, {
-        x,
-        y,
-        w: BOX_W,
-        h: BOX_H,
-        match,
-        side: 'W',
-        round,
-        index: idx
-      });
-      y += spacing;
-    });
+  wRounds.forEach(r => {
+    roundX[`w_${r}`] = (r - 1) * (BRACKET_CONFIG.cardWidth + BRACKET_CONFIG.gapX) + BRACKET_CONFIG.padding;
   });
 
-  // Positionner Losers Bracket (en dessous)
-  const losersYOffset = winnersHeight + 100;
+  // Round 1: empiler verticalement
+  const firstRoundMatches = tree.winners[1] || [];
+  let currentY = BRACKET_CONFIG.padding;
 
-  lRoundKeys.forEach((round, colIdx) => {
-    const roundMatches = lRounds[round];
-    const x = LEFT_OFFSET + (colIdx * COL_W);
-
-    // Espacement pour losers (alternance entre rounds)
-    const baseSpacing = (BOX_H + GAP_Y);
-    const multiplier = Math.pow(2, Math.floor(colIdx / 2));
-    const spacing = baseSpacing * multiplier;
-
-    let y = losersYOffset + TOP_OFFSET;
-
-    roundMatches.forEach((match, idx) => {
-      positions.set(match.id, {
-        x,
-        y,
-        w: BOX_W,
-        h: BOX_H,
-        match,
-        side: 'L',
-        round,
-        index: idx
-      });
-      y += spacing;
+  firstRoundMatches.forEach(m => {
+    positions.set(m.id, {
+      x: roundX['w_1'],
+      y: currentY
     });
+    currentY += BRACKET_CONFIG.cardHeight + BRACKET_CONFIG.gapY;
   });
 
-  // Positionner Finals (au centre en bas)
-  if (finalsMatches.length > 0) {
-    const finalsX = svgWidth / 2 - BOX_W / 2;
-    let finalsY = svgHeight - 150;
+  // Rounds suivants: Y = moyenne des Y des parents
+  for (let r = 2; r <= maxWRound; r++) {
+    const matchesInRound = tree.winners[r] || [];
+    matchesInRound.forEach(m => {
+      const prevRound = tree.winners[r-1];
+      const p1Index = (m.match_number * 2) - 2;
+      const p2Index = (m.match_number * 2) - 1;
 
-    finalsMatches.forEach(match => {
-      positions.set(match.id, {
-        x: finalsX,
-        y: finalsY,
-        w: BOX_W + 40,
-        h: BOX_H,
-        match,
-        side: 'F',
-        round: match.round
+      const p1 = prevRound[p1Index];
+      const p2 = prevRound[p2Index];
+
+      let y;
+      if (p1 && p2 && positions.has(p1.id) && positions.has(p2.id)) {
+        y = (positions.get(p1.id).y + positions.get(p2.id).y) / 2;
+      } else {
+        y = currentY;
+        currentY += BRACKET_CONFIG.cardHeight + BRACKET_CONFIG.gapY;
+      }
+
+      positions.set(m.id, {
+        x: roundX[`w_${r}`],
+        y: y
       });
-      finalsY += BOX_H + 30;
     });
   }
 
-  // Générer les connexions SVG
-  const connectors = generateConnectors(positions, matches);
+  let maxY = Math.max(...Array.from(positions.values()).map(p => p.y)) + BRACKET_CONFIG.cardHeight;
 
-  // Construire le HTML avec SVG
-  let html = `
-    <div class="svg-bracket-container" style="background:#2a2a2a;padding:20px;overflow:auto;border-radius:12px;">
-      <!-- Titre en HTML pour éviter overlap -->
+  // --- LOSER BRACKET ---
+  if (format === 'double_elimination' && Object.keys(tree.losers).length > 0) {
+    const lRounds = Object.keys(tree.losers).map(Number).sort((a,b)=>a-b);
+    const startYLoser = maxY + BRACKET_CONFIG.cardHeight;
+
+    lRounds.forEach(r => {
+      roundX[`l_${r}`] = (r - 1) * (BRACKET_CONFIG.cardWidth + BRACKET_CONFIG.gapX) + BRACKET_CONFIG.padding;
+
+      const matches = tree.losers[r];
+      let localY = startYLoser;
+
+      matches.forEach(m => {
+        positions.set(m.id, {
+          x: roundX[`l_${r}`],
+          y: localY
+        });
+        localY += BRACKET_CONFIG.cardHeight + BRACKET_CONFIG.gapY;
+      });
+    });
+
+    const lMaxY = Math.max(...Array.from(positions.values()).map(p => p.y)) + BRACKET_CONFIG.cardHeight;
+    maxY = Math.max(maxY, lMaxY);
+  }
+
+  // --- FINALS ---
+  if (tree.finals && tree.finals[1] && tree.finals[1].length > 0) {
+    const finalsMatch = tree.finals[1][0];
+    const finalX = (maxWRound) * (BRACKET_CONFIG.cardWidth + BRACKET_CONFIG.gapX) + BRACKET_CONFIG.padding;
+
+    let finalY = BRACKET_CONFIG.padding;
+    const lastWinnerMatch = tree.winners[maxWRound] ? tree.winners[maxWRound][0] : null;
+    if (lastWinnerMatch && positions.has(lastWinnerMatch.id)) {
+        finalY = positions.get(lastWinnerMatch.id).y;
+    }
+
+    positions.set(finalsMatch.id, { x: finalX, y: finalY });
+    roundX['f_1'] = finalX;
+  }
+
+  // --- THIRD PLACE ---
+  if (tree.thirdPlace && tree.thirdPlace[1] && tree.thirdPlace[1].length > 0) {
+     const tpMatch = tree.thirdPlace[1][0];
+     const finalX = (maxWRound) * (BRACKET_CONFIG.cardWidth + BRACKET_CONFIG.gapX) + BRACKET_CONFIG.padding;
+
+     let finalY = BRACKET_CONFIG.padding;
+     if (tree.finals && tree.finals[1] && tree.finals[1].length > 0) {
+       finalY = positions.get(tree.finals[1][0].id).y + BRACKET_CONFIG.cardHeight + 40;
+     }
+
+     positions.set(tpMatch.id, { x: finalX, y: finalY });
+  }
+
+  const allX = Array.from(positions.values()).map(p => p.x);
+  const width = Math.max(...allX) + BRACKET_CONFIG.cardWidth + BRACKET_CONFIG.padding;
+
+  return { positions, width, height: maxY + BRACKET_CONFIG.padding };
+}
+
+// --- RENDU DOM & SVG ---
+
+function generateDOM(layout, tree, allMatches, tournamentInfo) {
+  // Titre en HTML
+  let html = '';
+  if (tournamentInfo) {
+    html += `
       <div style="padding:16px 20px;margin-bottom:20px;background:linear-gradient(90deg, rgba(37,99,235,0.2), rgba(37,99,235,0.05));border-left:4px solid #2563eb;border-radius:8px;">
-        <h3 style="margin:0;color:#fff;font-size:18px;font-weight:700;">
-          ${escapeHtml(tournament?.name || 'Tournament')} - ${format.toUpperCase()}
+        <h3 style="margin:0;color:var(--text);font-size:18px;font-weight:700;">
+          ${escapeHtml(tournamentInfo.name || 'Tournament')}
         </h3>
       </div>
+    `;
+  }
 
-      <svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="display:block;">
-        <!-- Headers Winners -->
-        ${renderRoundHeaders(wRoundKeys, 'winners', LEFT_OFFSET, TOP_OFFSET - 40, COL_W)}
+  html += `<div style="position:relative; width:${layout.width}px; height:${layout.height}px; min-width:100%;">`;
 
-        <!-- Headers Losers -->
-        ${lRoundKeys.length > 0 ? `
-          <text x="${svgWidth/2}" y="${losersYOffset - 20}" fill="#ef4444" font-size="14" font-weight="700" text-anchor="middle">
-            LOSER'S BRACKET
-          </text>
-          ${renderRoundHeaders(lRoundKeys, 'losers', LEFT_OFFSET, losersYOffset + TOP_OFFSET - 40, COL_W)}
-        ` : ''}
+  // 1. SVG Layer (Lignes)
+  html += `<svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0">`;
 
-        <!-- Connexions -->
-        ${connectors.map(c => `
-          <path d="${c.path}" stroke="#4a4a4a" stroke-width="2" fill="none"/>
-        `).join('')}
+  allMatches.forEach(match => {
+    if (match.next_match_winner_id) {
+        const start = layout.positions.get(match.id);
+        const end = layout.positions.get(match.next_match_winner_id);
 
-        <!-- Matchs -->
-        ${Array.from(positions.values()).map(pos => renderMatchBox(pos, matches)).join('')}
-      </svg>
-    </div>
-  `;
+        if (start && end) {
+            html += drawConnector(start, end, match.next_match_winner_slot === 'player2');
+        }
+    }
+  });
 
+  html += `</svg>`;
+
+  // 2. HTML Layer (Cartes Match)
+  allMatches.forEach(match => {
+    const pos = layout.positions.get(match.id);
+    if (!pos) return;
+
+    const statusClass = match.status;
+    const isEditable = (match.player1_id && match.player2_id && match.status !== 'completed');
+
+    html += `
+      <div class="bracket-node ${statusClass} ${isEditable ? 'editable' : ''}"
+           style="position:absolute; left:${pos.x}px; top:${pos.y}px; width:${BRACKET_CONFIG.cardWidth}px; height:${BRACKET_CONFIG.cardHeight}px;"
+           ${isEditable ? `onclick="openScoreModal(${match.id})"` : ''}
+           data-id="${match.id}">
+
+        <div class="node-header">
+           <span class="match-id">#${match.match_number}</span>
+           <span class="round-name">${getShortRoundName(match.bracket_type, match.round)}</span>
+        </div>
+
+        <div class="node-player ${match.winner_id === match.player1_id ? 'winner' : ''} ${match.status==='completed' && match.winner_id!==match.player1_id ? 'loser' : ''}">
+          <span class="name">${escapeHtml(match.player1_name || '-')}</span>
+          <span class="score">${match.player1_score !== null && match.player1_score !== undefined ? match.player1_score : ''}</span>
+        </div>
+
+        <div class="node-player ${match.winner_id === match.player2_id ? 'winner' : ''} ${match.status==='completed' && match.winner_id!==match.player2_id ? 'loser' : ''}">
+          <span class="name">${escapeHtml(match.player2_name || '-')}</span>
+          <span class="score">${match.player2_score !== null && match.player2_score !== undefined ? match.player2_score : ''}</span>
+        </div>
+
+      </div>
+    `;
+  });
+
+  html += `</div>`;
   return html;
 }
 
-function groupByRound(matches) {
-  const rounds = {};
-  matches.forEach(m => {
-    if (!rounds[m.round]) rounds[m.round] = [];
-    rounds[m.round].push(m);
-  });
-  return rounds;
+function drawConnector(start, end, isPlayer2Slot) {
+  const x1 = start.x + BRACKET_CONFIG.cardWidth;
+  const y1 = start.y + (BRACKET_CONFIG.cardHeight / 2);
+
+  const x2 = end.x;
+  const y2 = end.y + (BRACKET_CONFIG.cardHeight / 2);
+
+  const midX = x1 + (BRACKET_CONFIG.gapX / 2);
+
+  return `<path d="M ${x1} ${y1} H ${midX} V ${y2} H ${x2}"
+            fill="none" stroke="var(--border)" stroke-width="2" stroke-linecap="round" />`;
 }
 
-function renderRoundHeaders(roundKeys, type, offsetX, offsetY, colW) {
-  const roundNames = {
-    winners: ['Round 1', 'Round 2', 'Round 3', 'Semifinals', 'Finals'],
-    losers: (r) => `Losers Round ${r}`
-  };
-
-  return roundKeys.map((round, idx) => {
-    const x = offsetX + (idx * colW) + 110; // Center in column
-    const name = type === 'winners'
-      ? (roundNames.winners[idx] || `Round ${round}`)
-      : roundNames.losers(round);
-
-    return `
-      <rect x="${offsetX + idx * colW}" y="${offsetY}" width="220" height="32" fill="#374151" rx="4"/>
-      <text x="${x}" y="${offsetY + 20}" fill="#9ca3af" font-size="12" font-weight="700" text-anchor="middle">
-        ${name.toUpperCase()}
-      </text>
-    `;
-  }).join('');
-}
-
-function renderMatchBox(pos, allMatches) {
-  const { x, y, w, h, match } = pos;
-
-  // Obtenir les noms des joueurs
-  const p1Name = match.player1_name || getPlaceholder(match, 'player1', allMatches);
-  const p2Name = match.player2_name || getPlaceholder(match, 'player2', allMatches);
-
-  const p1Winner = match.winner_id && match.winner_id === match.player1_id;
-  const p2Winner = match.winner_id && match.winner_id === match.player2_id;
-
-  const isClickable = match.player1_id && match.player2_id && match.status !== 'completed';
-
-  return `
-    <g class="match-group ${isClickable ? 'clickable' : ''}"
-       data-match-id="${match.id}"
-       ${isClickable ? `onclick="openScoreModal(${match.id})"` : ''}
-       style="${isClickable ? 'cursor:pointer' : ''}">
-
-      <!-- Box background -->
-      <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#3a3a3a" stroke="#4f4f4f" stroke-width="1" rx="3"/>
-
-      <!-- Match number -->
-      <text x="${x + w - 5}" y="${y + 12}" fill="#666" font-size="9" font-weight="600" text-anchor="end">
-        ${match.id}
-      </text>
-
-      <!-- Player 1 -->
-      <rect x="${x}" y="${y}" width="${w}" height="${h/2}" fill="${p1Winner ? 'rgba(34,197,94,0.1)' : 'transparent'}" rx="3"/>
-      ${p1Winner ? `<rect x="${x}" y="${y}" width="3" height="${h/2}" fill="#22c55e"/>` : ''}
-      <text x="${x + 10}" y="${y + 16}" fill="#fff" font-size="13">
-        ${escapeHtml(p1Name || 'TBD')}
-      </text>
-      ${match.player1_score !== null && match.player1_score !== undefined ? `
-        <text x="${x + w - 10}" y="${y + 16}" fill="#fff" font-size="13" font-weight="700" text-anchor="end">
-          ${match.player1_score}
-        </text>
-      ` : ''}
-
-      <!-- Separator -->
-      <line x1="${x}" y1="${y + h/2}" x2="${x + w}" y2="${y + h/2}" stroke="#4f4f4f" stroke-width="1"/>
-
-      <!-- Player 2 -->
-      <rect x="${x}" y="${y + h/2}" width="${w}" height="${h/2}" fill="${p2Winner ? 'rgba(34,197,94,0.1)' : 'transparent'}" rx="3"/>
-      ${p2Winner ? `<rect x="${x}" y="${y + h/2}" width="3" height="${h/2}" fill="#22c55e"/>` : ''}
-      <text x="${x + 10}" y="${y + h/2 + 16}" fill="#fff" font-size="13">
-        ${escapeHtml(p2Name || 'TBD')}
-      </text>
-      ${match.player2_score !== null && match.player2_score !== undefined ? `
-        <text x="${x + w - 10}" y="${y + h/2 + 16}" fill="#fff" font-size="13" font-weight="700" text-anchor="end">
-          ${match.player2_score}
-        </text>
-      ` : ''}
-
-      ${isClickable ? `
-        <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="transparent" stroke="transparent" stroke-width="2" rx="3">
-          <animate attributeName="stroke" begin="mouseover" end="mouseout" from="transparent" to="#2563eb" dur="0.2s" fill="freeze"/>
-        </rect>
-      ` : ''}
-    </g>
-  `;
-}
-
-function getPlaceholder(match, playerSlot, allMatches) {
-  const from = playerSlot === 'player1' ? match.player1_from : match.player2_from;
-
-  if (from === 'loser') {
-    for (const source of allMatches) {
-      if (source.next_match_loser_id === match.id) {
-        const slot = source.next_match_loser_slot;
-        if ((slot === 'player1' && playerSlot === 'player1') ||
-            (slot === 'player2' && playerSlot === 'player2')) {
-          return `Loser of ${source.id}`;
-        }
-      }
-    }
-  }
-
-  if (from === 'winner' && match.bracket_type === 'finals') {
-    if (playerSlot === 'player1') return "Winner of Loser's Bracket";
-    if (playerSlot === 'player2') return "Winner of Winner's Bracket";
-  }
-
-  return '';
-}
-
-function generateConnectors(positions, allMatches) {
-  const connectors = [];
-
-  positions.forEach((fromPos, matchId) => {
-    const match = fromPos.match;
-
-    // Trouver le prochain match pour le gagnant
-    if (match.next_match_winner_id) {
-      const toPos = positions.get(match.next_match_winner_id);
-      if (toPos) {
-        const slot = match.next_match_winner_slot;
-
-        // Point de départ: milieu droit du match actuel
-        const x1 = fromPos.x + fromPos.w;
-        const y1 = fromPos.y + fromPos.h / 2;
-
-        // Point d'arrivée: gauche du prochain match, haut ou bas selon le slot
-        const x2 = toPos.x;
-        const y2 = slot === 'player1'
-          ? toPos.y + toPos.h / 4
-          : toPos.y + (3 * toPos.h / 4);
-
-        // Courbe bézier cubique
-        const cx1 = x1 + (x2 - x1) * 0.5;
-        const cx2 = x2 - (x2 - x1) * 0.5;
-
-        connectors.push({
-          path: `M ${x1} ${y1} C ${cx1} ${y1} ${cx2} ${y2} ${x2} ${y2}`
-        });
-      }
-    }
-
-    // Connexions pour les perdants (double elim)
-    if (match.next_match_loser_id && match.bracket_type !== 'round_robin') {
-      const toPos = positions.get(match.next_match_loser_id);
-      if (toPos) {
-        const slot = match.next_match_loser_slot;
-
-        const x1 = fromPos.x + fromPos.w;
-        const y1 = fromPos.y + fromPos.h / 2;
-
-        const x2 = toPos.x;
-        const y2 = slot === 'player1'
-          ? toPos.y + toPos.h / 4
-          : toPos.y + (3 * toPos.h / 4);
-
-        const cx1 = x1 + (x2 - x1) * 0.3;
-        const cx2 = x2 - (x2 - x1) * 0.3;
-
-        connectors.push({
-          path: `M ${x1} ${y1} C ${cx1} ${y1} ${cx2} ${y2} ${x2} ${y2}`,
-          isLoser: true
-        });
-      }
-    }
-  });
-
-  return connectors;
-}
+// --- UTILITAIRES ---
 
 function renderRoundRobinSimple(matches) {
-  const byRound = groupByRound(matches);
+  const byRound = {};
+  matches.forEach(m => {
+    if (!byRound[m.round]) byRound[m.round] = [];
+    byRound[m.round].push(m);
+  });
 
-  let html = '<div class="round-robin-container" style="padding:20px;background:#2a2a2a;">';
+  let html = '<div class="round-robin-container" style="padding:20px;background:var(--bg);">';
 
   Object.keys(byRound).sort((a, b) => a - b).forEach(round => {
     html += `<div class="rr-round" style="margin-bottom:30px;">`;
@@ -350,11 +273,11 @@ function renderRoundRobinSimple(matches) {
     html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;">';
 
     byRound[round].forEach(match => {
-      const isClickable = match.player1_id && match.player2_id && match.status !== 'completed';
+      const isEditable = match.player1_id && match.player2_id && match.status !== 'completed';
       html += `
-        <div class="rr-match ${isClickable ? 'clickable' : ''}"
-             ${isClickable ? `onclick="openScoreModal(${match.id})"` : ''}
-             style="background:#3a3a3a;border:1px solid #4a4a4a;border-radius:6px;padding:16px;display:flex;align-items:center;gap:16px;${isClickable ? 'cursor:pointer;' : ''}">
+        <div class="rr-match ${isEditable ? 'clickable' : ''}"
+             ${isEditable ? `onclick="openScoreModal(${match.id})"` : ''}
+             style="background:#3a3a3a;border:1px solid #4a4a4a;border-radius:6px;padding:16px;display:flex;align-items:center;gap:16px;${isEditable ? 'cursor:pointer;' : ''}">
           <div style="flex:1;display:flex;justify-content:space-between;padding:8px 12px;background:#2a2a2a;border-radius:4px;${match.winner_id === match.player1_id ? 'border:1px solid #22c55e;' : ''}">
             <span style="color:#fff;font-size:13px;">${escapeHtml(match.player1_name || 'TBD')}</span>
             ${match.player1_score !== null ? `<b style="color:#fff;font-size:14px;">${match.player1_score}</b>` : ''}
@@ -373,4 +296,18 @@ function renderRoundRobinSimple(matches) {
 
   html += '</div>';
   return html;
+}
+
+function getShortRoundName(type, round) {
+  if (type === 'finals') return 'Finale';
+  if (type === 'third_place') return '3ème';
+  if (type === 'losers') return `L${round}`;
+  return `R${round}`;
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
