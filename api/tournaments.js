@@ -246,6 +246,30 @@ async function saveAndLinkMatches(client, tournamentId, matches, format) {
 }
 
 /**
+ * Supprime tous les joueurs GUEST d'un tournoi
+ */
+async function deleteGuestPlayers(client, tournamentId) {
+  const guestPlayers = await client.query(`
+    SELECT DISTINCT tp.player_id, p.name
+    FROM tournament_participants tp
+    JOIN players p ON tp.player_id = p.player_id
+    WHERE tp.tournament_id = $1 AND p.role = 'GUEST'
+  `, [tournamentId]);
+
+  if (guestPlayers.rows.length > 0) {
+    const guestIds = guestPlayers.rows.map(row => row.player_id);
+    await client.query(
+      'DELETE FROM players WHERE player_id = ANY($1)',
+      [guestIds]
+    );
+    console.log(`   🗑️  ${guestIds.length} joueurs GUEST supprimés: ${guestPlayers.rows.map(r => r.name).join(', ')}`);
+    return guestIds.length;
+  }
+
+  return 0;
+}
+
+/**
  * Traite les byes - avance automatiquement les joueurs sans adversaire
  */
 async function processAutomaticByes(client, tournamentId) {
@@ -434,11 +458,18 @@ function setupTournamentRoutes(app, pool, auth, io) {
       return res.status(403).json({ error: 'Accès refusé' });
     }
 
+    const client = await pool.connect();
     try {
+      await client.query('BEGIN');
+
       const { id } = req.params;
       const { name, description, format, status, max_participants, third_place_match } = req.body;
 
-      const result = await pool.query(`
+      // Récupérer l'ancien statut
+      const oldTournament = await client.query('SELECT status FROM tournaments WHERE id = $1', [id]);
+      const oldStatus = oldTournament.rows[0]?.status;
+
+      const result = await client.query(`
         UPDATE tournaments
         SET name = $1, description = $2, format = $3, status = $4,
             max_participants = $5, third_place_match = $6
@@ -447,13 +478,90 @@ function setupTournamentRoutes(app, pool, auth, io) {
       `, [name, description, format, status, max_participants, third_place_match, id]);
 
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Tournoi non trouvé' });
+        throw new Error('Tournoi non trouvé');
       }
+
+      // Si le tournoi est clôturé (completed/cancelled), supprimer les joueurs GUEST
+      if ((status === 'completed' || status === 'cancelled') && oldStatus !== status) {
+        console.log(`🔒 Tournoi ${id} clôturé (${status}), nettoyage des joueurs GUEST...`);
+        const deletedCount = await deleteGuestPlayers(client, id);
+        if (deletedCount > 0) {
+          console.log(`   ✅ ${deletedCount} joueurs GUEST supprimés`);
+        }
+      }
+
+      await client.query('COMMIT');
 
       res.json({ tournament: result.rows[0] });
     } catch (error) {
+      await client.query('ROLLBACK');
       console.error('Error updating tournament:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
+      res.status(500).json({ error: error.message || 'Erreur serveur' });
+    } finally {
+      client.release();
+    }
+  });
+
+  // DELETE /tournaments/:id - Supprimer un tournoi
+  app.delete('/tournaments/:id', auth, async (req, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const { id } = req.params;
+
+      console.log(`🗑️  Suppression du tournoi ${id}...`);
+
+      // Supprimer le tournoi (CASCADE supprime participants et matchs)
+      const deleteResult = await client.query(
+        'DELETE FROM tournaments WHERE id = $1 RETURNING id, name',
+        [id]
+      );
+
+      if (deleteResult.rows.length === 0) {
+        throw new Error('Tournoi non trouvé');
+      }
+
+      // Supprimer les joueurs GUEST (doit être fait AVANT la suppression du tournoi)
+      // NOTE: En fait on doit le faire APRÈS car le tournoi est déjà supprimé
+      // On va chercher dans la table players les GUEST qui commencent par "guest_"
+      // et qui ne sont plus référencés nulle part
+      const orphanGuests = await client.query(`
+        DELETE FROM players
+        WHERE role = 'GUEST'
+          AND player_id LIKE 'guest_%'
+          AND NOT EXISTS (
+            SELECT 1 FROM tournament_participants tp WHERE tp.player_id = players.player_id
+          )
+        RETURNING player_id, name
+      `);
+
+      const deletedCount = orphanGuests.rows.length;
+
+      await client.query('COMMIT');
+
+      io.to(`tournament:${id}`).emit('tournament:deleted');
+
+      if (deletedCount > 0) {
+        console.log(`   ✅ ${deletedCount} joueurs GUEST supprimés`);
+      }
+
+      console.log(`✅ Tournoi "${deleteResult.rows[0].name}" supprimé`);
+      res.json({
+        message: 'Tournoi supprimé',
+        deleted_guests: deletedCount
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error deleting tournament:', error);
+      res.status(500).json({ error: error.message || 'Erreur serveur' });
+    } finally {
+      client.release();
     }
   });
 
