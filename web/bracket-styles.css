@@ -1,170 +1,74 @@
 /**
- * Styles pour Bracket Renderer - Style Challonge
+ * Challonge Bracket Styles - Reproduction EXACTE
  */
 
-/* Container principal */
-.challonge-bracket-container {
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: auto;
+.challonge-wrapper {
   background: #2a2a2a;
   padding: 20px;
-  min-height: 600px;
+  overflow-x: auto;
+  overflow-y: auto;
+  min-height: 100vh;
 }
 
-/* Header des rounds */
-.challonge-rounds-header {
+/* === STRUCTURE GÉNÉRALE === */
+
+.bracket-section {
+  margin-bottom: 60px;
+}
+
+.bracket-rounds {
   display: flex;
-  gap: 20px;
-  margin-bottom: 30px;
-  position: sticky;
-  top: 0;
-  background: #2a2a2a;
-  z-index: 10;
-  padding: 10px 0;
-  border-bottom: 2px solid #3a3a3a;
+  gap: 50px;
+  align-items: flex-start;
+}
+
+.bracket-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  position: relative;
 }
 
 .round-header {
-  flex: 0 0 200px;
   text-align: center;
+  font-size: 13px;
   font-weight: 700;
-  font-size: 14px;
   color: #aaa;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: 8px 12px;
+  letter-spacing: 0.5px;
+  margin-bottom: 20px;
+  padding: 8px;
   background: #333;
   border-radius: 4px;
 }
 
-.round-header.finals {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  color: white;
-  box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
-}
-
-/* Content avec brackets */
-.challonge-bracket-content {
-  display: flex;
-  flex-direction: column;
-  gap: 40px;
-}
-
-/* Winners Section */
-.challonge-winners-section {
-  width: 100%;
-}
-
-/* Losers Section */
-.challonge-losers-section {
-  width: 100%;
-  position: relative;
-}
-
-.challonge-losers-separator {
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #ef4444, transparent);
-  margin: 20px 0;
-}
-
-/* Finals Section */
-.challonge-finals-section {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.challonge-finals-separator {
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #2563eb, transparent);
-  margin: 20px 0;
-}
-
-/* Section Labels */
-.challonge-section-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 20px;
-  border-radius: 8px;
-  margin-bottom: 24px;
-  font-weight: 700;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-}
-
-.challonge-section-label.losers {
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  color: #ef4444;
-}
-
-.challonge-section-label.finals {
-  background: rgba(37, 99, 235, 0.15);
-  border: 2px solid #2563eb;
-  color: #2563eb;
-}
-
-.label-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.challonge-section-label.finals .label-dot {
-  width: 10px;
-  height: 10px;
-  box-shadow: 0 0 12px currentColor;
-}
-
-/* Rounds container (horizontal layout) */
-.challonge-bracket-rounds {
-  display: flex;
-  gap: 40px;
-  align-items: flex-start;
-  position: relative;
-}
-
-/* Individual round column */
-.challonge-round {
-  flex: 0 0 200px;
+.matches-container {
   display: flex;
   flex-direction: column;
   gap: 40px;
   position: relative;
 }
 
-.losers-round-label {
-  position: absolute;
-  top: -30px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 11px;
-  font-weight: 600;
-  color: #ef4444;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+/* === MATCH BOX (comme sur l'image) === */
 
-/* Match Box - Style Challonge */
-.challonge-match {
+.match-box {
   background: #3a3a3a;
   border: 1px solid #4a4a4a;
-  border-radius: 4px;
+  border-radius: 3px;
   position: relative;
-  transition: all 0.2s ease;
   min-height: 60px;
+  width: 200px;
 }
 
-.challonge-match[style*="cursor:pointer"]:hover {
+.match-box.clickable {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.match-box.clickable:hover {
   border-color: #2563eb;
   box-shadow: 0 0 0 1px #2563eb;
-  transform: translateX(-2px);
+  transform: translateY(-1px);
 }
 
 .match-number {
@@ -181,96 +85,149 @@
   flex-direction: column;
 }
 
-/* Individual Player in Match */
-.match-player {
+.player {
   display: flex;
   align-items: center;
   padding: 8px 10px;
   gap: 8px;
   border-bottom: 1px solid #4a4a4a;
-  position: relative;
-  transition: background 0.2s;
+  font-size: 13px;
 }
 
-.match-player:last-child {
+.player:last-child {
   border-bottom: none;
 }
 
-.match-player.winner {
-  background: rgba(34, 197, 94, 0.08);
+.player.winner {
+  background: rgba(34, 197, 94, 0.1);
   border-left: 3px solid #22c55e;
+  font-weight: 600;
 }
 
-.match-player.loser {
-  opacity: 0.5;
-}
-
-.player-seed {
+.player .seed {
   flex: 0 0 auto;
   font-size: 10px;
   color: #888;
-  font-weight: 700;
-  min-width: 16px;
+  min-width: 14px;
 }
 
-.player-name {
+.player .name {
   flex: 1;
-  font-size: 13px;
   color: #fff;
-  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.player-name.placeholder {
-  color: #666;
-  font-style: italic;
-  font-size: 11px;
-}
-
-.player-score {
+.player .score {
   flex: 0 0 auto;
-  font-size: 13px;
-  color: #fff;
   font-weight: 700;
+  color: #fff;
   min-width: 24px;
   text-align: right;
 }
 
-/* Match Connectors (lignes entre matchs) */
-.match-connector {
-  position: absolute;
-  right: -40px;
-  top: 50%;
-  width: 40px;
-  height: 2px;
-  background: #4a4a4a;
-  transform: translateY(-50%);
+/* === WINNERS BRACKET === */
+
+.winners-bracket .round-header {
+  background: #374151;
+  color: #d1d5db;
 }
 
-.match-connector::before {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: -1px;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 3px 0 3px 5px;
-  border-color: transparent transparent transparent #4a4a4a;
+/* Espacement vertical automatique pour winners */
+.winners-bracket .bracket-column[data-round="2"] .matches-container {
+  gap: 120px;
 }
 
-/* Finals Matches */
-.challonge-finals-matches {
+.winners-bracket .bracket-column[data-round="3"] .matches-container {
+  gap: 280px;
+}
+
+.winners-bracket .bracket-column[data-round="4"] .matches-container {
+  gap: 600px;
+}
+
+/* === LOSERS BRACKET === */
+
+.losers-bracket {
+  border-top: 2px solid #ef4444;
+  padding-top: 40px;
+}
+
+.losers-header {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ef4444;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 30px;
+  padding: 10px 20px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  display: inline-block;
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+
+.losers-bracket .round-header {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Espacement vertical pour losers (plus serré) */
+.losers-bracket .bracket-column[data-round="2"] .matches-container {
+  gap: 120px;
+}
+
+.losers-bracket .bracket-column[data-round="3"] .matches-container {
+  gap: 280px;
+}
+
+.losers-bracket .bracket-column[data-round="4"] .matches-container {
+  gap: 120px;
+}
+
+.losers-bracket .bracket-column[data-round="5"] .matches-container {
+  gap: 600px;
+}
+
+/* === FINALS === */
+
+.finals-bracket {
+  border-top: 2px solid #2563eb;
+  padding-top: 40px;
+}
+
+.finals-header {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #2563eb;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 30px;
+  padding: 12px 24px;
+  background: rgba(37, 99, 235, 0.15);
+  border: 2px solid #2563eb;
+  border-radius: 8px;
+  display: inline-block;
+  margin-left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+}
+
+.finals-matches {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 20px;
 }
 
-.challonge-finals-matches .challonge-match {
-  width: 300px;
+.finals-matches .match-box {
+  width: 280px;
 }
 
 .reset-note {
@@ -278,28 +235,32 @@
   color: #888;
   font-style: italic;
   text-align: center;
+  margin-top: -10px;
 }
 
-/* Round Robin Styles */
-.round-robin-container {
+/* === CONNECTORS SVG === */
+
+.connector-svg {
+  position: absolute;
+  right: -50px;
+  top: 0;
+  pointer-events: none;
+}
+
+/* === ROUND ROBIN === */
+
+.round-robin-grid {
   display: grid;
   gap: 30px;
   padding: 20px;
 }
 
-.rr-round {
-  background: #333;
-  border-radius: 8px;
-  padding: 20px;
-}
-
-.rr-round-title {
+.rr-round h3 {
   font-size: 16px;
   font-weight: 700;
   color: #2563eb;
   margin-bottom: 16px;
   text-transform: uppercase;
-  letter-spacing: 1px;
 }
 
 .rr-matches {
@@ -316,24 +277,22 @@
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.rr-match.clickable {
+  cursor: pointer;
   transition: all 0.2s;
 }
 
-.rr-match[style*="cursor:pointer"]:hover {
+.rr-match.clickable:hover {
   border-color: #2563eb;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.rr-match.completed {
-  opacity: 0.85;
 }
 
 .rr-player {
   flex: 1;
   display: flex;
   justify-content: space-between;
-  align-items: center;
   padding: 8px 12px;
   background: #2a2a2a;
   border-radius: 4px;
@@ -344,16 +303,14 @@
   border: 1px solid #22c55e;
 }
 
-.rr-player .player-name {
-  font-size: 13px;
+.rr-player span {
   color: #fff;
-  font-weight: 500;
+  font-size: 13px;
 }
 
-.rr-player .score {
-  font-size: 14px;
+.rr-player b {
   color: #fff;
-  font-weight: 700;
+  font-size: 14px;
   margin-left: 12px;
 }
 
@@ -361,60 +318,51 @@
   font-size: 11px;
   color: #666;
   font-weight: 700;
-  text-transform: uppercase;
 }
 
-/* Responsive */
-@media (max-width: 1200px) {
-  .challonge-round {
-    flex: 0 0 180px;
-  }
+/* === SCROLLBAR === */
 
-  .round-header {
-    flex: 0 0 180px;
-  }
-}
-
-@media (max-width: 768px) {
-  .challonge-bracket-rounds {
-    gap: 30px;
-  }
-
-  .challonge-round {
-    flex: 0 0 160px;
-    gap: 30px;
-  }
-
-  .round-header {
-    flex: 0 0 160px;
-    font-size: 12px;
-  }
-
-  .player-name {
-    font-size: 11px;
-  }
-
-  .challonge-finals-matches .challonge-match {
-    width: 100%;
-    max-width: 280px;
-  }
-}
-
-/* Scrollbar styling */
-.challonge-bracket-container::-webkit-scrollbar {
+.challonge-wrapper::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-.challonge-bracket-container::-webkit-scrollbar-track {
+.challonge-wrapper::-webkit-scrollbar-track {
   background: #2a2a2a;
 }
 
-.challonge-bracket-container::-webkit-scrollbar-thumb {
+.challonge-wrapper::-webkit-scrollbar-thumb {
   background: #4a4a4a;
   border-radius: 4px;
 }
 
-.challonge-bracket-container::-webkit-scrollbar-thumb:hover {
+.challonge-wrapper::-webkit-scrollbar-thumb:hover {
   background: #5a5a5a;
+}
+
+/* === RESPONSIVE === */
+
+@media (max-width: 1200px) {
+  .bracket-rounds {
+    gap: 40px;
+  }
+
+  .match-box {
+    width: 180px;
+  }
+}
+
+@media (max-width: 768px) {
+  .bracket-rounds {
+    gap: 30px;
+  }
+
+  .match-box {
+    width: 160px;
+    font-size: 11px;
+  }
+
+  .round-header {
+    font-size: 11px;
+  }
 }

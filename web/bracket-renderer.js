@@ -1,86 +1,44 @@
 /**
- * Bracket Visual Renderer - Style Challonge
- * Affichage horizontal avec connexions visuelles
+ * Challonge Bracket Renderer - Reproduction EXACTE de l'image
  */
 
-/**
- * Rend un bracket complet style Challonge avec connexions
- * @param {Array} matches - Liste de tous les matchs
- * @param {string} format - Format du tournoi
- * @param {Object} tournament - Données du tournoi
- * @returns {string} HTML du bracket
- */
 function renderChallongeBracket(matches, format, tournament) {
   if (format === 'round_robin') {
-    return renderRoundRobinGrid(matches);
+    return renderSimpleRoundRobin(matches);
   }
 
-  // Organiser les matchs par type et round
-  const winnersMatches = matches.filter(m => m.bracket_type === 'winners').sort((a, b) => {
-    if (a.round !== b.round) return a.round - b.round;
-    return a.match_number - b.match_number;
-  });
-
-  const losersMatches = matches.filter(m => m.bracket_type === 'losers').sort((a, b) => {
-    if (a.round !== b.round) return a.round - b.round;
-    return a.match_number - b.match_number;
-  });
-
-  const finalsMatches = matches.filter(m => m.bracket_type === 'finals').sort((a, b) => a.round - b.round);
+  // Séparer les matchs par type
+  const winnersMatches = matches.filter(m => m.bracket_type === 'winners');
+  const losersMatches = matches.filter(m => m.bracket_type === 'losers');
+  const finalsMatches = matches.filter(m => m.bracket_type === 'finals');
 
   const isDoubleElim = losersMatches.length > 0;
 
   // Organiser par rounds
-  const winnersRounds = groupByRound(winnersMatches);
-  const losersRounds = groupByRound(losersMatches);
+  const wbRounds = groupMatchesByRound(winnersMatches);
+  const lbRounds = groupMatchesByRound(losersMatches);
 
-  let html = '<div class="challonge-bracket-container">';
+  let html = '<div class="challonge-wrapper">';
 
-  // Header avec rounds
-  html += renderRoundHeaders(winnersRounds, losersRounds, finalsMatches.length > 0);
+  // Render Winners Bracket
+  html += renderWinnersBracket(wbRounds, matches);
 
-  // Contenu principal avec SVG connections
-  html += '<div class="challonge-bracket-content">';
-
-  // Winners Bracket
-  html += '<div class="challonge-winners-section">';
-  html += renderBracketSection(winnersRounds, 'winners', matches);
-  html += '</div>';
-
-  // Losers Bracket (si double élimination)
+  // Render Losers Bracket
   if (isDoubleElim) {
-    html += '<div class="challonge-losers-separator"></div>';
-    html += '<div class="challonge-losers-section">';
-    html += '<div class="challonge-section-label losers">';
-    html += '<span class="label-dot"></span>';
-    html += '<span class="label-text">Losers Bracket</span>';
-    html += '</div>';
-    html += renderBracketSection(losersRounds, 'losers', matches);
-    html += '</div>';
+    html += renderLosersBracket(lbRounds, matches);
   }
 
-  // Finals
+  // Render Finals
   if (finalsMatches.length > 0) {
-    html += '<div class="challonge-finals-separator"></div>';
-    html += '<div class="challonge-finals-section">';
-    html += '<div class="challonge-section-label finals">';
-    html += '<span class="label-dot"></span>';
-    html += '<span class="label-text">Grand Finals</span>';
-    html += '</div>';
-    html += renderFinalsSection(finalsMatches, matches);
-    html += '</div>';
+    html += renderFinals(finalsMatches, matches);
   }
 
-  html += '</div>'; // challonge-bracket-content
-  html += '</div>'; // challonge-bracket-container
+  html += '</div>';
 
   return html;
 }
 
-/**
- * Groupe les matchs par round
- */
-function groupByRound(matches) {
+function groupMatchesByRound(matches) {
   const rounds = {};
   matches.forEach(m => {
     if (!rounds[m.round]) rounds[m.round] = [];
@@ -89,108 +47,119 @@ function groupByRound(matches) {
   return rounds;
 }
 
-/**
- * Rend les headers de rounds
- */
-function renderRoundHeaders(winnersRounds, losersRounds, hasFinals) {
-  const winnersRoundCount = Object.keys(winnersRounds).length;
-  const losersRoundCount = Object.keys(losersRounds).length;
-  const maxRounds = Math.max(winnersRoundCount, losersRoundCount);
+function renderWinnersBracket(rounds, allMatches) {
+  const roundKeys = Object.keys(rounds).map(Number).sort((a, b) => a - b);
+  const roundNames = ['Round 1', 'Round 2', 'Round 3', 'Semifinals', 'Finals'];
 
-  let html = '<div class="challonge-rounds-header">';
+  let html = '<div class="bracket-section winners-bracket">';
+  html += '<div class="bracket-rounds">';
 
-  // Headers pour Winners
-  for (let i = 1; i <= winnersRoundCount; i++) {
-    const roundName = i === winnersRoundCount ? 'Finals' :
-                     i === winnersRoundCount - 1 ? 'Semifinals' :
-                     i === winnersRoundCount - 2 ? 'Round 3' :
-                     `Round ${i}`;
+  roundKeys.forEach((roundNum, idx) => {
+    const matches = rounds[roundNum];
+    const roundName = roundNames[idx] || `Round ${roundNum}`;
+
+    html += `<div class="bracket-column" data-round="${roundNum}">`;
     html += `<div class="round-header">${roundName}</div>`;
-  }
+    html += '<div class="matches-container">';
 
-  if (hasFinals) {
-    html += `<div class="round-header finals">Finals</div>`;
-  }
+    matches.forEach((match, matchIdx) => {
+      html += renderMatch(match, 'winners', allMatches);
+    });
 
-  html += '</div>';
+    html += '</div>'; // matches-container
+
+    // SVG pour connexions
+    if (idx < roundKeys.length - 1) {
+      html += renderConnectorsSVG(matches, rounds[roundKeys[idx + 1]], 'winners');
+    }
+
+    html += '</div>'; // bracket-column
+  });
+
+  html += '</div>'; // bracket-rounds
+  html += '</div>'; // bracket-section
 
   return html;
 }
 
-/**
- * Rend une section de bracket (winners ou losers)
- */
-function renderBracketSection(rounds, type, allMatches) {
+function renderLosersBracket(rounds, allMatches) {
   const roundKeys = Object.keys(rounds).map(Number).sort((a, b) => a - b);
 
-  let html = '<div class="challonge-bracket-rounds">';
+  let html = '<div class="bracket-section losers-bracket">';
+  html += '<div class="losers-header">Losers Bracket</div>';
+  html += '<div class="bracket-rounds">';
 
-  roundKeys.forEach((roundNum, roundIndex) => {
+  roundKeys.forEach((roundNum, idx) => {
     const matches = rounds[roundNum];
-    const isFirstRound = roundIndex === 0;
 
-    html += `<div class="challonge-round" data-round="${roundNum}" data-bracket="${type}">`;
+    html += `<div class="bracket-column" data-round="${roundNum}">`;
+    html += `<div class="round-header">Losers Round ${roundNum}</div>`;
+    html += '<div class="matches-container">';
 
-    // Label du round (pour losers)
-    if (type === 'losers') {
-      html += `<div class="losers-round-label">Losers Round ${roundNum}</div>`;
-    }
-
-    // Matchs
-    matches.forEach((match, matchIndex) => {
-      html += renderChallongeMatch(match, type, roundNum, matchIndex, allMatches);
+    matches.forEach((match, matchIdx) => {
+      html += renderMatch(match, 'losers', allMatches);
     });
 
-    // Connections SVG
-    if (roundIndex < roundKeys.length - 1) {
-      html += renderConnections(matches, rounds[roundKeys[roundIndex + 1]], type, roundNum);
+    html += '</div>'; // matches-container
+
+    // SVG pour connexions
+    if (idx < roundKeys.length - 1) {
+      html += renderConnectorsSVG(matches, rounds[roundKeys[idx + 1]], 'losers');
     }
 
-    html += '</div>';
+    html += '</div>'; // bracket-column
+  });
+
+  html += '</div>'; // bracket-rounds
+  html += '</div>'; // bracket-section
+
+  return html;
+}
+
+function renderFinals(finalsMatches, allMatches) {
+  let html = '<div class="bracket-section finals-bracket">';
+  html += '<div class="finals-header">Finals</div>';
+  html += '<div class="finals-matches">';
+
+  finalsMatches.forEach(match => {
+    html += renderMatch(match, 'finals', allMatches);
+    if (match.round === 2) {
+      html += '<div class="reset-note">Loser of 30 (if necessary)</div>';
+    }
   });
 
   html += '</div>';
+  html += '</div>';
 
   return html;
 }
 
-/**
- * Rend un match individuel style Challonge
- */
-function renderChallongeMatch(match, bracketType, roundNum, matchIndex, allMatches) {
-  const isEmpty = !match.player1_id && !match.player2_id;
-  const isWalkover = match.status === 'walkover';
-  const isCompleted = match.status === 'completed';
+function renderMatch(match, bracketType, allMatches) {
+  const p1Name = match.player1_name || getPlaceholderLabel(match, 'player1', allMatches);
+  const p2Name = match.player2_name || getPlaceholderLabel(match, 'player2', allMatches);
+
+  const p1Winner = match.winner_id && match.winner_id === match.player1_id;
+  const p2Winner = match.winner_id && match.winner_id === match.player2_id;
+
   const isClickable = match.player1_id && match.player2_id && match.status !== 'completed';
 
-  // Déterminer les labels "Loser of X" ou "Winner of X"
-  const p1Label = getPlayerLabel(match, 'player1', allMatches, bracketType, roundNum);
-  const p2Label = getPlayerLabel(match, 'player2', allMatches, bracketType, roundNum);
-
-  const p1Name = match.player1_name || p1Label || '';
-  const p2Name = match.player2_name || p2Label || '';
-
-  const p1Winner = match.winner_id === match.player1_id;
-  const p2Winner = match.winner_id === match.player2_id;
-
   let html = `
-    <div class="challonge-match"
+    <div class="match-box ${isClickable ? 'clickable' : ''}"
          data-match-id="${match.id}"
-         ${isClickable ? `onclick="openScoreModal(${match.id})"` : ''}
-         ${isClickable ? 'style="cursor:pointer"' : ''}>
+         ${isClickable ? `onclick="openScoreModal(${match.id})"` : ''}>
       <div class="match-number">${match.id}</div>
       <div class="match-players">
-        <div class="match-player ${p1Winner ? 'winner' : ''} ${isCompleted && !p1Winner ? 'loser' : ''}">
-          <span class="player-seed">${match.player1_seed || ''}</span>
-          <span class="player-name ${!match.player1_id ? 'placeholder' : ''}">${escapeHtml(p1Name) || 'TBD'}</span>
+        <div class="player ${p1Winner ? 'winner' : ''}">
+          <span class="seed">${match.player1_seed || ''}</span>
+          <span class="name">${escapeHtml(p1Name) || 'TBD'}</span>
           ${match.player1_score !== null && match.player1_score !== undefined ?
-            `<span class="player-score">${match.player1_score}</span>` : ''}
+            `<span class="score">${match.player1_score}</span>` : ''}
         </div>
-        <div class="match-player ${p2Winner ? 'winner' : ''} ${isCompleted && !p2Winner ? 'loser' : ''}">
-          <span class="player-seed">${match.player2_seed || ''}</span>
-          <span class="player-name ${!match.player2_id ? 'placeholder' : ''}">${escapeHtml(p2Name) || 'TBD'}</span>
+        <div class="player ${p2Winner ? 'winner' : ''}">
+          <span class="seed">${match.player2_seed || ''}</span>
+          <span class="name">${escapeHtml(p2Name) || 'TBD'}</span>
           ${match.player2_score !== null && match.player2_score !== undefined ?
-            `<span class="player-score">${match.player2_score}</span>` : ''}
+            `<span class="score">${match.player2_score}</span>` : ''}
         </div>
       </div>
     </div>
@@ -199,113 +168,65 @@ function renderChallongeMatch(match, bracketType, roundNum, matchIndex, allMatch
   return html;
 }
 
-/**
- * Obtient le label d'un joueur (ex: "Loser of 15")
- */
-function getPlayerLabel(match, playerSlot, allMatches, bracketType, roundNum) {
-  // Pour le premier round du winners, pas de label
-  if (bracketType === 'winners' && roundNum === 1) {
-    return null;
-  }
+function getPlaceholderLabel(match, playerSlot, allMatches) {
+  const from = playerSlot === 'player1' ? match.player1_from : match.player2_from;
 
-  // Pour les losers, afficher "Loser of X" pour les joueurs venant du winners
-  if (bracketType === 'losers') {
-    const from = playerSlot === 'player1' ? match.player1_from : match.player2_from;
-
-    if (from === 'loser') {
-      // Trouver quel match du winners a envoyé ce joueur
-      const sourceMatch = findSourceMatch(match, playerSlot, allMatches);
-      if (sourceMatch) {
-        return `Loser of ${sourceMatch.id}`;
+  if (from === 'loser') {
+    // Trouver le match source
+    for (const sourceMatch of allMatches) {
+      if (sourceMatch.next_match_loser_id === match.id) {
+        const loserSlot = sourceMatch.next_match_loser_slot;
+        if ((loserSlot === 'player1' && playerSlot === 'player1') ||
+            (loserSlot === 'player2' && playerSlot === 'player2')) {
+          return `Loser of ${sourceMatch.id}`;
+        }
       }
     }
   }
 
-  return null;
-}
-
-/**
- * Trouve le match source d'un joueur
- */
-function findSourceMatch(targetMatch, playerSlot, allMatches) {
-  // Chercher dans tous les matchs celui qui envoie un perdant vers ce match
-  for (const match of allMatches) {
-    if (match.next_match_loser_id === targetMatch.id) {
-      const loserSlot = match.next_match_loser_slot;
-      if ((loserSlot === 'player1' && playerSlot === 'player1') ||
-          (loserSlot === 'player2' && playerSlot === 'player2')) {
-        return match;
-      }
+  if (from === 'winner') {
+    // Finals spéciaux
+    if (match.bracket_type === 'finals') {
+      if (playerSlot === 'player1') return 'Winner of Loser\'s Bracket';
+      if (playerSlot === 'player2') return 'Winner of Winner\'s Bracket';
     }
   }
-  return null;
+
+  return '';
 }
 
-/**
- * Rend les connexions SVG entre matchs
- */
-function renderConnections(currentRoundMatches, nextRoundMatches, type, roundNum) {
-  if (!nextRoundMatches || nextRoundMatches.length === 0) {
-    return '';
-  }
+function renderConnectorsSVG(fromMatches, toMatches, bracketType) {
+  if (!toMatches || toMatches.length === 0) return '';
 
-  // Pour l'instant, on skip les connexions SVG complexes
-  // On utilisera du CSS pur pour les lignes simples
-  return '<div class="match-connector"></div>';
+  // Simple connector line for now
+  return `<svg class="connector-svg" width="40" height="100%">
+    <line x1="0" y1="50%" x2="40" y2="50%" stroke="#4a4a4a" stroke-width="2"/>
+  </svg>`;
 }
 
-/**
- * Rend la section finals
- */
-function renderFinalsSection(finalsMatches, allMatches) {
-  let html = '<div class="challonge-finals-matches">';
+function renderSimpleRoundRobin(matches) {
+  const byRound = groupMatchesByRound(matches);
 
-  finalsMatches.forEach(match => {
-    // Labels spéciaux pour les finals
-    const p1Label = match.player1_from === 'winner' ? 'Winner of Losers Bracket' : '';
-    const p2Label = match.player2_from === 'winner' && match.round === 1 ? 'Winner of Winners Bracket' : '';
-
-    html += renderChallongeMatch(match, 'finals', match.round, 0, allMatches);
-
-    if (match.round === 2) {
-      html += '<div class="reset-note">(if necessary)</div>';
-    }
-  });
-
-  html += '</div>';
-
-  return html;
-}
-
-/**
- * Rend round robin en grille
- */
-function renderRoundRobinGrid(matches) {
-  const byRound = groupByRound(matches);
-
-  let html = '<div class="round-robin-container">';
+  let html = '<div class="round-robin-grid">';
 
   Object.keys(byRound).sort((a, b) => a - b).forEach(round => {
-    html += `
-      <div class="rr-round">
-        <div class="rr-round-title">Round ${round}</div>
-        <div class="rr-matches">
-    `;
+    html += `<div class="rr-round">`;
+    html += `<h3>Round ${round}</h3>`;
+    html += '<div class="rr-matches">';
 
     byRound[round].forEach(match => {
       const isClickable = match.player1_id && match.player2_id && match.status !== 'completed';
       html += `
-        <div class="rr-match ${match.status}"
-             ${isClickable ? `onclick="openScoreModal(${match.id})"` : ''}
-             ${isClickable ? 'style="cursor:pointer"' : ''}>
+        <div class="rr-match ${isClickable ? 'clickable' : ''}"
+             ${isClickable ? `onclick="openScoreModal(${match.id})"` : ''}>
           <div class="rr-player ${match.winner_id === match.player1_id ? 'winner' : ''}">
-            <span class="player-name">${escapeHtml(match.player1_name) || 'TBD'}</span>
-            ${match.player1_score !== null ? `<span class="score">${match.player1_score}</span>` : ''}
+            <span>${escapeHtml(match.player1_name) || 'TBD'}</span>
+            ${match.player1_score !== null ? `<b>${match.player1_score}</b>` : ''}
           </div>
           <div class="rr-vs">vs</div>
           <div class="rr-player ${match.winner_id === match.player2_id ? 'winner' : ''}">
-            <span class="player-name">${escapeHtml(match.player2_name) || 'TBD'}</span>
-            ${match.player2_score !== null ? `<span class="score">${match.player2_score}</span>` : ''}
+            <span>${escapeHtml(match.player2_name) || 'TBD'}</span>
+            ${match.player2_score !== null ? `<b>${match.player2_score}</b>` : ''}
           </div>
         </div>
       `;
