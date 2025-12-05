@@ -572,6 +572,99 @@ app.put('/admin/players/:oldId', auth, adminOnly, async (req, res) => {
   }
 });
 
+// POST /admin/players/:playerId/attach_user - Lier/créer un compte utilisateur
+app.post('/admin/players/:playerId/attach_user', auth, adminOnly, async (req, res) => {
+  try {
+    const { playerId } = req.params;
+    const { email, password } = req.body || {};
+
+    if (!email || !email.trim()) {
+      return bad(res, 400, 'Email requis');
+    }
+
+    // Vérifier que le joueur existe
+    const playerCheck = await q(`SELECT player_id, name FROM players WHERE player_id = $1`, [playerId]);
+    if (!playerCheck.rowCount) {
+      return bad(res, 404, 'Joueur introuvable');
+    }
+
+    // Vérifier si un utilisateur existe déjà avec cet email
+    const existingUser = await q(`SELECT id, email, player_id FROM users WHERE email = $1`, [email.trim()]);
+
+    let userId;
+    if (existingUser.rowCount > 0) {
+      // Utilisateur existe, le lier au joueur
+      userId = existingUser.rows[0].id;
+
+      // Vérifier si déjà lié à un autre joueur
+      if (existingUser.rows[0].player_id && existingUser.rows[0].player_id !== playerId) {
+        return bad(res, 409, `Cet email est déjà lié au joueur ${existingUser.rows[0].player_id}`);
+      }
+
+      // Lier le joueur
+      await q(`UPDATE users SET player_id = $1 WHERE id = $2`, [playerId, userId]);
+    } else {
+      // Créer un nouveau compte utilisateur
+      if (!password || !password.trim()) {
+        return bad(res, 400, 'Mot de passe requis pour créer un nouveau compte');
+      }
+
+      const hash = await bcrypt.hash(password.trim(), 10);
+      const newUser = await q(
+        `INSERT INTO users (email, password_hash, role, player_id) VALUES ($1, $2, 'member', $3) RETURNING id, email`,
+        [email.trim(), hash, playerId]
+      );
+      userId = newUser.rows[0].id;
+    }
+
+    ok(res, {
+      message: 'Compte lié avec succès',
+      user: { id: userId, email: email.trim() },
+      player_id: playerId
+    });
+  } catch (error) {
+    console.error('Error attaching user:', error);
+    bad(res, 500, error.message || 'Erreur serveur');
+  }
+});
+
+// DELETE /admin/players/:playerId - Supprimer un joueur
+app.delete('/admin/players/:playerId', auth, adminOnly, async (req, res) => {
+  try {
+    const { playerId } = req.params;
+
+    // Vérifier que le joueur existe
+    const playerCheck = await q(`SELECT player_id, name, role FROM players WHERE player_id = $1`, [playerId]);
+    if (!playerCheck.rowCount) {
+      return bad(res, 404, 'Joueur introuvable');
+    }
+
+    const player = playerCheck.rows[0];
+
+    // Ne pas permettre la suppression de joueurs réels (seulement GUEST)
+    if (player.role !== 'GUEST') {
+      return bad(res, 403, 'Seuls les joueurs GUEST peuvent être supprimés. Pour les autres, utilisez la désactivation.');
+    }
+
+    // Supprimer le joueur (CASCADE supprimera les dépendances)
+    await q(`DELETE FROM players WHERE player_id = $1`, [playerId]);
+
+    // Retirer de la présence
+    if (presence.players.has(playerId)) {
+      presence.players.delete(playerId);
+    }
+
+    ok(res, {
+      message: 'Joueur supprimé',
+      player_id: playerId,
+      name: player.name
+    });
+  } catch (error) {
+    console.error('Error deleting player:', error);
+    bad(res, 500, error.message || 'Erreur serveur');
+  }
+});
+
 /* ====== Standings helpers ====== */
 async function currentSeasonId(){
   const r=await q(`SELECT id FROM seasons WHERE is_closed=false ORDER BY id DESC LIMIT 1`);
