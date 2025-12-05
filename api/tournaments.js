@@ -246,6 +246,63 @@ async function saveAndLinkMatches(client, tournamentId, matches, format) {
 }
 
 /**
+ * Traite les byes - avance automatiquement les joueurs sans adversaire
+ */
+async function processAutomaticByes(client, tournamentId) {
+  console.log('🔄 Traitement des byes automatiques...');
+
+  // Récupérer tous les matchs avec un seul joueur (bye)
+  const byeMatches = await client.query(`
+    SELECT id, player1_id, player2_id, next_match_winner_id, next_match_winner_slot, bracket_type, round, match_number
+    FROM tournament_matches
+    WHERE tournament_id = $1
+      AND status = 'pending'
+      AND (
+        (player1_id IS NOT NULL AND player2_id IS NULL) OR
+        (player1_id IS NULL AND player2_id IS NOT NULL)
+      )
+    ORDER BY round, match_number
+  `, [tournamentId]);
+
+  let byeCount = 0;
+
+  for (const match of byeMatches.rows) {
+    const advancingPlayer = match.player1_id || match.player2_id;
+
+    console.log(`  🎯 Match ${match.id} [${match.bracket_type} R${match.round}]: ${advancingPlayer} avance automatiquement (bye)`);
+
+    // Marquer le match comme complété avec walkover
+    await client.query(`
+      UPDATE tournament_matches
+      SET winner_id = $1,
+          status = 'walkover',
+          completed_at = NOW()
+      WHERE id = $2
+    `, [advancingPlayer, match.id]);
+
+    // Avancer le joueur au match suivant
+    if (match.next_match_winner_id) {
+      const field = match.next_match_winner_slot === 'player1' ? 'player1_id' : 'player2_id';
+      await client.query(
+        `UPDATE tournament_matches SET ${field} = $1 WHERE id = $2`,
+        [advancingPlayer, match.next_match_winner_id]
+      );
+      console.log(`    ✅ ${advancingPlayer} → Match ${match.next_match_winner_id} [${field}]`);
+    }
+
+    byeCount++;
+  }
+
+  // Processus récursif : si on a créé de nouveaux byes, les traiter aussi
+  if (byeCount > 0) {
+    console.log(`  📊 ${byeCount} byes traités, vérification des cascades...`);
+    await processAutomaticByes(client, tournamentId);
+  } else {
+    console.log('  ✅ Tous les byes ont été traités');
+  }
+}
+
+/**
  * Configure les routes API pour les tournois
  */
 function setupTournamentRoutes(app, pool, auth, io) {
@@ -628,6 +685,9 @@ function setupTournamentRoutes(app, pool, auth, io) {
       // SAUVEGARDER ET LIER (fonction corrigée)
       await saveAndLinkMatches(client, id, matches, tournament.format);
 
+      // TRAITER LES BYES AUTOMATIQUES
+      await processAutomaticByes(client, id);
+
       // Mettre à jour le statut
       await client.query(
         "UPDATE tournaments SET status = 'in_progress', total_matches = $1 WHERE id = $2",
@@ -708,6 +768,9 @@ function setupTournamentRoutes(app, pool, auth, io) {
         );
         console.log(`  ✅ Perdant → Match ${match.next_match_loser_id} [${field}]`);
       }
+
+      // 3.5. TRAITER LES BYES AUTOMATIQUES (cascade)
+      await processAutomaticByes(client, tournamentId);
 
       // 4. Update stats
       await client.query(`
