@@ -534,6 +534,7 @@ async function ensureSchema(){
     CHECK (format IN ('single_elimination')),
     CHECK (status IN ('draft','live','completed','archived'))
   )`);
+  await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS winner_player_id TEXT REFERENCES players(player_id) ON UPDATE CASCADE ON DELETE SET NULL`);
   await q(`CREATE INDEX IF NOT EXISTS tournaments_status_idx ON tournaments(status)`);
   await q(`CREATE INDEX IF NOT EXISTS tournaments_created_at_idx ON tournaments(created_at DESC)`);
 
