@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>GOUZEPE eFOOTBALL - Admin Sauvegardes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="mobile.css">
+<meta name="color-scheme" content="dark light">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script defer src="common.js"></script>
+<style>
+  .grid{display:grid;gap:12px}
+  .row-end{display:flex;gap:10px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+  .warn-box{padding:10px;border:1px solid #b45309;border-radius:10px;background:rgba(245,158,11,.08)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid var(--border)}
+</style>
+</head>
+<body>
+  <header class="top" id="topbar">
+    <a class="brand" href="./Accueil.html" aria-label="Accueil GOUZEPE">
+      <img id="clubLogo" class="logo" src="assets/icons/apple-touch-icon.png" alt="Logo">
+      <div class="brand-title">
+        <h1>GOUZEPE eFOOTBALL</h1>
+        <div class="season-sub"><span id="season-text" style="color: #16a34a; font-weight: bold;">Saison</span></div>
+      </div>
+    </a>
+
+    <button id="menuToggle" class="btn ghost" aria-controls="menu" aria-expanded="false" title="Ouvrir le menu de navigation"><i data-lucide="menu"></i> Menu</button>
+    <nav class="nav" aria-label="Navigation principale">
+      <div id="menu" class="menu">
+        <a href="./Accueil.html"><i data-lucide="home"></i> Accueil</a>
+        <a href="./Duel.html"><i data-lucide="swords"></i> Duel</a>
+        <a href="./Classement-general.html"><i data-lucide="bar-chart-2"></i> Classements</a>
+        <a href="./Panel-Membre.html"><i data-lucide="user"></i> Mon espace</a>
+        <a class="adminNav" href="./Admin-Joueurs.html" style="display:none"><i data-lucide="users"></i> Admin-Joueurs</a>
+        <a class="adminNav" href="./Admin-Utilisateurs.html" style="display:none"><i data-lucide="shield"></i> Admin Utilisateurs</a>
+        <a class="adminNav" href="./Admin-Sauvegardes.html" style="display:none"><i data-lucide="database"></i> Sauvegardes</a>
+        <button id="logoutBtn" class="btn ghost danger" type="button" title="Se deconnecter"><i data-lucide="log-out"></i></button>
+      </div>
+    </nav>
+
+    <div class="spacer"></div>
+
+    <button id="themeBtn" class="btn ghost" title="Theme clair/sombre">
+      <i data-lucide="sun" class="theme-icon-sun"></i>
+      <i data-lucide="moon" class="theme-icon-moon" style="display:none"></i>
+    </button>
+  </header>
+
+  <div class="wrap">
+    <section class="card grid" style="margin-top:12px">
+      <h3 style="margin:0">Sauvegardes base PostgreSQL</h3>
+      <div id="scheduleInfo" class="muted">Chargement...</div>
+      <div class="row-end">
+        <button id="refreshBtn" class="btn">Rafraichir</button>
+        <button id="manualBackupBtn" class="btn primary">Sauvegarde manuelle</button>
+      </div>
+      <span id="status" class="muted"></span>
+    </section>
+
+    <section class="card grid" style="margin-top:12px">
+      <h3 style="margin:0">Restauration depuis un fichier .sql</h3>
+      <div class="warn-box">
+        Cette action peut remplacer la base courante. A utiliser uniquement si vous etes sur de votre fichier.
+      </div>
+      <div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input id="sqlFile" type="file" accept=".sql" />
+        <button id="restoreUploadBtn" class="btn danger">Restaurer ce fichier</button>
+      </div>
+    </section>
+
+    <section class="card grid" style="margin-top:12px">
+      <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0">Historique des sauvegardes</h3>
+        <span id="runningState" class="pill">Etat: idle</span>
+      </div>
+      <div class="table-wrap" style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Fichier</th>
+              <th>Type</th>
+              <th>Taille</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="backupsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+<script>
+function toast(msg){
+  const s = document.getElementById('status');
+  if(!s) return;
+  s.textContent = msg;
+  s.style.opacity = 1;
+  setTimeout(()=>{ s.style.opacity = 0.8; }, 1500);
+}
+
+function getToken(){
+  return localStorage.getItem('efoot.token') || '';
+}
+
+function authHeaders(extra = {}){
+  const token = getToken();
+  const base = { ...extra };
+  if (token) base.Authorization = 'Bearer ' + token;
+  return base;
+}
+
+function handleUnauthorized(){
+  localStorage.removeItem('efoot.token');
+  localStorage.removeItem('efoot.role');
+  localStorage.removeItem('efoot.expAt');
+  location.replace('login.html');
+}
+
+async function apiFetch(url, opt = {}){
+  const headers = authHeaders(opt.headers || {});
+  const res = await fetch(url, { ...opt, headers });
+  if (res.status === 401) {
+    handleUnauthorized();
+    throw new Error('Session expiree');
+  }
+  return res;
+}
+
+function bytesFmt(n){
+  const b = Number(n || 0);
+  if (b < 1024) return b + ' B';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+  return (b / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function sourceLabel(source){
+  if(source === 'auto') return 'Auto';
+  if(source === 'manual') return 'Manuel';
+  if(source === 'uploaded') return 'Upload';
+  return source || '-';
+}
+
+let BACKUPS = [];
+
+async function loadBackups(){
+  const res = await apiFetch(`${API}/admin/backups`, { headers: authHeaders() });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error || 'Erreur chargement sauvegardes');
+  BACKUPS = data.backups || [];
+  renderBackups();
+  renderSchedule(data.schedule || {});
+  document.getElementById('runningState').textContent = `Etat: ${data.running ? 'busy' : 'idle'}`;
+}
+
+function renderSchedule(schedule){
+  const el = document.getElementById('scheduleInfo');
+  if(!schedule?.enabled){
+    el.textContent = 'Sauvegarde automatique desactivee';
+    return;
+  }
+  const nextDate = schedule.nextRun ? new Date(schedule.nextRun) : null;
+  const nextLocal = nextDate ? nextDate.toLocaleString('fr-FR') : 'inconnue';
+  const nextUTC   = nextDate ? nextDate.toUTCString().slice(0, -4) : 'inconnue';
+  el.innerHTML = `Auto backup: samedi <strong>${String(schedule.hour).padStart(2,'0')}:${String(schedule.minute).padStart(2,'0')} UTC</strong> &mdash; prochaine : ${nextLocal} (heure locale) &bull; ${nextUTC} UTC`;
+}
+
+function renderBackups(){
+  const tb = document.getElementById('backupsBody');
+  tb.innerHTML = '';
+  if(!BACKUPS.length){
+    tb.innerHTML = '<tr><td colspan="5" class="muted">Aucune sauvegarde disponible</td></tr>';
+    return;
+  }
+  BACKUPS.forEach((b) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="mono">${b.name}</td>
+      <td>${sourceLabel(b.source)}</td>
+      <td>${bytesFmt(b.sizeBytes)}</td>
+      <td>${new Date(b.updatedAt).toLocaleString('fr-FR')}</td>
+      <td>
+        <button class="btn" data-action="download" data-file="${encodeURIComponent(b.name)}">Telecharger</button>
+        <button class="btn danger" data-action="restore" data-file="${encodeURIComponent(b.name)}">Restaurer</button>
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+async function createManualBackup(){
+  const btn = document.getElementById('manualBackupBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sauvegarde...';
+  try{
+    const res = await apiFetch(`${API}/admin/backups/create`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({})
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error || 'Echec creation sauvegarde');
+    toast(`Sauvegarde creee: ${data.backup?.name || ''}`);
+    await loadBackups();
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Sauvegarde manuelle';
+  }
+}
+
+async function downloadBackup(file){
+  const res = await apiFetch(`${API}/admin/backups/${encodeURIComponent(file)}/download`, { headers: authHeaders() });
+  if(!res.ok){
+    const data = await res.json().catch(()=>({}));
+    throw new Error(data.error || 'Telechargement impossible');
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = file;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function restoreExisting(file){
+  if(!confirm(`Restaurer la base depuis ${file} ?`)) return;
+  const res = await apiFetch(`${API}/admin/backups/restore-existing`, {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ file })
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error || 'Restauration impossible');
+  toast(`Restauration terminee depuis ${data.restoredFrom || file}`);
+}
+
+async function restoreFromUpload(){
+  const input = document.getElementById('sqlFile');
+  if(!input.files || !input.files[0]){
+    toast('Selectionne un fichier .sql');
+    return;
+  }
+  if(!confirm(`Restaurer la base depuis ${input.files[0].name} ?`)) return;
+  const form = new FormData();
+  form.append('sqlFile', input.files[0]);
+
+  const btn = document.getElementById('restoreUploadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Restauration...';
+  try{
+    const res = await apiFetch(`${API}/admin/backups/restore-upload`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: form
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error || 'Restauration upload impossible');
+    toast(`Restauration terminee depuis ${data.restoredFrom || input.files[0].name}`);
+    input.value = '';
+    await loadBackups();
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Restaurer ce fichier';
+  }
+}
+
+document.getElementById('manualBackupBtn').addEventListener('click', ()=> {
+  createManualBackup().catch((e)=> toast(e.message || 'Erreur'));
+});
+document.getElementById('refreshBtn').addEventListener('click', ()=> {
+  loadBackups().catch((e)=> toast(e.message || 'Erreur'));
+});
+document.getElementById('restoreUploadBtn').addEventListener('click', ()=> {
+  restoreFromUpload().catch((e)=> toast(e.message || 'Erreur'));
+});
+
+document.getElementById('backupsBody').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button[data-action]');
+  if(!btn) return;
+  const action = btn.dataset.action;
+  const file = decodeURIComponent(btn.dataset.file || '');
+  if(!file) return;
+  if(action === 'download'){
+    downloadBackup(file).catch((e)=> toast(e.message || 'Erreur'));
+  } else if(action === 'restore'){
+    restoreExisting(file).catch((e)=> toast(e.message || 'Erreur'));
+  }
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadBackups().catch((e)=> toast(e.message || 'Erreur'));
+});
+</script>
+
+<footer style="text-align:center;font-family:'Gill Sans','Gill Sans MT',Calibri,'Trebuchet MS',sans-serif;">Copyright © -GOUZEPE GAMING CLUB 2025</footer>
+</body>
+</html>

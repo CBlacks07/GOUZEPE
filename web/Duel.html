@@ -1,690 +1,438 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-  <title>Duel — GOUZEPE eFOOTBALL (Exhibitions)</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Duel — GOUZEPE eFOOTBALL</title>
+<meta name="description" content="Duels eFootball - Affrontements en exhibition"/>
+<meta name="theme-color" content="#16a34a"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" type="image/png" href="assets/icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="theme.css"/>
+<link rel="stylesheet" href="common.css"/>
+<link rel="stylesheet" href="mobile.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script defer src="common.js"></script>
+<style>
+  .wrap{max-width:none!important;padding:12px 20px!important}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .full{grid-column:1/-1}
 
-  <!-- PWA Meta Tags -->
-  <meta name="description" content="Duels eFootball - Affrontements en exhibition" />
-  <meta name="theme-color" content="#16a34a" />
-  <link rel="manifest" href="manifest.json" />
+  /* Section titles */
+  .section-title{margin:0 0 14px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;color:var(--text)}
+  .section-title i{width:15px;height:15px;color:var(--muted)}
 
-  <link rel="stylesheet" href="theme.css"/>
-  <link rel="stylesheet" href="mobile.css"/>
-  <style>
-    :root{
-      /* Dark palette */
-      --bg:#0b1119;
-      --panel:#0e1624;
-      --card:#111b28;
-      --text:#e5e7eb;
-      --muted:#94a3b8;
-      --border:#1f2937;
-      --topbar-bg:rgba(10,14,22,.65);
-      --overlay:rgba(0,0,0,.4);
+  /* Fields */
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
 
-      --accent:#3b82f6; --brand:#16a34a; --warn:#f59e0b; --danger:#ef4444;
-      --r:14px; --pad:clamp(12px,2.5vw,22px);
-      --shadow:0 6px 18px rgba(0,0,0,.25);
-      --input-bg:#0c1422; --input-text:var(--text);
-      --chip-win:rgba(22,163,74,.14);
-      --chip-draw:rgba(148,163,184,.14);
-      --chip-lose:rgba(59,130,246,.14);
-    }
-    /* Light palette */
-    :root.light{
-      --bg:#f4f7fb;
-      --panel:#ffffff;
-      --card:#ffffff;
-      --text:#0f172a;
-      --muted:#475569;
-      --border:#e5e7eb;
-      --topbar-bg:rgba(255,255,255,.78);
-      --overlay:rgba(0,0,0,.35);
+  /* Result pills */
+  .res{display:flex;gap:10px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;user-select:none;background:var(--card);color:var(--text);transition:border-color .15s,background .15s,box-shadow .15s;outline:none}
+  .pill:focus-visible{box-shadow:0 0 0 3px rgba(99,102,241,.35)}
+  .pill[data-v="A"]{background:rgba(22,163,74,.08)}
+  .pill[data-v="D"]{background:rgba(148,163,184,.08)}
+  .pill[data-v="B"]{background:rgba(59,130,246,.08)}
+  .pill[data-v="A"].active{border-color:rgba(22,163,74,.7);background:rgba(22,163,74,.18);box-shadow:0 0 0 2px rgba(22,163,74,.18)}
+  .pill[data-v="D"].active{border-color:rgba(148,163,184,.6);background:rgba(148,163,184,.18);box-shadow:0 0 0 2px rgba(148,163,184,.18)}
+  .pill[data-v="B"].active{border-color:rgba(59,130,246,.7);background:rgba(59,130,246,.18);box-shadow:0 0 0 2px rgba(59,130,246,.18)}
 
-      --input-bg:#ffffff; --input-text:#0f172a;
-      --chip-win:rgba(34,197,94,.16);
-      --chip-draw:rgba(100,116,139,.15);
-      --chip-lose:rgba(59,130,246,.16);
-    }
+  /* Result tags in table */
+  .tag{display:inline-block;border-radius:999px;padding:2px 10px;font-weight:700;font-size:12px;border:1px solid transparent;white-space:nowrap}
+  .tag.win  {background:rgba(22,163,74,.15); color:#86efac; border-color:rgba(22,163,74,.3)}
+  .tag.draw {background:rgba(148,163,184,.15);color:#cbd5e1; border-color:rgba(148,163,184,.3)}
+  .tag.lose {background:rgba(59,130,246,.15); color:#93c5fd; border-color:rgba(59,130,246,.3)}
+  :root.light .tag.win  {background:rgba(22,163,74,.12); color:#065f46;border-color:rgba(22,163,74,.4)}
+  :root.light .tag.draw {background:rgba(100,116,139,.12);color:#334155;border-color:rgba(100,116,139,.4)}
+  :root.light .tag.lose {background:rgba(59,130,246,.12); color:#1e3a8a;border-color:rgba(59,130,246,.4)}
 
-    html,body{height:100%}
-    body{
-      margin:0;color:var(--text);background:var(--bg);
-      font:400 16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
-    }
-    a{color:inherit;text-decoration:none}
+  /* Table */
+  .table-wrap{overflow:auto;border-radius:10px;border:1px solid var(--border)}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:9px 12px;text-align:center;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+  tbody tr:last-child td{border-bottom:none}
+  thead th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;background:rgba(255,255,255,.02);font-weight:700}
+  tbody tr:hover td{background:rgba(255,255,255,.03)}
+  :root.light tbody tr:hover td{background:rgba(0,0,0,.02)}
 
-    /* ===== TOP ===== */
-    .top{
-      position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;
-      padding:10px var(--pad);background:rgba(10,14,22,.65);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)
-    }
-    html.light .top{background:rgba(255,255,255,.75)}
-    .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;user-select:none}
-    .logo{width:42px;height:42px;border-radius:12px;object-fit:cover;border:1px solid var(--border);background:#0d1420}
-    .brand-title{display:flex;flex-direction:column;line-height:1.1}
-    .brand-title h1{margin:0;font-size:18px;letter-spacing:.3px;font-weight:800}
-    .season-sub{margin:0;color:var(--muted);font-size:12px}
-    #menuToggle{display:none;flex:0 0 auto;appearance:none;border:1px solid var(--border);background:transparent;color:inherit;border-radius:10px;padding:8px 10px;align-items:center;gap:8px}
-    .nav{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:4px 0;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-    #menu{display:flex;gap:8px}
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;border-radius:999px;font-weight:600;border:1px solid var(--border);background:transparent;color:inherit;text-decoration:none;line-height:1;white-space:nowrap;transition:filter .15s,transform .02s}
-    .btn:hover{filter:brightness(1.1)} .btn:active{transform:translateY(1px)}
-    .btn.primary{background:rgba(22,163,74,.15);border-color:#1e3a2f}
-    .btn.info{background:rgba(59,130,246,.14);border-color:#1e3a8a}
-    .btn.warn{background:rgba(245,158,11,.14);border-color:#7c2d12}
-    .btn.ghost{background:transparent}
-    .spacer{flex:1 1 auto} .tiny{font-size:12px;opacity:.8}
-    .badge{display:inline-flex;align-items:center;gap:8px;padding:4px 8px;border:1px dashed var(--border);border-radius:999px;font-weight:600;opacity:.9}
-    .badge .dot{width:8px;height:8px;border-radius:50%;background:var(--brand)}
-    .badge-top{display:none}
-    @media (max-width: 900px){
-      #menuToggle{display:inline-flex}
-      .nav{display:none}
-      .top.nav-open .nav{display:flex}
-    }
-    .btn.danger{background:var(--panel);border-color:#7f1d1d;color:#b91c1c}
+  /* Compare output */
+  #cmpOut{margin-top:12px;font-size:14px}
+  .cmp-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:10px}
+  :root.light .cmp-row{background:rgba(0,0,0,.02)}
+  .leader-tag{display:inline-block;padding:3px 12px;border-radius:999px;font-weight:700;font-size:13px;border:1px solid transparent}
+  .leader-tag.win  {background:rgba(22,163,74,.15); color:#86efac;border-color:rgba(22,163,74,.3)}
+  .leader-tag.draw {background:rgba(148,163,184,.15);color:#cbd5e1;border-color:rgba(148,163,184,.3)}
+  .leader-tag.lose {background:rgba(59,130,246,.15); color:#93c5fd;border-color:rgba(59,130,246,.3)}
+  :root.light .leader-tag.win  {color:#065f46;background:rgba(22,163,74,.12);border-color:rgba(22,163,74,.4)}
+  :root.light .leader-tag.draw {color:#334155;background:rgba(100,116,139,.12);border-color:rgba(100,116,139,.4)}
+  :root.light .leader-tag.lose {color:#1e3a8a;background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.4)}
 
-    /* === Menu Mobile Moderne === */
-    #mobileMenu{
-      position:fixed; inset:0; z-index:60;
-      background:rgba(0,0,0,.65); backdrop-filter:blur(4px);
-      display:flex; align-items:flex-start; justify-content:center;
-      padding:0; opacity:0; pointer-events:none;
-      transition:opacity .25s ease;
-    }
-    #mobileMenu:not([hidden]){ opacity:1; pointer-events:auto; }
-    #mobileMenu[hidden]{ display:none }
+  /* Filter bar */
+  .filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .filter-bar label{font-size:12px;color:var(--muted);white-space:nowrap}
+  .filter-bar select,.filter-bar input[type="date"]{font-size:12px;padding:5px 8px}
 
-    .mm-panel{
-      width:min(94vw,400px); margin-top:0;
-      background:var(--panel); color:var(--text);
-      border:none; border-bottom-left-radius:16px; border-bottom-right-radius:16px;
-      box-shadow:0 8px 32px rgba(0,0,0,.4);
-      padding:0; max-height:90vh; overflow-y:auto;
-      transform:translateY(-100%); transition:transform .3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    #mobileMenu:not([hidden]) .mm-panel{ transform:translateY(0); }
+  /* Delete btn */
+  .danger-link{border:none;background:transparent;color:#f87171;cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px}
+  .danger-link:hover{background:rgba(248,113,113,.12)}
+  :root.light .danger-link{color:#b91c1c}
 
-    .mm-title{
-      font-weight:800; text-align:center; padding:16px;
-      border-bottom:1px solid var(--border); margin:0;
-      position:sticky; top:0; background:var(--panel); z-index:1;
-    }
-    .mm-list{display:flex; flex-direction:column; gap:0; padding:8px;}
-    .mm-btn{
-      display:flex; align-items:center; justify-content:flex-start; gap:12px;
-      padding:14px 16px; border-radius:12px; border:none;
-      background:transparent; color:inherit; text-decoration:none; font-weight:600;
-      transition:background .2s ease;
-    }
-    .mm-btn:hover, .mm-btn:active{ background:rgba(255,255,255,.06); }
-    .mm-theme{display:flex; justify-content:center; padding:8px 16px; border-top:1px solid var(--border);}
-    .mm-logout{display:flex; justify-content:center; padding:12px 16px; border-top:1px solid var(--border);}
-    .mm-logout .btn{background:rgba(239,68,68,.12);border-color:#7f1d1d;color:#fca5a5; width:100%;}
-    @media (min-width:901px){ #mobileMenu{ display:none !important } .menu-toggle{ display:none; } }
+  /* Save msg */
+  .save-msg{font-size:12px;color:var(--muted);margin-top:6px;min-height:18px}
 
-    /* Layout */
-    .wrap{padding:var(--pad);display:grid;gap:12px;grid-template-columns:1fr;max-width:1200px;margin:auto}
-    @media (min-width:1000px){ .wrap{grid-template-columns:1.2fr .8fr} }
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:clamp(12px,2vw,18px)}
-    .h3{margin:6px 0 12px;font-size:18px}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .field{display:flex;flex-direction:column;gap:6px;min-width:220px}
-    label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
-    select,input,textarea{
-      border:1px solid var(--border);background:var(--input-bg);color:var(--input-text);
-      border-radius:10px;padding:8px 10px; transition:background-color .15s ease, border-color .15s ease;
-    }
-    input[type="datetime-local"]{min-width:220px}
-    .muted{color:var(--muted)} .tiny{font-size:12px}
-
-    /* Result pills */
-    .res{display:flex;gap:8px;flex-wrap:wrap}
-    .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:8px 12px;font-weight:700;cursor:pointer;user-select:none;background:var(--panel)}
-    .pill[data-v="A"]{background:var(--chip-win)}
-    .pill[data-v="D"]{background:var(--chip-draw)}
-    .pill[data-v="B"]{background:var(--chip-lose)}
-    .pill.active{outline:2px solid color-mix(in srgb, var(--text) 25%, transparent)}
-
-    /* Tables */
-    table{width:100%;border-collapse:collapse}
-    th,td{border:1px solid var(--border);padding:8px 10px;text-align:center}
-    thead th{font-size:12px;color:var(--muted);text-transform:uppercase;background:color-mix(in srgb, var(--panel) 92%, transparent)}
-    .tag{display:inline-block;border:1px dashed var(--border);border-radius:999px;padding:2px 8px;font-weight:700;background:var(--panel)}
-    .win{background:var(--chip-win)} .draw{background:var(--chip-draw)} .lose{background:var(--chip-lose)}
-    .right{display:flex;justify-content:flex-end}
-    .danger-link{border:none;background:transparent;color:#b91c1c;cursor:pointer}
-    @media (prefers-reduced-motion:no-preference){
-      .card, .btn, select, input { transition:background-color .2s ease, color .2s ease, border-color .2s ease, transform .1s ease }
-    }
-  </style>
-
-  <style id="theme-fix">
-    /* ===== Visual refresh: higher contrast & clearer buttons (dark/light) ===== */
-    :root{
-      --accent:#2563eb; /* blue-600 */
-      --brand:#16a34a;  /* green-600 */
-      --warn:#f59e0b;   /* amber-500 */
-      --danger:#ef4444; /* red-500 */
-      --focus: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
-    }
-    :root.light{
-      --accent:#1d4ed8; /* blue-700 for light */
-      --brand:#15803d;  /* green-700 */
-      --danger:#dc2626; /* red-600 */
-    }
-
-    /* Buttons */
-    .btn{ font-weight:700; border-radius:999px; padding:10px 14px; }
-    .btn:focus-visible{ outline: var(--focus); }
-    .btn.primary{ background: var(--brand); color:#fff; border-color: color-mix(in srgb, var(--brand) 60%, var(--border)); }
-    .btn.primary:hover{ filter:none; background: color-mix(in srgb, var(--brand) 88%, black 12%); }
-    .btn.info{ background: var(--accent); color:#fff; border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
-    .btn.info:hover{ filter:none; background: color-mix(in srgb, var(--accent) 88%, black 12%); }
-    .btn.danger{ background: var(--danger); color:#fff; border-color: color-mix(in srgb, var(--danger) 60%, var(--border)); }
-    .btn.danger:hover{ filter:none; background: color-mix(in srgb, var(--danger) 88%, black 12%); }
-    .btn.ghost{ background: transparent; border-color: var(--border); }
-    .btn[disabled]{ opacity:.6; cursor:not-allowed; }
-
-    /* Inputs */
-    select,input,textarea{
-      background: var(--input-bg); color: var(--input-text);
-      border:1px solid var(--border);
-    }
-    select:focus,input:focus,textarea:focus{
-      outline: var(--focus); border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
-    }
-
-    /* Top bar tweaks */
-    .top{ border-bottom:1px solid var(--border); }
-    .menu .btn{ padding:8px 12px; }
-    .menu-toggle{ border-color: var(--border); }
-    .menu.top{ background: var(--panel); }
-
-    /* Cards & headings */
-    .card{ border-color: var(--border); }
-    .h3{ font-size:20px; margin:4px 0 12px; }
-    label{ color: var(--muted); }
-
-    /* Pills (result selector) */
-    .pill{ background: var(--panel); }
-    .pill[data-v="A"]{ background: color-mix(in srgb, var(--brand) 18%, transparent); }
-    .pill[data-v="D"]{ background: color-mix(in srgb, var(--muted) 16%, transparent); }
-    .pill[data-v="B"]{ background: color-mix(in srgb, var(--accent) 18%, transparent); }
-    .pill.active{ outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); }
-
-    /* Table improvements */
-    thead th{ background: color-mix(in srgb, var(--panel) 94%, transparent); }
-    tbody tr:hover{ background: color-mix(in srgb, var(--panel) 88%, transparent); }
-    .table-wrap{ overflow:auto; border-radius:12px; }
-
-    /* Tags for W/D/L with stronger contrast */
-    .tag{ font-weight:800; }
-    .tag.win{ color:#065f46; background: color-mix(in srgb, #10b981 22%, var(--panel)); border-color: color-mix(in srgb, #059669 40%, var(--border)); }
-    .tag.draw{ color:#334155; background: color-mix(in srgb, #94a3b8 22%, var(--panel)); border-color: color-mix(in srgb, #475569 40%, var(--border)); }
-    .tag.lose{ color:#1e3a8a; background: color-mix(in srgb, #60a5fa 22%, var(--panel)); border-color: color-mix(in srgb, #1d4ed8 40%, var(--border)); }
-    :root.light .tag.win{ color:#064e3b; }
-    :root.light .tag.draw{ color:#0f172a; }
-    :root.light .tag.lose{ color:#1e3a8a; }
-
-    /* Danger link more visible */
-    .danger-link{ color:#fecaca; }
-    .danger-link:hover{ text-decoration:underline; }
-
-    /* Responsive spacing */
-    @media (max-width:700px){
-      .row{ gap:12px; }
-      .field{ min-width:unset; flex:1; }
-      .right .btn{ width:100%; justify-content:center; }
-    }
-  </style>
-
-
-  <!-- Intercepteur logout (Annuler = reste connecté) -->
-  <script>
-  (function hardenLogout(){
-    document.addEventListener('click', function(e){
-      const t = e.target && e.target.closest && e.target.closest('#logoutBtn');
-      if(!t) return;
-      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-      const ok = confirm('Voulez-vous vraiment vous déconnecter ?');
-      if(!ok) return;
-      const API = () => (window.API || localStorage.getItem('efoot.api') || (location.protocol+'//'+location.hostname+':3005')).replace(/\/+$/,'');
-      const token = localStorage.getItem('efoot.token') || '';
-      (async () => {
-        // Appel API logout
-        try{ await fetch(API()+'/auth/logout',{ method:'POST', headers:{ Authorization:'Bearer '+token }}); }catch(_){}
-
-        // Nettoyage complet du localStorage (sauf thème)
-        try{
-          const keep=new Set(['efoot.theme']);
-          for(let i=localStorage.length-1;i>=0;i--){
-            const k=localStorage.key(i);
-            if(!keep.has(k)) localStorage.removeItem(k);
-          }
-          sessionStorage.clear();
-        }catch(_){}
-
-        // Nettoyage des caches si service worker présent
-        if('caches' in window){
-          try{
-            caches.keys().then(names=>{ for(let name of names) caches.delete(name); });
-          }catch(_){}
-        }
-
-        // Redirection avec reload forcé
-        location.replace('login.html');
-        location.reload(true);
-      })();
-    }, true);
-  })();
-  </script>
-
-  
-
-<script>
-  (function(){
-    var img = document.getElementById('clubLogo');
-    if(!img) return;
-    img.addEventListener('error', function(){ this.style.display='none'; }, { once:true });
-  })();
-</script>
-
-
-  <style id="duel-mobile-fix">
-    /* Logo image as <img>, not empty div */
-    .logo{ object-fit:cover; display:block; background:var(--panel); }
-
-    /* Mobile polish */
-    @media (max-width: 700px){
-      .top{ padding:8px 10px; }
-      .title b{ font-size:16px }
-      .title small{ display:none } /* garder propre */
-      .wrap{ padding:12px }
-      .card{ padding:12px; border-radius:12px }
-      .row{ gap:10px }
-      .right .btn{ width:100%; justify-content:center; }
-      table{ display:block; overflow:auto; border-spacing:0; }
-      thead, tbody, tr{ width:100% }
-    }
-    @media (max-width: 480px){
-      .menu{ right:8px; top:56px; width:min(92vw,360px) }
-      .btn{ padding:10px 12px }
-      input,select,textarea{ padding:10px 12px }
-    }
-  </style>
-
-  <script defer src="common.js"></script>
-
-  <!-- Favicon / PWA icons (club logo) -->
-  <link rel="icon" type="image/png" sizes="32x32"  href="assets/icons/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/apple-touch-icon.png">
-  <link rel="apple-touch-icon" sizes="180x180"     href="assets/icons/apple-touch-icon.png">
-  <link rel="shortcut icon"                        href="assets/icons/apple-touch-icon.png">
-  <meta name="theme-color" content="#0b1119">
-
-
-  <style id="pill-ux-fix">
-    .res{ gap:10px; }
-    .pill{
-      position:relative;
-      padding:10px 14px; font-weight:800;
-      border-radius:999px; border:1px solid var(--border);
-      transform:translateZ(0);
-    }
-    .pill:focus-visible{ outline: 0; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
-    .pill.active{
-      box-shadow: 0 4px 14px rgba(0,0,0,.25), inset 0 0 0 999px color-mix(in srgb, var(--panel) 0%, transparent);
-    }
-    .pill[data-v="A"].active{ border-color: color-mix(in srgb, var(--brand) 70%, var(--border)); }
-    .pill[data-v="D"].active{ border-color: color-mix(in srgb, var(--muted) 70%, var(--border)); }
-    .pill[data-v="B"].active{ border-color: color-mix(in srgb, var(--accent) 70%, var(--border)); }
-    .pill .dot{
-      position:absolute; inset:auto 10px -6px auto; width:10px; height:10px; border-radius:50%;
-      background: currentColor; opacity:0; transition:opacity .15s ease, transform .15s ease;
-    }
-    .pill.active .dot{ opacity:1; transform:translateY(0) }
-    .pill[data-v="A"] .dot{ color: var(--brand); }
-    .pill[data-v="D"] .dot{ color: var(--muted); }
-    .pill[data-v="B"] .dot{ color: var(--accent); }
-  </style>
-
-
-  <style id="duel-mobile-polish2">
-    @media (max-width: 720px){
-      .right{ width:100% }
-      .right .btn{ width:100% }
-    }
-  </style>
-
+  /* Hint text */
+  .hint{font-size:12px;color:var(--muted);margin-top:4px}
+</style>
 </head>
-<body class="container">
-  <!-- TOP -->
-  <!-- ===== TOP ===== -->
+<body>
   <header class="top" id="topbar">
     <a class="brand" href="./Accueil.html" aria-label="Accueil GOUZEPE">
       <img id="clubLogo" class="logo" src="assets/icons/apple-touch-icon.png" alt="Logo">
       <div class="brand-title">
         <h1>GOUZEPE eFOOTBALL</h1>
-        <div class="season-sub"><span id="season-text" style="color: #16a34a; font-weight: bold;">Saison</span></div>
+        <div class="season-sub"><span id="season-text" style="color:#16a34a;font-weight:bold;">Duel</span></div>
       </div>
     </a>
-
-    <button id="menuToggle" class="btn ghost" aria-controls="menu" aria-expanded="false" title="Ouvrir le menu de navigation">☰ Menu</button>
+    <button id="menuToggle" class="btn ghost" aria-controls="menu"><i data-lucide="menu"></i> Menu</button>
     <nav class="nav" aria-label="Navigation principale">
-      <div id="menu">
-        <a class="btn ghost" href="./Accueil.html">🏠 Accueil</a>
-        <a class="btn ghost" href="./Duel.html">💪🏽 Duel</a>
-        <a class="btn ghost" href="./Classement-general.html">📊 Classements</a>
-        <a class="btn ghost" href="./Tournois.html">🏆 Tournois</a>
-        <a class="btn ghost" href="./Panel-Membre.html">👤 Mon espace</a>
-        <a class="btn ghost adminNav" href="./Admin-Joueurs.html" style="display:none">👥 Admin-Joueurs</a>
-        <a class="btn ghost adminNav" href="./Admin-Utilisateurs.html" style="display:none">🛡️ Admin Utilisateurs</a>
-        <button id="logoutBtn" class="btn ghost danger" type="button" title="Se déconnecter de votre compte">Déconnexion</button>
+      <div id="menu" class="menu">
+        <a href="./Accueil.html"><i data-lucide="home"></i> Accueil</a>
+        <a href="./Duel.html"><i data-lucide="swords"></i> Duel</a>
+        <a href="./Classement-general.html"><i data-lucide="bar-chart-2"></i> Classements</a>
+        <a href="./Panel-Membre.html"><i data-lucide="user"></i> Mon espace</a>
+        <a href="./Tournois.html"><i data-lucide="trophy"></i> Tournois</a>
+        <a class="adminNav" href="./Admin-Joueurs.html" style="display:none"><i data-lucide="users"></i> Admin-Joueurs</a>
+        <a class="adminNav" href="./Admin-Utilisateurs.html" style="display:none"><i data-lucide="shield"></i> Admin Utilisateurs</a>
+        <a class="adminNav" href="./Admin-Sauvegardes.html" style="display:none"><i data-lucide="database"></i> Sauvegardes</a>
+        <button id="logoutBtn" class="btn ghost danger" type="button"><i data-lucide="log-out"></i></button>
       </div>
     </nav>
-
     <div class="spacer"></div>
-    <div id="season-badge" class="badge badge-top"><span class="dot"></span><span id="season-top">Saison</span></div>
-
-    <button id="themeBtn" class="btn ghost" title="Thème clair/sombre">☀️/🌙</button>
-
-    <!-- Menu Mobile Moderne -->
-<div id="mobileMenu" hidden>
-  <div class="mm-panel" role="dialog" aria-modal="true" aria-labelledby="mmTitle">
-    <div id="mmTitle" class="mm-title">
-      <span>Menu</span>
-      <button id="mmClose" class="btn ghost" style="position:absolute;right:12px;top:12px;padding:6px 10px;font-size:18px;line-height:1" aria-label="Fermer" title="Fermer le menu">✕</button>
-    </div>
-    <div class="mm-list">
-      <a class="mm-btn" href="./Accueil.html">🏠 Accueil</a>
-      <a class="mm-btn" href="./Duel.html">💪🏽 Duel</a>
-      <a class="mm-btn" href="./Classement-general.html">📊 Classements</a>
-      <a class="mm-btn" href="./Panel-Membre.html">👤 Mon espace</a>
-      <a class="mm-btn adminOnly" id="mmAdminPlayers" href="./Admin-Joueurs.html" style="display:none">👥 Admin-Joueurs</a>
-    </div>
-    <div class="mm-theme"><button id="mmTheme" class="btn ghost" title="Basculer entre thème clair et sombre">☀️ / 🌙 Thème</button></div>
-    <div class="mm-logout"><button id="mmLogout" class="btn danger" title="Se déconnecter de votre compte">Déconnexion</button></div>
-  </div>
-</div>
-
+    <button id="themeBtn" class="btn ghost" title="Thème">
+      <i data-lucide="sun" class="theme-icon-sun"></i>
+      <i data-lucide="moon" class="theme-icon-moon" style="display:none"></i>
+    </button>
   </header>
 
-  <main class="wrap">
-    <!-- Colonne gauche -->
-    <section class="card">
-      <h3 class="h3">Nouveau duel (exhibition)</h3>
+  <div class="wrap">
+    <div class="grid">
 
-      <div class="row">
-        <div class="field">
-          <label for="p1">Joueur A</label>
-          <select id="p1"><option value="">Choisir…</option></select>
+      <!-- ── Nouveau duel ── -->
+      <section class="card">
+        <h3 class="section-title">
+          <i data-lucide="swords"></i>Nouveau duel (exhibition)
+        </h3>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+          <div class="field" style="flex:1;min-width:150px">
+            <label for="p1">Joueur A</label>
+            <select id="p1"><option value="">Choisir…</option></select>
+          </div>
+          <div class="field" style="flex:1;min-width:150px">
+            <label for="p2">Joueur B</label>
+            <select id="p2"><option value="">Choisir…</option></select>
+          </div>
         </div>
-        <div class="field">
-          <label for="p2">Joueur B</label>
-          <select id="p2"><option value="">Choisir…</option></select>
+
+        <div class="field" style="margin-bottom:14px">
+          <label>Résultat</label>
+          <div class="res" id="resPick">
+            <button class="pill" data-v="A" aria-pressed="false">
+              <i data-lucide="trophy" style="width:13px;height:13px"></i> A gagne
+            </button>
+            <button class="pill" data-v="D" aria-pressed="false">
+              <i data-lucide="handshake" style="width:13px;height:13px"></i> Nul
+            </button>
+            <button class="pill" data-v="B" aria-pressed="false">
+              <i data-lucide="trophy" style="width:13px;height:13px"></i> B gagne
+            </button>
+          </div>
+          <div class="hint">L'historique retient uniquement V/N/D (pas de score).</div>
         </div>
-      </div>
 
-      <div class="field" style="margin-top:8px">
-        <label>Résultat</label>
-        <div class="res" id="resPick">
-          <button class="pill" data-v="A" aria-pressed="false" title="Le joueur A remporte le duel">🏆 A gagne<span class="dot"></span></button>
-          <button class="pill" data-v="D" aria-pressed="false" title="Match nul entre les deux joueurs">🤝 Nul<span class="dot"></span></button>
-          <button class="pill" data-v="B" aria-pressed="false" title="Le joueur B remporte le duel">🏆 B gagne<span class="dot"></span></button>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <div class="field" style="flex:1;min-width:180px">
+            <label for="dt">Date &amp; heure (facultatif)</label>
+            <input id="dt" type="datetime-local"/>
+          </div>
+          <button id="save" class="btn primary">Enregistrer le duel</button>
         </div>
-        <div class="tiny muted">L’historique retient uniquement W/D/L (pas de score).</div>
-      </div>
+        <div id="saveMsg" class="save-msg">—</div>
+      </section>
 
-      <div class="row" style="margin-top:8px">
-        <div class="field">
-          <label for="dt">Date & heure (facultatif)</label>
-          <input id="dt" type="datetime-local"/>
+      <!-- ── Face-à-face ── -->
+      <section class="card">
+        <h3 class="section-title">
+          <i data-lucide="users"></i>Face-à-face
+        </h3>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+          <div class="field" style="flex:1;min-width:130px">
+            <label for="cA">Joueur A</label>
+            <select id="cA"><option value="">Choisir…</option></select>
+          </div>
+          <div class="field" style="flex:1;min-width:130px">
+            <label for="cB">Joueur B</label>
+            <select id="cB"><option value="">Choisir…</option></select>
+          </div>
         </div>
-        <div class="sp"></div>
-        <div class="right"><button id="save" class="btn primary" title="Enregistrer ce duel dans l'historique">Enregistrer le duel</button></div>
-      </div>
-      <div id="saveMsg" class="tiny muted" style="margin-top:6px">—</div>
-    </section>
 
-    <!-- Colonne droite -->
-    <section class="card">
-      <h3 class="h3">Face-à-face rapide</h3>
-      <div class="row">
-        <div class="field">
-          <label for="cA">Joueur A</label>
-          <select id="cA"><option value="">Choisir…</option></select>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:4px">
+          <div class="field" style="flex:1;min-width:120px">
+            <label for="from">Depuis</label>
+            <input id="from" type="date"/>
+          </div>
+          <div class="field" style="flex:1;min-width:120px">
+            <label for="to">Jusqu'au</label>
+            <input id="to" type="date"/>
+          </div>
+          <button id="compare" class="btn">Comparer</button>
         </div>
-        <div class="field">
-          <label for="cB">Joueur B</label>
-          <select id="cB"><option value="">Choisir…</option></select>
+
+        <div id="cmpOut"></div>
+      </section>
+
+      <!-- ── Historique ── -->
+      <section class="card full">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+          <h3 class="section-title" style="margin:0">
+            <i data-lucide="clock"></i>Historique des duels
+          </h3>
+          <div class="filter-bar">
+            <label>Période</label>
+            <select id="period">
+              <option value="all" selected>Toujours</option>
+              <option value="today">Aujourd'hui</option>
+              <option value="week">7 jours</option>
+              <option value="month">30 jours</option>
+            </select>
+            <label>De</label><input id="histFrom" type="date">
+            <label>À</label><input id="histTo" type="date">
+            <label>Joueur</label><select id="histP"><option value="">Tous</option></select>
+            <label>Afficher</label>
+            <select id="limit">
+              <option>5</option><option selected>10</option><option>20</option><option>50</option>
+            </select>
+            <button id="refresh" class="btn" style="padding:5px 10px;font-size:12px">
+              <i data-lucide="refresh-cw" style="width:12px;height:12px"></i> Rafraîchir
+            </button>
+            <a id="exportCsv" class="btn" href="#" style="padding:5px 10px;font-size:12px">CSV</a>
+            <a id="exportPdf" class="btn" href="#" target="_blank" rel="noopener" style="padding:5px 10px;font-size:12px">PDF</a>
+          </div>
         </div>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <div class="field">
-          <label for="from">Depuis (optionnel)</label>
-          <input id="from" type="date">
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Joueur A</th>
+                <th>Résultat</th>
+                <th>Joueur B</th>
+                <th>Leader</th>
+                <th class="adminOnly">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="list"></tbody>
+          </table>
         </div>
-        <div class="field">
-          <label for="to">Jusqu’au (optionnel)</label>
-          <input id="to" type="date">
-        </div>
-        <div class="sp"></div>
-        <div class="right"><button id="compare" class="btn info" title="Comparer les statistiques entre deux joueurs">Comparer</button></div>
-      </div>
-      <div id="cmpOut" style="margin-top:10px"></div>
-    </section>
+      </section>
 
-    <!-- Historique -->
-    <section class="card" style="grid-column:1/-1">
-      <div class="row" style="justify-content:space-between">
-        <h3 class="h3">Historique des duels</h3>
-        <div class="row">
-          <label for="period">Période</label>
-          <select id="period">
-            <option value="all" selected>Toujours</option>
-            <option value="today">Aujourd’hui</option>
-            <option value="week">7 jours</option>
-            <option value="month">30 jours</option>
-          </select>
-          <label for="histFrom">De</label><input id="histFrom" type="date">
-          <label for="histTo">À</label><input id="histTo" type="date">
-          <label for="histP">Joueur</label><select id="histP"><option value="">Tous</option></select>
-          <label for="limit">Afficher</label><select id="limit"><option>5</option><option selected>10</option><option>20</option><option>50</option></select>
-          <button id="refresh" class="btn" title="Recharger l'historique des duels depuis le serveur">Rafraîchir</button>
-          <a id="exportCsv" class="btn" href="#" title="Exporter l'historique au format CSV">Export CSV</a>
-          <a id="exportPdf" class="btn" href="#" target="_blank" rel="noopener" title="Imprimer l'historique au format PDF">Imprimer PDF</a>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Date</th><th>Joueur A</th><th>Résultat</th><th>Joueur B</th><th>Leader</th><th class="adminOnly">Actions</th></tr></thead>
-          <tbody id="list"></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
+    </div>
+  </div>
 
-  <script>
-  const API = () => (window.API || localStorage.getItem('efoot.api') || (location.protocol+'//'+location.hostname+':3005')).replace(/\/+$/,'');
-  const TOK = localStorage.getItem('efoot.token')||'';
-  let MY_ROLE = (localStorage.getItem('efoot.role')||'member').toLowerCase();
-  const hd = (m='GET')=>({method:m,headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOK}});
-  const $ = s => document.querySelector(s);
-  const esc = t => String(t??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+<script>
+/* ── Helpers définis localement (pas de dépendance sur common.js au parse-time) ── */
+const $ = s => document.querySelector(s);
+const esc = t => String(t??'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
-  // Menu Mobile Moderne
-  (function(){
-    const sheet = $('#mobileMenu');
-    const toggleBtn = $('#menuToggle');
-    const closeBtn = $('#mmClose');
-    const open = ()=>{ sheet.hidden=false; document.body.style.overflow='hidden'; };
-    const close= ()=>{ sheet.hidden=true;  document.body.style.overflow=''; };
+/* Lit le token depuis localStorage à chaque appel (common.js peut l'avoir mis à jour) */
+const hd = (m='GET') => ({
+  method: m,
+  headers: { 'Content-Type':'application/json', Authorization:'Bearer '+(localStorage.getItem('efoot.token')||'') }
+});
 
-    toggleBtn?.addEventListener('click', (e)=>{ e.preventDefault(); open(); });
-    closeBtn?.addEventListener('click', close);
-    sheet?.addEventListener('click', (e)=>{ if(e.target===sheet) close(); });
-    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !sheet.hidden) close(); });
+/* API base : window.API est positionné par common.js (defer) avant DOMContentLoaded */
+const getAPI = () => window.API || localStorage.getItem('efoot.api') || ('http://'+location.hostname+':3005');
 
-    // Rôle admin -> affiche liens admin
-    const isAdmin = (localStorage.getItem('efoot.role')||'member').toLowerCase()==='admin';
-    $('#mmAdminPlayers').style.display = isAdmin ? '' : 'none';
+const nowLocal = () => {
+  const d = new Date(); d.setSeconds(0,0);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
-    // Synchronise avec les contrôles existants
-    $('#mmTheme').onclick = ()=> $('#themeBtn').click();
-    $('#mmLogout').onclick = ()=> $('#logoutBtn').click();
-  })();
+/* ── State ── */
+const NAME_BY_ID = new Map();
+let MY_PID  = null;
+let MY_ROLE = 'member';
+let RESULT  = null;
 
-  // Thème (clé unifiée 'efoot.theme')
-  (function(){
-    const key='efoot.theme'; const b=$('#themeBtn');
-    const apply=m=>{document.documentElement.classList.toggle('light',m==='light');localStorage.setItem(key,m);};
-    apply(localStorage.getItem(key)||'dark');
-    b?.addEventListener('click',()=>apply(document.documentElement.classList.contains('light')?'dark':'light'));
-  })();
-
-  // Linked player (pour restriction membre)
-  let MY_PID = null;
-  (async ()=>{ try{ const r=await fetch(API()+'/auth/me', hd()); if(r.ok){ const d=await r.json(); MY_ROLE=(d.user?.role||MY_ROLE).toLowerCase(); MY_PID=d.user?.player_id||null; } }catch(_){}})();
-
-  // Chargement joueurs
-  const NAME_BY_ID = new Map();
-  async function loadPlayers(){
-    const r = await fetch(API()+'/players', hd());
-    const d = await r.json().catch(()=>({players:[]}));
-    const list = (d.players||[]).sort((a,b)=> (a.name||a.player_id).localeCompare(b.name||b.player_id,'fr'));
-    list.forEach(p=> NAME_BY_ID.set(String(p.player_id), p.name||p.player_id));
-    const opts = list.map(p=>`<option value="${esc(p.player_id)}">${esc(p.name||p.player_id)} — ${esc(p.player_id)}</option>`).join('');
-    ['p1','p2','cA','cB','histP'].forEach(id=>{ const sel=$('#'+id); if(sel) sel.innerHTML = (id==='histP' ? '<option value="">Tous</option>' : '<option value="">Choisir…</option>') + opts; });
-  }
-
-  // Sélection résultat (A/D/B) avec clavier + aria
-  let RESULT = null;
-  (function(){
-    const box = $('#resPick');
-    function setActive(btn){
-      RESULT = btn.dataset.v;
-      box.querySelectorAll('.pill').forEach(x=>{
-        const on = (x===btn);
-        x.classList.toggle('active', on);
-        x.setAttribute('aria-pressed', on ? 'true' : 'false');
-      });
-    }
-    box.addEventListener('click',(e)=>{
-      const b = e.target.closest('.pill'); if(!b) return;
-      setActive(b);
-    });
-    box.addEventListener('keydown',(e)=>{
-      if(e.key!==' ' && e.key!=='Enter') return;
-      const b = e.target.closest('.pill'); if(!b) return;
-      e.preventDefault();
-      setActive(b);
-    });
-    // Focus du premier pill au chargement pour accessibilité
-    const first = box.querySelector('.pill'); first && first.setAttribute('tabindex', '0');
-    box.querySelectorAll('.pill').forEach(p=> p.setAttribute('tabindex','0'));
-  })();
-
-  const nowLocal = ()=>{ const d=new Date(); d.setSeconds(0,0); const pad=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-
-  // Enregistrer un duel
-  async function onSave(){
-    const btn=$('#save'), msg=$('#saveMsg'); msg.textContent='…'; btn.disabled=true;
-    try{
-      const p1=$('#p1').value.trim(), p2=$('#p2').value.trim();
-      if(!p1 || !p2) throw new Error('Sélectionne les deux joueurs.');
-      if(p1===p2)    throw new Error('Choisis deux joueurs différents.');
-      if(!RESULT)    throw new Error('Choisis le résultat (A gagne / Nul / B gagne).');
-      if(MY_ROLE!=='admin'){
-        if(!MY_PID) throw new Error("Votre compte n'est lié à aucun player_id");
-        if(p1!==MY_PID && p2!==MY_PID) throw new Error("Vous ne pouvez enregistrer qu’un duel auquel vous participez.");
-      }
-      const dt = $('#dt').value ? new Date($('#dt').value).toISOString() : null;
-      let score_a=0, score_b=0; if(RESULT==='A'){score_a=1;} else if(RESULT==='B'){score_b=1;}
-      const body = { p1, p2, score_a, score_b }; if(dt) body.played_at = dt;
-
-      const r = await fetch(API()+'/duels', { ...hd('POST'), body: JSON.stringify(body) });
-      const d = await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
-
-      msg.textContent = '✅ Duel enregistré';
-      RESULT=null; document.querySelectorAll('#resPick .pill').forEach(x=>x.classList.remove('active'));
-      $('#dt').value = nowLocal();
-      await refreshRecent();
-    }catch(e){ msg.textContent='❌ '+(e.message||'Erreur'); }
-    finally{ btn.disabled=false; }
-  }
-
-  // Face-à-face
-  function badge(w,d,l){
-    let cls='draw', lab='Égalité'; if(w>l){cls='win';lab='Leader A';} else if(l>w){cls='lose';lab='Leader B';}
-    return `<span class="tag ${cls}">${lab} • ${w}-${d}-${l}</span>`;
-  }
-  async function onCompare(){
-    const A=$('#cA').value.trim(), B=$('#cB').value.trim(), F=$('#from').value.trim(), T=$('#to').value.trim();
-    const out=$('#cmpOut'); out.innerHTML='';
-    if(!A||!B){ out.innerHTML='<div class="tiny muted">Choisis deux joueurs.</div>'; return; }
-    if(A===B){ out.innerHTML='<div class="tiny muted">Les joueurs doivent être différents.</div>'; return; }
-    const qs=new URLSearchParams({p1:A,p2:B}); if(F)qs.set('from',F); if(T)qs.set('to',T);
-    const r=await fetch(API()+'/duels/compare?'+qs.toString(), hd()); const d=await r.json().catch(()=>({})); if(!r.ok){ out.innerHTML='<div class="tiny muted">Erreur.</div>'; return; }
-    const t=d.totals||{wins:0,draws:0,losses:0,legs:0};
-    const nA=d.p1?.name||NAME_BY_ID.get(A)||A, nB=d.p2?.name||NAME_BY_ID.get(B)||B;
-    out.innerHTML = `<div class="row" style="justify-content:space-between"><div><b>${esc(nA)}</b> vs <b>${esc(nB)}</b> — <span class="muted">${t.legs||0} match(s)</span></div><div>${badge(t.wins,t.draws,t.losses)}</div></div>`;
-  }
-
-  // Historique + filtres + exports
-  function periodToRange(v){
-    const d = new Date(); const pad=n=>String(n).padStart(2,'0');
-    const iso = x => `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`;
-    if(v==='today'){ const a=new Date(); const b=new Date(); return {from:iso(a), to:iso(b)}; }
-    if(v==='week'){ const a=new Date(); a.setDate(d.getDate()-6); return {from:iso(a), to:iso(d)}; }
-    if(v==='month'){ const a=new Date(); a.setDate(d.getDate()-29); return {from:iso(a), to:iso(d)}; }
-    return {from:$('#histFrom').value||'', to:$('#histTo').value||''};
-  }
-  async function refreshRecent(){
-    const L=parseInt($('#limit').value||'10',10), p=$('#histP').value||'', pr=$('#period').value;
-    const {from,to} = periodToRange(pr);
-    const qs = new URLSearchParams({ limit:String(L) });
-    if (p) qs.set('p', p); if (from) qs.set('from', from); if (to) qs.set('to', to);
-    $('#exportCsv').href = `${API()}/duels/export.csv?${qs.toString()}`;
-    $('#exportPdf').href = `${API()}/duels/export.html?${qs.toString()}`;
-
-    const r=await fetch(API()+'/duels/recent?'+qs.toString(), hd());
-    const d=await r.json().catch(()=>({duels:[]})); const tb=$('#list'); tb.innerHTML='';
-    (d.duels||[]).forEach(row=>{
-      const a=+row.score_a, b=+row.score_b, cls=(a>b)?'win':(a<b?'lose':'draw');
-      const res=(a>b)?'A gagne':(a<b?'B gagne':'Nul');
-      const leader=(a>b)?(row.p1_name||row.p1_id):(a<b?(row.p2_name||row.p2_id):'Égalité');
-      const tr=document.createElement('tr');
-      tr.innerHTML = `<td>${new Date(row.played_at).toLocaleString('fr-FR')}</td>
-        <td>${esc(row.p1_name||row.p1_id)}</td>
-        <td><span class="tag ${cls}">${esc(res)}</span></td>
-        <td>${esc(row.p2_name||row.p2_id)}</td>
-        <td>${esc(leader)}</td>
-        <td class="adminOnly">${MY_ROLE==='admin'
-          ? `<button class="danger-link" data-del="${row.id}">Supprimer</button>` : ''}</td>`;
-      tb.appendChild(tr);
-    });
-  }
-  document.getElementById('list').addEventListener('click', async (e)=>{
-    const id=e.target?.dataset?.del; if(!id) return;
-    if(MY_ROLE!=='admin') return alert('Réservé aux administrateurs.'); if(!confirm('Supprimer ce duel ?')) return;
-    const r=await fetch(API()+'/duels/'+encodeURIComponent(id), {...hd('DELETE')}); if(!r.ok){ const d=await r.json().catch(()=>({})); alert(d.error||('HTTP '+r.status)); return; }
-    await refreshRecent();
+/* ── Chargement joueurs ── */
+async function loadPlayers() {
+  const r = await fetch(getAPI()+'/players', hd());
+  const d = await r.json().catch(() => ({ players:[] }));
+  const list = (d.players||[]).sort((a,b) => (a.name||a.player_id).localeCompare(b.name||b.player_id,'fr'));
+  list.forEach(p => NAME_BY_ID.set(String(p.player_id), p.name||p.player_id));
+  const opts = list.map(p => `<option value="${esc(p.player_id)}">${esc(p.name||p.player_id)} — ${esc(p.player_id)}</option>`).join('');
+  ['p1','p2','cA','cB','histP'].forEach(id => {
+    const sel = $('#'+id);
+    if (sel) sel.innerHTML = (id==='histP' ? '<option value="">Tous</option>' : '<option value="">Choisir…</option>') + opts;
   });
+}
 
-  // Init
-  (async function(){
-    const expAt=+localStorage.getItem('efoot.expAt')||0; if(!TOK || Date.now()>=expAt){ location.href='login.html'; return; }
-    $('#dt').value = (function(){ const d=new Date(); d.setSeconds(0,0); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; })();
-    await loadPlayers();
-    ['save','compare','refresh'].forEach(id=> document.getElementById(id).addEventListener('click', ({target})=>({save:onSave,compare:onCompare,refresh:refreshRecent}[target.id]())));
-    ['period','histFrom','histTo','histP','limit'].forEach(id=> $('#'+id).addEventListener('change', refreshRecent));
+/* ── Enregistrer un duel ── */
+async function onSave() {
+  const btn = $('#save'), msg = $('#saveMsg');
+  msg.textContent = '…'; btn.disabled = true;
+  try {
+    const p1 = $('#p1').value.trim(), p2 = $('#p2').value.trim();
+    if (!p1 || !p2) throw new Error('Sélectionne les deux joueurs.');
+    if (p1 === p2)  throw new Error('Choisis deux joueurs différents.');
+    if (!RESULT)    throw new Error('Choisis le résultat (A gagne / Nul / B gagne).');
+    if (MY_ROLE !== 'admin') {
+      if (!MY_PID) throw new Error("Votre compte n'est lié à aucun player_id");
+      if (p1 !== MY_PID && p2 !== MY_PID) throw new Error("Vous ne pouvez enregistrer qu'un duel auquel vous participez.");
+    }
+    const dt = $('#dt').value ? new Date($('#dt').value).toISOString() : null;
+    let score_a = 0, score_b = 0;
+    if (RESULT === 'A') { score_a = 1; } else if (RESULT === 'B') { score_b = 1; }
+    const body = { p1, p2, score_a, score_b }; if (dt) body.played_at = dt;
+    const r = await fetch(getAPI()+'/duels', { ...hd('POST'), body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || ('HTTP '+r.status));
+    msg.innerHTML = '<i data-lucide="check" style="width:13px;height:13px;vertical-align:middle;color:#86efac"></i> Duel enregistré';
+    if (window.lucide) lucide.createIcons({ nodes:[msg] });
+    RESULT = null; document.querySelectorAll('#resPick .pill').forEach(x => x.classList.remove('active'));
+    $('#dt').value = nowLocal();
     await refreshRecent();
-  })();
-  </script>
-  <script src="pwa-init.js"></script>
+  } catch(e) {
+    msg.innerHTML = '<i data-lucide="x-circle" style="width:13px;height:13px;vertical-align:middle;color:#f87171"></i> ' + esc(e.message||'Erreur');
+    if (window.lucide) lucide.createIcons({ nodes:[msg] });
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ── Face-à-face ── */
+function leaderBadge(w, d, l) {
+  let cls = 'draw', lab = 'Égalité';
+  if (w > l) { cls='win';  lab='Leader A'; }
+  else if (l > w) { cls='lose'; lab='Leader B'; }
+  return `<span class="leader-tag ${cls}">${lab} &bull; ${w}V-${d}N-${l}D</span>`;
+}
+async function onCompare() {
+  const A = $('#cA').value.trim(), B = $('#cB').value.trim();
+  const F = $('#from').value.trim(), T = $('#to').value.trim();
+  const out = $('#cmpOut'); out.innerHTML = '';
+  if (!A || !B) { out.innerHTML = '<div class="hint" style="margin-top:8px">Choisis deux joueurs.</div>'; return; }
+  if (A === B)  { out.innerHTML = '<div class="hint" style="margin-top:8px">Les joueurs doivent être différents.</div>'; return; }
+  const qs = new URLSearchParams({ p1:A, p2:B }); if (F) qs.set('from',F); if (T) qs.set('to',T);
+  const r = await fetch(getAPI()+'/duels/compare?'+qs.toString(), hd());
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { out.innerHTML = '<div class="hint" style="margin-top:8px">Erreur lors de la comparaison.</div>'; return; }
+  const t = d.totals || { wins:0, draws:0, losses:0, legs:0 };
+  const nA = d.p1?.name || NAME_BY_ID.get(A) || A;
+  const nB = d.p2?.name || NAME_BY_ID.get(B) || B;
+  out.innerHTML = `<div class="cmp-row">
+    <div><strong>${esc(nA)}</strong> <span class="muted" style="font-size:13px">vs</span> <strong>${esc(nB)}</strong> <span class="muted" style="font-size:12px;margin-left:6px">${t.legs||0} match(s)</span></div>
+    <div>${leaderBadge(t.wins, t.draws, t.losses)}</div>
+  </div>`;
+}
+
+/* ── Historique ── */
+function periodToRange(v) {
+  const d = new Date(); const pad = n => String(n).padStart(2,'0');
+  const iso = x => `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`;
+  if (v === 'today') { return { from:iso(d), to:iso(d) }; }
+  if (v === 'week')  { const a = new Date(); a.setDate(d.getDate()-6); return { from:iso(a), to:iso(d) }; }
+  if (v === 'month') { const a = new Date(); a.setDate(d.getDate()-29); return { from:iso(a), to:iso(d) }; }
+  return { from:$('#histFrom').value||'', to:$('#histTo').value||'' };
+}
+async function refreshRecent() {
+  const L = parseInt($('#limit').value||'10', 10);
+  const p = $('#histP').value || '';
+  const { from, to } = periodToRange($('#period').value);
+  const qs = new URLSearchParams({ limit:String(L) });
+  if (p)    qs.set('p', p);
+  if (from) qs.set('from', from);
+  if (to)   qs.set('to', to);
+  $('#exportCsv').href = `${getAPI()}/duels/export.csv?${qs.toString()}`;
+  $('#exportPdf').href = `${getAPI()}/duels/export.html?${qs.toString()}`;
+  const r = await fetch(getAPI()+'/duels/recent?'+qs.toString(), hd());
+  const d = await r.json().catch(() => ({ duels:[] }));
+  const tb = $('#list'); tb.innerHTML = '';
+  (d.duels||[]).forEach(row => {
+    const a = +row.score_a, b = +row.score_b;
+    const cls  = a > b ? 'win' : (a < b ? 'lose' : 'draw');
+    const res  = a > b ? 'A gagne' : (a < b ? 'B gagne' : 'Nul');
+    const leader = a > b ? (row.p1_name||row.p1_id) : (a < b ? (row.p2_name||row.p2_id) : 'Égalité');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:var(--muted);font-size:12px">${new Date(row.played_at).toLocaleString('fr-FR')}</td>
+      <td style="font-weight:500">${esc(row.p1_name||row.p1_id)}</td>
+      <td><span class="tag ${cls}">${esc(res)}</span></td>
+      <td style="font-weight:500">${esc(row.p2_name||row.p2_id)}</td>
+      <td style="font-weight:600">${esc(leader)}</td>
+      <td class="adminOnly">${MY_ROLE==='admin'
+        ? `<button class="danger-link" data-del="${row.id}">Supprimer</button>` : '—'}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+document.getElementById('list').addEventListener('click', async e => {
+  const id = e.target?.dataset?.del; if (!id) return;
+  if (MY_ROLE !== 'admin') return alert('Réservé aux administrateurs.');
+  if (!confirm('Supprimer ce duel ?')) return;
+  const r = await fetch(getAPI()+'/duels/'+encodeURIComponent(id), hd('DELETE'));
+  if (!r.ok) { const d = await r.json().catch(()=>({})); alert(d.error||('HTTP '+r.status)); return; }
+  await refreshRecent();
+});
+
+/* ── Init : s'exécute après common.js (defer) ET après le DOM ── */
+document.addEventListener('DOMContentLoaded', async () => {
+  const tok   = localStorage.getItem('efoot.token');
+  const expAt = +localStorage.getItem('efoot.expAt') || 0;
+  if (!tok || (expAt > 0 && Date.now() >= expAt)) { location.replace('login.html'); return; }
+
+  /* Charger MY_PID / MY_ROLE */
+  try {
+    const r = await fetch(getAPI()+'/auth/me', hd());
+    if (r.ok) {
+      const d = await r.json();
+      MY_ROLE = (d.user?.role || 'member').toLowerCase();
+      MY_PID  = d.user?.player_id || null;
+    }
+  } catch(_) {}
+
+  /* Sélection résultat */
+  const box = $('#resPick');
+  function setActive(btn) {
+    RESULT = btn.dataset.v;
+    box.querySelectorAll('.pill').forEach(x => {
+      const on = (x === btn);
+      x.classList.toggle('active', on);
+      x.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  box.addEventListener('click', e => { const b = e.target.closest('.pill'); if(b) setActive(b); });
+  box.addEventListener('keydown', e => {
+    if (e.key !== ' ' && e.key !== 'Enter') return;
+    const b = e.target.closest('.pill'); if (!b) return;
+    e.preventDefault(); setActive(b);
+  });
+  box.querySelectorAll('.pill').forEach(p => p.setAttribute('tabindex','0'));
+
+  /* Autres initialisations */
+  $('#dt').value = nowLocal();
+  await loadPlayers();
+  document.getElementById('save').addEventListener('click', onSave);
+  document.getElementById('compare').addEventListener('click', onCompare);
+  document.getElementById('refresh').addEventListener('click', refreshRecent);
+  ['period','histFrom','histTo','histP','limit'].forEach(id => $('#'+id).addEventListener('change', refreshRecent));
+  await refreshRecent();
+  if (window.lucide) lucide.createIcons();
+});
+</script>
 </body>
 </html>

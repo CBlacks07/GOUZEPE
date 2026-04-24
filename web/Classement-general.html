@@ -1,4 +1,4 @@
-<!-- Classement-general.html -->
+﻿<!-- Classement-general.html -->
 <!doctype html>
 <html lang="fr">
 <head>
@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="mobile.css">
 <script src="common.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
 
 <style>
   :root{
@@ -35,66 +36,6 @@
   }
   .wrap{max-width:1200px;margin:auto;padding:12px}
 
-  /* ===== TOP ===== */
-  .top{
-    position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;
-    padding:10px var(--pad);background:rgba(10,14,22,.65);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)
-  }
-  html.light .top{background:rgba(255,255,255,.75)}
-  .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;user-select:none}
-  .logo{width:42px;height:42px;border-radius:12px;object-fit:cover;border:1px solid var(--border);background:#0d1420}
-  .brand-title{display:flex;flex-direction:column;line-height:1.1}
-  .brand-title h1{margin:0;font-size:18px;letter-spacing:.3px;font-weight:800}
-  .season-sub{margin:0;color:var(--muted);font-size:12px}
-  #menuToggle{display:none;flex:0 0 auto;appearance:none;border:1px solid var(--border);background:transparent;color:inherit;border-radius:10px;padding:8px 10px;align-items:center;gap:8px}
-  .nav{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:4px 0;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-  #menu{display:flex;gap:8px}
-  .spacer{flex:1 1 auto} .tiny{font-size:12px;opacity:.8}
-  @media (max-width: 900px){
-    #menuToggle{display:inline-flex}
-    .nav{display:none}
-    .top.nav-open .nav{display:flex}
-  }
-
-  /* === Menu Mobile Moderne === */
-  #mobileMenu{
-    position:fixed; inset:0; z-index:60;
-    background:rgba(0,0,0,.65); backdrop-filter:blur(4px);
-    display:flex; align-items:flex-start; justify-content:center;
-    padding:0; opacity:0; pointer-events:none;
-    transition:opacity .25s ease;
-  }
-  #mobileMenu:not([hidden]){ opacity:1; pointer-events:auto; }
-  #mobileMenu[hidden]{ display:none }
-
-  .mm-panel{
-    width:min(94vw,400px); margin-top:0;
-    background:var(--panel); color:var(--text);
-    border:none; border-bottom-left-radius:16px; border-bottom-right-radius:16px;
-    box-shadow:0 8px 32px rgba(0,0,0,.4);
-    padding:0; max-height:90vh; overflow-y:auto;
-    transform:translateY(-100%); transition:transform .3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  #mobileMenu:not([hidden]) .mm-panel{ transform:translateY(0); }
-
-  .mm-title{
-    font-weight:800; text-align:center; padding:16px;
-    border-bottom:1px solid var(--border); margin:0;
-    position:sticky; top:0; background:var(--panel); z-index:1;
-  }
-  .mm-list{display:flex; flex-direction:column; gap:0; padding:8px;}
-  .mm-btn{
-    display:flex; align-items:center; justify-content:flex-start; gap:12px;
-    padding:14px 16px; border-radius:12px; border:none;
-    background:transparent; color:inherit; text-decoration:none; font-weight:600;
-    transition:background .2s ease;
-  }
-  .mm-btn:hover, .mm-btn:active{ background:rgba(255,255,255,.06); }
-  .mm-theme{display:flex; justify-content:center; padding:8px 16px; border-top:1px solid var(--border);}
-  .mm-logout{display:flex; justify-content:center; padding:12px 16px; border-top:1px solid var(--border);}
-  .mm-logout .btn{background:rgba(239,68,68,.12);border-color:#7f1d1d;color:#fca5a5; width:100%;}
-  @media (min-width:841px){ #mobileMenu{ display:none !important } .menu-toggle{ display:none; } }
-
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;border-radius:999px;font-weight:600;border:1px solid var(--border);background:transparent;color:inherit;text-decoration:none;line-height:1;white-space:nowrap;transition:filter .15s,transform .02s}
   .btn:hover{filter:brightness(1.1)} .btn:active{transform:translateY(1px)}
   .btn.primary{background:rgba(22,163,74,.15);border-color:#1e3a2f}
@@ -104,6 +45,8 @@
   .btn.danger{background:#2a0c0c;border-color:#7f1d1d;color:#fecaca}
   select,input{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:#0b1020;color:var(--text)}
   html.light select,html.light input{background:#fff}
+  .player-link{background:none;border:none;color:inherit;text-decoration:underline;cursor:pointer;padding:0;font:inherit}
+  .player-link:hover{color:var(--accent)}
   .muted{color:var(--muted)}
   .hint{font-size:12px;color:var(--muted)}
   table{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
@@ -149,9 +92,7 @@
   }
 </style>
 </head>
-<body class="container">
-<div class="wrap">
-
+<body>
   <!-- ===== TOP ===== -->
   <header class="top" id="topbar">
     <a class="brand" href="./Accueil.html" aria-label="Accueil GOUZEPE">
@@ -162,46 +103,32 @@
       </div>
     </a>
 
-    <button id="menuToggle" class="btn ghost" aria-controls="menu" aria-expanded="false" title="Ouvrir le menu de navigation">☰ Menu</button>
+    <button id="menuToggle" class="btn ghost" aria-controls="menu" aria-expanded="false" title="Ouvrir le menu de navigation"><i data-lucide="menu"></i> Menu</button>
     <nav class="nav" aria-label="Navigation principale">
-      <div id="menu">
-        <a class="btn ghost" href="./Accueil.html">🏠 Accueil</a>
-        <a class="btn ghost" href="./Duel.html">💪🏽 Duel</a>
-        <a class="btn ghost" href="./Classement-general.html">📊 Classements</a>
-        <a class="btn ghost" href="./Tournois.html">🏆 Tournois</a>
-        <a class="btn ghost" href="./Panel-Membre.html">👤 Mon espace</a>
-        <a class="btn ghost adminNav" href="./Admin-Joueurs.html" style="display:none">👥 Admin-Joueurs</a>
-        <a class="btn ghost adminNav" href="./Admin-Utilisateurs.html" style="display:none">🛡️ Admin Utilisateurs</a>
-        <button id="logoutBtn" class="btn ghost danger" type="button" title="Se déconnecter de votre compte">Déconnexion</button>
+      <div id="menu" class="menu">
+        <a href="./Accueil.html"><i data-lucide="home"></i> Accueil</a>
+        <a href="./Duel.html"><i data-lucide="swords"></i> Duel</a>
+        <a href="./Classement-general.html"><i data-lucide="bar-chart-2"></i> Classements</a>
+        <a href="./Panel-Membre.html"><i data-lucide="user"></i> Mon espace</a>
+        <a class="adminNav" href="./Admin-Joueurs.html" style="display:none"><i data-lucide="users"></i> Admin-Joueurs</a>
+        <a class="adminNav" href="./Admin-Utilisateurs.html" style="display:none"><i data-lucide="shield"></i> Admin Utilisateurs</a>
+        <a class="adminNav" href="./Admin-Sauvegardes.html" style="display:none"><i data-lucide="database"></i> Sauvegardes</a>
+        <button id="logoutBtn" class="btn ghost danger" type="button" title="Se déconnecter de votre compte"><i data-lucide="log-out"></i></button>
       </div>
     </nav>
 
     <div class="spacer"></div>
-    <div id="season-badge" class="badge badge-top"><span class="dot"></span><span id="season-top">Saison</span></div>
 
-    <button id="themeBtn" class="btn ghost" title="Thème clair/sombre">☀️/🌙</button>
+    <button id="themeBtn" class="btn ghost" title="Thème clair/sombre">
+      <i data-lucide="sun" class="theme-icon-sun"></i>
+      <i data-lucide="moon" class="theme-icon-moon" style="display: none;"></i>
+    </button>
 
-    <!-- Menu Mobile Moderne -->
-<div id="mobileMenu" hidden>
-  <div class="mm-panel" role="dialog" aria-modal="true" aria-labelledby="mmTitle">
-    <div id="mmTitle" class="mm-title">
-      <span>Menu</span>
-      <button id="mmClose" class="btn ghost" style="position:absolute;right:12px;top:12px;padding:6px 10px;font-size:18px;line-height:1" aria-label="Fermer" title="Fermer le menu">✕</button>
-    </div>
-    <div class="mm-list">
-      <a class="mm-btn" href="./Accueil.html">🏠 Accueil</a>
-      <a class="mm-btn" href="./Duel.html">💪🏽 Duel</a>
-      <a class="mm-btn" href="./Classement-general.html">📊 Classements</a>
-      <a class="mm-btn" href="./Panel-Membre.html">👤 Mon espace</a>
-      <a class="mm-btn adminOnly" id="mmAdminPlayers" href="./Admin-Joueurs.html" style="display:none">👥 Admin-Joueurs</a>
-    </div>
-    <div class="mm-theme"><button id="mmTheme" class="btn ghost" title="Basculer entre thème clair et sombre">☀️ / 🌙 Thème</button></div>
-    <div class="mm-logout"><button id="mmLogout" class="btn danger" title="Se déconnecter de votre compte">Déconnexion</button></div>
-  </div>
-</div>
+
 
   </header>
 
+<div class="wrap">
   <div class="row" style="margin:12px 0; display:flex; gap:10px; flex-wrap:wrap">
     <label class="muted">Saison :</label>
     <select id="seasonSelect" style="min-width:220px"></select>
@@ -231,7 +158,7 @@
     <button id="deleteDay" class="btn danger adminOnly" disabled title="Supprimer définitivement cette journée (irréversible)">Supprimer cette journée</button>
   </div>
 
-  <h3 class="sectionTitle">Classés (≥ 25% de participation)</h3>
+  <h3 class="sectionTitle">Classés (â‰¥ 25% de participation)</h3>
   <div class="table-wrap" style="overflow-x:auto;-webkit-overflow-scrolling:touch">
     <table id="seasonTableClassed">
       <thead id="theadClassed"></thead>
@@ -262,7 +189,7 @@
   <dialog id="compareModal" class="compare">
   <div class="day-head" style="padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
     <div style="font-weight:700">Comparateur de joueurs</div>
-    <button class="btn" onclick="document.getElementById('compareModal').close()" title="Fermer le comparateur">✖</button>
+    <button class="btn" onclick="document.getElementById('compareModal').close()" title="Fermer le comparateur">Fermer</button>
   </div>
 
   <!-- ICI : on remplace les styles par une classe responsive -->
@@ -283,65 +210,42 @@
   <div id="cmpResult" style="padding:14px"></div>
 </dialog>
 
+<!-- Modale stats joueur -->
+<dialog id="playerStatsModal" style="max-width:640px">
+  <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-weight:800">Titres du joueur</div>
+      <div class="muted" id="ps_player"></div>
+    </div>
+    <button id="ps_close" class="btn" style="padding:6px 10px"><i data-lucide="x"></i></button>
+  </div>
+  <div style="padding:12px;display:grid;gap:10px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="ps_filter" style="min-width:160px">
+        <option value="all">D1 + D2</option>
+        <option value="D1">Division 1</option>
+        <option value="D2">Division 2</option>
+      </select>
+      <span class="muted" id="ps_summary"></span>
+    </div>
+    <div id="ps_body" class="muted">Chargement…</div>
+  </div>
+</dialog>
+
 </div>
 
 <script>
 /* ===== utilitaires & état ===== */
-const $ = s => document.querySelector(s);
-const DEF_API = () => {
-  const host = (location.hostname && location.hostname !== '') ? location.hostname : 'localhost';
-  return 'http://' + host + ':3005';
-};
-const API   = (localStorage.getItem('efoot.api')||DEF_API()).replace(/\/+$/,'');
-const token = localStorage.getItem('efoot.token');
-const role  = (localStorage.getItem('efoot.role')||'member').toLowerCase();
-const expAt = +localStorage.getItem('efoot.expAt')||0;
-if(!token||Date.now()>=expAt){ location.href='login.html'; }
-
-document.querySelectorAll('.adminOnly').forEach(el=>el.style.display=(role==='admin')?'inline-flex':'none');
-
-/* thème + menu + logout */
-(function(){
-  const k='efoot.theme';
-  const apply=m=>{document.documentElement.classList.toggle('light',m==='light');localStorage.setItem(k,m);$('#themeBtn').textContent=m==='light'?'🌙':'☀️'};
-  apply(localStorage.getItem(k)||'dark');
-  $('#themeBtn').onclick=()=>apply(document.documentElement.classList.contains('light')?'dark':'light');
-})();
-
-$('#logoutBtn')?.addEventListener('click',async ()=>{
-  if(!confirm('Voulez-vous vraiment vous déconnecter ?')) return;
-
-  // Appel API logout
-  try{ await fetch(`${API}/auth/logout`, {method:'POST',headers:{'Authorization':`Bearer ${token}`}}); }catch(_){}
-
-  // Nettoyage complet du localStorage (sauf thème)
-  const keep = new Set(['efoot.theme']);
-  for(let i=localStorage.length-1; i>=0; i--){
-    const k = localStorage.key(i);
-    if(!keep.has(k)) localStorage.removeItem(k);
-  }
-
-  // Nettoyage sessionStorage
-  sessionStorage.clear();
-
-  // Nettoyage des caches si service worker présent
-  if('caches' in window){
-    caches.keys().then(names=>{ for(let name of names) caches.delete(name); });
-  }
-
-  // Redirection avec reload forcé
-  location.replace('login.html');
-  location.reload(true);
-});
 
 /* ===== joueurs (noms/roles) ===== */
 const NAME_BY_ID = new Map();
 const ROLE_BY_ID = new Map(); // MEMBRE | INVITE
+const CHAMPIONS_BY_PLAYER = new Map(); // id -> [{date, div, team}]
 async function loadPlayers(){
   if(NAME_BY_ID.size>0) return;
   try{
     console.log('[Classement] Chargement des joueurs depuis:', `${API}/players`);
-    const r=await fetch(`${API}/players`,{headers:{'Authorization':`Bearer ${token}`}});
+    const r=await fetch(`${API}/players`,{headers:{'Authorization':`Bearer ${window.token}`}});
     console.log('[Classement] Réponse /players:', r.status, r.ok);
     if(!r.ok) {
       const errText = await r.text();
@@ -379,6 +283,7 @@ function roleOf(id){ return (ROLE_BY_ID.get(id)||'MEMBRE').toUpperCase(); }
 let seasonData=[];          // standings renvoyés par le serveur
 let seasonDaysCount=0;      // nombre de journées pour la saison
 const SEASON_AGG = new Map(); // id -> {J,V,N,D,BP,BC,form:[],d1:0,d2:0}
+let CURRENT_PLAYER_STATS = { id:null, entries:[] };
 
 function escapeHtml(t){return String(t||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
@@ -386,7 +291,7 @@ function escapeHtml(t){return String(t||'').replace(/[&<>"']/g,m=>({'&':'&amp;',
 async function loadSeasons(){
   try{
     console.log('[Classement] Chargement des saisons depuis:', `${API}/seasons`);
-    const r = await fetch(`${API}/seasons`, { headers:{Authorization:`Bearer ${token}`} });
+    const r = await fetch(`${API}/seasons`, { headers:{Authorization:`Bearer ${window.token}`} });
     console.log('[Classement] Réponse /seasons:', r.status, r.ok);
     if(!r.ok) {
       const errText = await r.text();
@@ -411,30 +316,29 @@ async function loadSeasons(){
 async function selectCurrentSeasonIfPossible(){
   let current=null;
   try{
-    const r=await fetch(`${API}/season/current`,{headers:{Authorization:`Bearer ${token}`}});
+    const r=await fetch(`${API}/season/current`,{headers:{Authorization:`Bearer ${window.token}`}});
     if(r.ok) current=await r.json();
   }catch(_){}
   const sel=$('#seasonSelect'); if(!sel) return;
   if(current){
     [...sel.options].forEach(o=>{ if(+o.value===+current.id) sel.value=String(current.id); });
-    $('#season-top').textContent=current.name||`Saison ${current.id}`;
-    $('#season-badge').style.display='inline-flex';
-  }else{
-    $('#season-badge').style.display='none';
+    const st = $('#season-text');
+    if(st) st.textContent=current.name||`Saison ${current.id}`;
   }
   sel.dispatchEvent(new Event('change'));
 }
 
-/* ===== chargement complet d’une saison ===== */
+/* ===== chargement complet dâ€™une saison ===== */
 async function buildSeasonAggregation(seasonId){
   SEASON_AGG.clear();
-  const rr=await fetch(`${API}/seasons/${seasonId}/matchdays`,{headers:{Authorization:`Bearer ${token}`}});
+  CHAMPIONS_BY_PLAYER.clear();
+  const rr=await fetch(`${API}/seasons/${seasonId}/matchdays`,{headers:{Authorization:`Bearer ${window.token}`}});
   const dd=await rr.json();
   const days=dd.days||[];
   seasonDaysCount=days.length||0;
 
   for(const day of days){
-    const r=await fetch(`${API}/matchdays/${day}`,{headers:{Authorization:`Bearer ${token}`}});
+    const r=await fetch(`${API}/matchdays/${day}`,{headers:{Authorization:`Bearer ${window.token}`}});
     if(!r.ok) continue;
     const payload=await r.json();
     const d1=payload.d1||[], d2=payload.d2||[];
@@ -460,10 +364,23 @@ async function buildSeasonAggregation(seasonId){
       }
     };
     apply(d1,1); apply(d2,2);
+
+    // champions
+    const c1=payload?.champions?.d1, c2=payload?.champions?.d2;
+    if(c1?.id){
+      const arr = CHAMPIONS_BY_PLAYER.get(c1.id) || [];
+      arr.push({date:day, div:'D1', team:c1.team||''});
+      CHAMPIONS_BY_PLAYER.set(c1.id, arr);
+    }
+    if(c2?.id){
+      const arr = CHAMPIONS_BY_PLAYER.get(c2.id) || [];
+      arr.push({date:day, div:'D2', team:c2.team||''});
+      CHAMPIONS_BY_PLAYER.set(c2.id, arr);
+    }
   }
 }
 
-/* tri : d’abord Total, puis Moyenne (demande du client) */
+/* tri : dâ€™abord Total, puis Moyenne (demande du client) */
 function sortStandings(arr){
   return arr.slice().sort((a,b)=>
     (b.moyenne - a.moyenne) ||
@@ -477,7 +394,7 @@ function tableHeadHTML(showWin, showForm){
   let h='<tr>'
     +'<th>Rang</th><th>Nom</th><th class="hid-m">ID</th>'
     +'<th>Total</th><th>Particip.</th><th>Moyenne</th>'
-    +'<th>Titres D1</th><th>Titres D2</th><th>Équipes diff.</th>';
+    +'<th>Titres D1</th><th>Titres D2</th><th>Equipes diff.</th>';
   if(showWin)  h+='<th>Vict. %</th>';
   if(showForm) h+='<th>Forme (5)</th>';
   h+='</tr>';
@@ -534,15 +451,15 @@ const renderRows = (arr, withBadges) => {
   arr.forEach((p,i)=>{
     const rank = i+1;
 
-    // ❗️ On n'affiche les médailles que pour les "classés"
+    // â—ï¸ On n'affiche les médailles que pour les "classés"
     const medal = (withBadges && rank<=3)
-      ? (rank===1?'🥇':rank===2?'🥈':'🥉')
+      ? (rank===1?'<i data-lucide="medal" style="color:#fbbf24;width:16px;height:16px;vertical-align:middle"></i>':rank===2?'<i data-lucide="medal" style="color:#9ca3af;width:16px;height:16px;vertical-align:middle"></i>':'<i data-lucide="medal" style="color:#b45309;width:16px;height:16px;vertical-align:middle"></i>')
       : '';
 
     const part  = +p.participations||0;
     const pct   = seasonDaysCount ? Math.round(part*100/seasonDaysCount) : 0;
 
-    // ❗️ Badges rôle / division uniquement quand withBadges=true
+    // â—ï¸ Badges rôle / division uniquement quand withBadges=true
    const divBadges = withBadges
   ? `<span class="badge div1">D1 ${p.d1||0}</span> <span class="badge div2">D2 ${p.d2||0}</span>`
   : '';
@@ -550,7 +467,7 @@ const roleBadge = withBadges ? (' <span class="badge role">'+(p.role||'')+'</spa
 
     let row = '<tr>'
       + `<td>${medal?('<span class="medal">'+medal+'</span> '):''}${rank}</td>`
-      + `<td>${escapeHtml(p.name||p.id||'')}${roleBadge} ${divBadges}</td>`
+      + `<td><button class="player-link" data-player="${escapeHtml(p.id||'')}">${escapeHtml(p.name||p.id||'')}</button>${roleBadge} ${divBadges}</td>`
       + `<td class="hid-m">${escapeHtml(p.id||'')}</td>`
       + `<td>${p.total??0}</td>`
       + `<td>${part} <div class="progress" title="${pct}%"><span style="width:${pct}%"></span></div></td>`
@@ -568,6 +485,8 @@ const roleBadge = withBadges ? (' <span class="badge role">'+(p.role||'')+'</spa
 
   $('#seasonTableClassed tbody').innerHTML   = renderRows(classed, true);
   $('#seasonTableUnclassed tbody').innerHTML = renderRows(unclassed, false);
+
+  if(window.lucide) lucide.createIcons();
 
   // cartes (mobile) — uniquement classés pour lisibilité
   const cards=$('#seasonCards'); if(cards){ cards.innerHTML=''; }
@@ -615,10 +534,50 @@ function setDayOptions(days, sid){
   document.getElementById('deleteDay').disabled = (role!=='admin') || !has;
 }
 
+/* ===== Stats joueur (titres) ===== */
+function renderPlayerStatsModal(){
+  const pid = CURRENT_PLAYER_STATS.id;
+  const entries = CURRENT_PLAYER_STATS.entries||[];
+  const filter = $('#ps_filter').value;
+  const filtered = entries.filter(e=> filter==='all' ? true : e.div===filter);
+
+  const titlesD1 = entries.filter(e=>e.div==='D1').length;
+  const titlesD2 = entries.filter(e=>e.div==='D2').length;
+  const teamsAll = new Set(entries.map(e=> (e.team||'').toUpperCase()).filter(Boolean));
+  const teamsFiltered = new Set(filtered.map(e=> (e.team||'').toUpperCase()).filter(Boolean));
+
+  $('#ps_summary').textContent = `Titres D1: ${titlesD1} - Titres D2: ${titlesD2} - Equipes utilisées: ${teamsAll.size||0}`;
+
+  if(!filtered.length){
+    $('#ps_body').innerHTML = '<div class="muted">Aucun titre pour ce joueur avec ce filtre.</div>';
+    return;
+  }
+
+  const fmt = d=> new Date(d).toLocaleDateString('fr-FR',{weekday:'long', day:'2-digit', month:'short', year:'numeric'});
+  let html = '';
+  html += `<div style="font-weight:700">Titres ${filter==='all'?'D1 + D2':filter}</div>`;
+  html += `<div class="muted" style="font-size:12px">Equipes (${teamsFiltered.size||0}) : ${(teamsFiltered.size? [...teamsFiltered].join(', ') : '—')}</div>`;
+  html += `<div style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:10px;margin-top:8px">`;
+  html += `<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid var(--border)">Date</th><th style="text-align:left;padding:8px;border-bottom:1px solid var(--border)">Division</th><th style="text-align:left;padding:8px;border-bottom:1px solid var(--border)">Equipe</th></tr></thead><tbody>`;
+  filtered.sort((a,b)=> a.date.localeCompare(b.date)).forEach(e=>{
+    html += `<tr><td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmt(e.date)}</td><td style="padding:6px 8px;border-bottom:1px solid var(--border)}">${e.div}</td><td style="padding:6px 8px;border-bottom:1px solid var(--border)}">${escapeHtml(e.team||'—')}</td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+  $('#ps_body').innerHTML = html;
+}
+
+function openPlayerStats(pid){
+  CURRENT_PLAYER_STATS = { id: pid, entries: CHAMPIONS_BY_PLAYER.get(pid)||[] };
+  $('#ps_player').textContent = `${nameOf(pid)} (${pid})`;
+  $('#ps_filter').value = 'all';
+  renderPlayerStatsModal();
+  document.getElementById('playerStatsModal').showModal();
+}
+
 async function loadDays(){
   try{
     console.log('[Classement] Chargement des journées depuis:', `${API}/matchdays`);
-    const r = await fetch(`${API}/matchdays`, { headers:{'Authorization':`Bearer ${token}`} });
+    const r = await fetch(`${API}/matchdays`, { headers:{'Authorization':`Bearer ${window.token}`} });
     console.log('[Classement] Réponse /matchdays:', r.status, r.ok);
     if(!r.ok) {
       const errText = await r.text();
@@ -712,7 +671,7 @@ async function viewSelectedDay(openModal=true){
   await loadPlayers();
   const day=$('#daySelect').value;
   if(!day){ alert('Choisis une date'); return; }
-  const r=await fetch(`${API}/matchdays/${day}`,{headers:{'Authorization':`Bearer ${token}`}});
+  const r=await fetch(`${API}/matchdays/${day}`,{headers:{'Authorization':`Bearer ${window.token}`}});
   if(!r.ok){ alert('Journée introuvable'); return; }
   const payload=await r.json();
   if(openModal){
@@ -764,7 +723,7 @@ async function printSeasonA4(){
   const logo = await logoDataURL();
 
 const headRow = ()=>{
-  let h='<tr><th>#</th><th>Nom</th><th>ID</th><th>Total</th><th>Particip.</th><th>D1</th><th>D2</th><th>Moyenne</th><th>Titres D1</th><th>Titres D2</th><th>Équipes diff.</th>';
+  let h='<tr><th>#</th><th>Nom</th><th>ID</th><th>Total</th><th>Particip.</th><th>D1</th><th>D2</th><th>Moyenne</th><th>Titres D1</th><th>Titres D2</th><th>Equipes diff.</th>';
   if(showWin)  h+='<th>Win %</th>';
   if(showForm) h+='<th>Forme (5)</th>';
   h+='</tr>'; 
@@ -802,14 +761,14 @@ const lines=[
   {k:'moyenne',     label:'Moyenne',            desc:true, fmt:(v)=> (v??0).toFixed? (v||0).toFixed(2) : (v??0)},
   {k:'participations',label:'Participations',   desc:true},
 
-  // ▼▼ AJOUTER CES DEUX LIGNES ▼▼
+  // â–¼â–¼ AJOUTER CES DEUX LIGNES â–¼â–¼
   {k:'d1',          label:'Confrontations D1',  desc:true},
   {k:'d2',          label:'Confrontations D2',  desc:true},
-  // ▲▲
+  // â–²â–²
 
   {k:'won_d1',      label:'Titres D1',          desc:true},
   {k:'won_d2',      label:'Titres D2',          desc:true},
-  {k:'teams_used',  label:'Équipes différentes',desc:true},
+  {k:'teams_used',  label:'Equipes différentes',desc:true},
   {k:'winpct',      label:'Win %',              desc:true,  fmt:(v)=> (v||0)+'%'},
   {k:'forme5',      label:'Forme (5)',          desc:true,  fmt:(v)=> v||''}
 ];
@@ -896,12 +855,22 @@ document.getElementById('deleteDay')?.addEventListener('click', async ()=>{
   const txt = `Supprimer définitivement la journée du ${new Date(day).toLocaleDateString('fr-FR')} ?`;
   if(!confirm(txt)) return;
   try{
-    const r = await fetch(`${API}/matchdays/${encodeURIComponent(day)}`,{ method:'DELETE', headers:{'Authorization':`Bearer ${token}`}});
-    if(!r.ok){ const e=await r.json().catch(()=>({})); alert('Échec suppression : ' + (e.error || r.status)); return; }
+    const r = await fetch(`${API}/matchdays/${encodeURIComponent(day)}`,{ method:'DELETE', headers:{'Authorization':`Bearer ${window.token}`}});
+    if(!r.ok){ const e=await r.json().catch(()=>({})); alert('Echec suppression : ' + (e.error || r.status)); return; }
     alert('Journée supprimée.'); await initSeasonFlow();
     try{ $('#dayModal')?.close?.(); }catch(_){}
   }catch(err){ console.error(err); alert('Erreur réseau lors de la suppression.'); }
 });
+
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('.player-link');
+  if(btn){
+    const pid = btn.dataset.player;
+    if(pid) openPlayerStats(pid);
+  }
+});
+document.getElementById('ps_filter').addEventListener('change', renderPlayerStatsModal);
+document.getElementById('ps_close').addEventListener('click', ()=> document.getElementById('playerStatsModal').close());
 
 /* ===== écouteurs sockets basiques ===== */
 function initSockets(){
@@ -929,7 +898,7 @@ document.getElementById('seasonSelect').addEventListener('change', async ()=>{
   try {
     // standings
     console.log('[Classement] Récupération standings pour saison:', sid);
-    let r = await fetch(`${API}/seasons/${sid}/standings`,{headers:{Authorization:`Bearer ${token}`}});
+    let r = await fetch(`${API}/seasons/${sid}/standings`,{headers:{Authorization:`Bearer ${window.token}`}});
     console.log('[Classement] Réponse /standings:', r.status, r.ok);
     if(!r.ok) {
       const errText = await r.text();
@@ -947,7 +916,7 @@ document.getElementById('seasonSelect').addEventListener('change', async ()=>{
 
     // journées (pour le sélecteur + seuil)
     console.log('[Classement] Récupération journées pour saison:', sid);
-    r = await fetch(`${API}/seasons/${sid}/matchdays`,{headers:{Authorization:`Bearer ${token}`}});
+    r = await fetch(`${API}/seasons/${sid}/matchdays`,{headers:{Authorization:`Bearer ${window.token}`}});
     console.log('[Classement] Réponse /matchdays:', r.status, r.ok);
     if(!r.ok) {
       const errText = await r.text();
@@ -972,38 +941,14 @@ document.getElementById('seasonSelect').addEventListener('change', async ()=>{
 (function(){
   const r = (localStorage.getItem('efoot.role')||'member').toLowerCase();
   const b = $('#btnProfile'); const lm=$('#linkMembers'); const menu=$('#menu');
-  if (r === 'admin') { if (b) b.style.display = 'none'; if (lm) lm.textContent = '👥 Admin-Joueurs'; }
+  if (r === 'admin') { if (b) b.style.display = 'none'; if (lm) lm.textContent = 'ðŸ‘¥ Admin-Joueurs'; }
   else { if (b){ b.style.display='inline-flex'; b.href='Panel-Membre.html'; if(menu && b.parentNode===menu) menu.insertBefore(b, menu.firstChild); }
-         if (lm){ lm.textContent='👥 Liste des membres'; lm.href='Admin-Joueurs.html'; } }
-})();
-
-// Menu Mobile Moderne
-(function(){
-  const sheet = $('#mobileMenu');
-  const toggleBtn = $('#menuToggle');
-  const closeBtn = $('#mmClose');
-  if(!sheet||!toggleBtn) return;
-  const open = ()=>{ sheet.hidden=false; document.body.style.overflow='hidden'; };
-  const close= ()=>{ sheet.hidden=true;  document.body.style.overflow=''; };
-
-  toggleBtn.addEventListener('click', (e)=>{ e.preventDefault(); open(); });
-  closeBtn?.addEventListener('click', close);
-  sheet.addEventListener('click', (e)=>{ if(e.target===sheet) close(); });
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !sheet.hidden) close(); });
-
-  // Rôle admin -> affiche liens admin
-  const isAdmin = role==='admin';
-  if($('#mmAdminPlayers')) $('#mmAdminPlayers').style.display = isAdmin ? '' : 'none';
-  if($('#mmAdminUsers')) $('#mmAdminUsers').style.display = isAdmin ? '' : 'none';
-
-  // Synchronise avec les contrôles existants
-  $('#mmTheme').onclick = ()=> $('#themeBtn').click();
-  $('#mmLogout').onclick = ()=> $('#logoutBtn').click();
+         if (lm){ lm.textContent='ðŸ‘¥ Liste des membres'; lm.href='Admin-Joueurs.html'; } }
 })();
 
 /* ===== démarrage ===== */
 (async function(){
-  console.log('[Classement] === DÉMARRAGE ===');
+  console.log('[Classement] === DEMARRAGE ===');
   console.log('[Classement] API URL:', API);
   console.log('[Classement] Token présent:', !!token);
   console.log('[Classement] Role:', role);
@@ -1014,7 +959,7 @@ document.getElementById('seasonSelect').addEventListener('change', async ()=>{
     await selectCurrentSeasonIfPossible();
     await loadDays();
     initSockets();
-    console.log('[Classement] === INITIALISATION TERMINÉE ===');
+    console.log('[Classement] === INITIALISATION TERMINEE ===');
   } catch(err) {
     console.error('[Classement] Erreur lors de l\'initialisation:', err);
     alert('Erreur lors de l\'initialisation de la page: ' + err.message);
@@ -1027,8 +972,11 @@ document.getElementById('seasonSelect').addEventListener('change', async ()=>{
     ping(); setInterval(ping, 15000);
   }
 })();
+
 </script>
 
 <footer style="text-align: center; font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;">Copyright © -GOUZEPE GAMING CLUB 2025</footer>
 </body>
 </html>
+
+
