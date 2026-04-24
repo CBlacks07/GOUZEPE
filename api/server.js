@@ -49,89 +49,60 @@ const app = express();
 const server = http.createServer(app);
 
 // Configuration CORS
-const allowedOrigins = (process.env.CORS_ORIGIN ||
-  'http://localhost:3000,http://localhost:5173'
-).split(',').map(s=>s.trim()).filter(Boolean);
+const defaultCorsOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://gouzepe.vercel.app'
+].join(',');
+const allowedOrigins = (process.env.CORS_ORIGIN || defaultCorsOrigins)
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 
-// âœ… FIX: Configuration CORS unique (suppression de la duplication)
-const corsOptions = {
-  origin: (origin, cb) => {
-    // Pas d'origin = requÃªte depuis le mÃªme serveur ou Electron
-    if (!origin) return cb(null, true);
+function isAllowedOrigin(origin) {
+  // Pas d'origin = requete serveur-a-serveur, curl, Electron, etc.
+  if (!origin) return true;
+  if (allowedOrigins.includes('*')) return true;
+  if (allowedOrigins.includes(origin)) return true;
 
-    // Wildcard autorisé
-    if (allowedOrigins.includes('*')) return cb(null, true);
+  try {
+    const originUrl = new URL(origin);
+    const hostname = originUrl.hostname;
 
-    // Origin dans la liste autorisée
-    if (allowedOrigins.includes(origin)) return cb(null, true);
+    // Localhost
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
 
-    // Autoriser les connexions depuis le réseau local (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
-    try {
-      const originUrl = new URL(origin);
-      const hostname = originUrl.hostname;
-
-      // Localhost
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return cb(null, true);
-      }
-
-      // Réseau local
-      if (
-        /^192\.168\.\d+\.\d+$/.test(hostname) ||
-        /^10\.\d+\.\d+\.\d+$/.test(hostname) ||
-        /^172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+$/.test(hostname)
-      ) {
-        return cb(null, true);
-      }
-    } catch (e) {
-      // Invalid origin URL
+    // Reseau local
+    if (
+      /^192\.168\.\d+\.\d+$/.test(hostname) ||
+      /^10\.\d+\.\d+\.\d+$/.test(hostname) ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+$/.test(hostname)
+    ) {
+      return true;
     }
 
-    return cb(null, false);
-  },
+    // Vercel previews du projet gouzepe (ex: gouzepe-git-main-xxx.vercel.app)
+    if (/^gouzepe(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(hostname)) return true;
+  } catch (_e) {
+    // Invalid origin URL
+  }
+
+  return false;
+}
+
+const corsOptions = {
+  origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
   credentials: false,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Authorization','Content-Type'],
   exposedHeaders: ['Content-Length'],
-  maxAge: 86400
+  maxAge: 86400,
+  optionsSuccessStatus: 204
 };
 
 const io = require('socket.io')(server, {
   cors: {
-    origin: (origin, cb) => {
-      // Pas d'origin = requÃªte depuis le mÃªme serveur ou Electron
-      if (!origin) return cb(null, true);
-
-      // Wildcard autorisé
-      if (allowedOrigins.includes('*')) return cb(null, true);
-
-      // Origin dans la liste autorisée
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-
-      // Autoriser les connexions depuis le réseau local
-      try {
-        const originUrl = new URL(origin);
-        const hostname = originUrl.hostname;
-
-        // Localhost
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-          return cb(null, true);
-        }
-
-        // Réseau local
-        if (
-          /^192\.168\.\d+\.\d+$/.test(hostname) ||
-          /^10\.\d+\.\d+\.\d+$/.test(hostname) ||
-          /^172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+$/.test(hostname)
-        ) {
-          return cb(null, true);
-        }
-      } catch (e) {
-        // Invalid origin URL
-      }
-
-      cb(null, false);
-    },
+    origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
     methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS']
   }
 });
