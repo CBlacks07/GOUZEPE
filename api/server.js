@@ -652,7 +652,7 @@ async function ensureSchema(){
   const seedAdmin = process.env.SEED_ADMIN_ON_BOOT === 'true';
   if (seedAdmin) {
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@gz.local';
-    const adminPass  = process.env.ADMIN_PASSWORD || 'admin';
+    const adminPass  = process.env.ADMIN_PASSWORD || 'Admin123';
     const row = await q(`SELECT id FROM users WHERE email=$1`,[adminEmail]);
     if(row.rowCount===0){
       const hash = await bcrypt.hash(adminPass,10);
