@@ -2,6 +2,7 @@ let socket = null
 let connectPromise = null
 
 function resolveApiBase() {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
   const fromStorage = (typeof localStorage !== 'undefined' && localStorage.getItem('efoot.api')) || ''
   if (fromStorage) return fromStorage
   if (typeof window !== 'undefined') return `${window.location.protocol}//${window.location.hostname}:3005`
