@@ -1,0 +1,69 @@
+services:
+
+  # ── Base de données PostgreSQL ───────────────────────────────────────────────
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file: .env.docker
+    volumes:
+      # Données persistantes (ne sont pas supprimées si on arrête le container)
+      - pgdata:/var/lib/postgresql/data
+      # Initialisation automatique du schéma au premier démarrage
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      # Seed : admin par défaut (admin@gz.local / Admin123)
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      # $$ → le shell du container évalue la variable (pas Docker Compose)
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Port NON exposé à l'extérieur : seul l'API y accède en interne
+    networks:
+      - gouzepe_net
+
+  # ── API Node.js / Express ────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # Exposé sur le réseau local pour que le navigateur puisse l'appeler
+      - "3005:3005"
+    volumes:
+      # Photos de joueurs (persistantes)
+      - uploads:/app/uploads
+      # Backups SQL (persistants)
+      - backups:/app/backups
+    networks:
+      - gouzepe_net
+
+  # ── Frontend Vue 3 + Vite + Nginx ────────────────────────────────────────────
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      # Port 8080 car le port 80 est déjà utilisé par Apache
+      - "8080:80"
+    networks:
+      - gouzepe_net
+
+# ── Volumes persistants ──────────────────────────────────────────────────────
+volumes:
+  pgdata:
+  uploads:
+  backups:
+
+# ── Réseau interne ───────────────────────────────────────────────────────────
+networks:
+  gouzepe_net:
+    driver: bridge

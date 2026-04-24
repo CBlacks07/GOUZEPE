@@ -6,8 +6,8 @@ const pool = new Pool({
   host: process.env.PGHOST || '127.0.0.1',
   port: process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 5432,
   user: process.env.PGUSER || 'postgres',
-  password: process.env.PGPASSWORD || '',
-  database: process.env.PGDATABASE || 'postgres'
+  password: process.env.PGPASSWORD || 'Admin123',
+  database: process.env.PGDATABASE || 'EFOOTBALL'
 });
 
 (async () => {

@@ -50,35 +50,9 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
                   radial-gradient(60% 45% at 90% 100%, rgba(34,197,94,.14), transparent 60%);
     }
 
-    /* ===== TOP ===== */
-    .top{
-      position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;
-      padding:10px var(--pad);background:rgba(10,14,22,.65);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)
-    }
-    html.light .top{background:rgba(255,255,255,.75)}
-    .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;user-select:none}
-    .logo{width:42px;height:42px;border-radius:12px;object-fit:cover;border:1px solid var(--border);background:#0d1420}
-    .brand-title{display:flex;flex-direction:column;line-height:1.1}
-    .brand-title h1{margin:0;font-size:18px;letter-spacing:.3px;font-weight:800}
-    .season-sub{margin:0;color:var(--muted);font-size:12px}
-    #menuToggle{display:none;flex:0 0 auto;appearance:none;border:1px solid var(--border);background:transparent;color:inherit;border-radius:10px;padding:8px 10px;align-items:center;gap:8px}
-    .nav{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:4px 0;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-    #menu{display:flex;gap:8px}
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;border-radius:999px;font-weight:600;border:1px solid var(--border);background:transparent;color:inherit;text-decoration:none;line-height:1;white-space:nowrap;transition:filter .15s,transform .02s}
-    .btn:hover{filter:brightness(1.1)} .btn:active{transform:translateY(1px)}
-    .btn.primary{background:rgba(22,163,74,.15);border-color:#1e3a2f}
-    .btn.info{background:rgba(59,130,246,.14);border-color:#1e3a8a}
     .btn.warn{background:rgba(245,158,11,.14);border-color:#7c2d12}
     .btn.ghost{background:transparent}
     .spacer{flex:1 1 auto} .tiny{font-size:12px;opacity:.8}
-    .badge{display:inline-flex;align-items:center;gap:8px;padding:4px 8px;border:1px dashed var(--border);border-radius:999px;font-weight:600;opacity:.9}
-    .badge .dot{width:8px;height:8px;border-radius:50%;background:var(--brand)}
-    .badge-top{display:none}
-    @media (max-width: 900px){
-      #menuToggle{display:inline-flex}
-      .nav{display:none}
-      .top.nav-open .nav{display:flex}
-    }
 
     /* ===== LAYOUT ===== */
     main{display:block; position:relative; z-index:2}
@@ -101,6 +75,19 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
     .division{flex:1 1 520px;min-width:320px}
     .division h3{margin:0 0 8px;font-size:16px;opacity:.9}
     .table-wrap{overflow-x:auto}
+    .matches-wrap{max-height:660px; overflow-y:auto; overflow-x:auto}
+    .match-highlight{border:1px solid var(--accent)!important; box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);}
+    select{
+      appearance:none;
+      background:var(--panel);
+      color:var(--text);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:8px 10px;
+    }
+    option{background:var(--panel); color:var(--text);}
+    .player-link{background:none;border:none;color:inherit;text-decoration:underline;cursor:pointer;padding:0;font:inherit;}
+    .player-link:hover{color:var(--accent);}
     table{width:100%;border-collapse:separate;border-spacing:0 8px}
     th,td{padding:8px 10px;vertical-align:middle}
     thead th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
@@ -123,48 +110,6 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
 
     /* Impression "ancienne": on imprime via fenêtre dédiée */
     .print-only{display:none}
-
-    @media (max-width:480px){.brand-title h1{font-size:16px}.btn{padding:8px 10px}}
-    
-
-    /* === Menu Mobile Moderne === */
-#mobileMenu{
-  position:fixed; inset:0; z-index:60;
-  background:rgba(0,0,0,.65); backdrop-filter:blur(4px);
-  display:flex; align-items:flex-start; justify-content:center;
-  padding:0; opacity:0; pointer-events:none;
-  transition:opacity .25s ease;
-}
-#mobileMenu:not([hidden]){ opacity:1; pointer-events:auto; }
-#mobileMenu[hidden]{ display:none }
-
-.mm-panel{
-  width:min(94vw,400px); margin-top:0;
-  background:var(--panel); color:var(--text);
-  border:none; border-bottom-left-radius:16px; border-bottom-right-radius:16px;
-  box-shadow:0 8px 32px rgba(0,0,0,.4);
-  padding:0; max-height:90vh; overflow-y:auto;
-  transform:translateY(-100%); transition:transform .3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-#mobileMenu:not([hidden]) .mm-panel{ transform:translateY(0); }
-
-.mm-title{
-  font-weight:800; text-align:center; padding:16px;
-  border-bottom:1px solid var(--border); margin:0;
-  position:sticky; top:0; background:var(--panel); z-index:1;
-}
-.mm-list{display:flex; flex-direction:column; gap:0; padding:8px;}
-.mm-btn{
-  display:flex; align-items:center; justify-content:flex-start; gap:12px;
-  padding:14px 16px; border-radius:12px; border:none;
-  background:transparent; color:inherit; text-decoration:none; font-weight:600;
-  transition:background .2s ease;
-}
-.mm-btn:hover, .mm-btn:active{ background:rgba(255,255,255,.06); }
-.mm-theme{display:flex; justify-content:center; padding:8px 16px; border-top:1px solid var(--border);}
-.mm-logout{display:flex; justify-content:center; padding:12px 16px; border-top:1px solid var(--border);}
-.mm-logout .btn{background:rgba(239,68,68,.12);border-color:#7f1d1d;color:#fca5a5; width:100%;}
-@media (min-width:901px){ #mobileMenu{ display:none !important } }
 
   </style>
   <script defer src="common.js"></script>
@@ -201,6 +146,8 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
     }
   </style>
 
+  <script src="https://unpkg.com/lucide@latest"></script>
+
 </head>
 <body>
   <!-- Backdrops -->
@@ -224,48 +171,35 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
       </div>
     </a>
 
-    <button id="menuToggle" class="btn ghost" aria-controls="menu" aria-expanded="false" title="Ouvrir le menu de navigation">☰ Menu</button>
+    <button id="menuToggle" class="btn ghost" aria-controls="menu" aria-expanded="false" title="Ouvrir le menu de navigation"><i data-lucide="menu"></i> Menu</button>
     <nav class="nav" aria-label="Navigation principale">
-      <div id="menu">
-        <a class="btn ghost" href="./Duel.html">💪🏽 Duel</a>
-        <a class="btn ghost" href="./Classement-general.html">📊 Classements</a>
-        <a class="btn ghost" href="./Tournois.html">🏆 Tournois</a>
-        <a class="btn ghost" href="./Panel-Membre.html">👤 Mon espace</a>
-        <a class="btn ghost adminNav" href="./Admin-Joueurs.html" style="display:none">👥 Admin-Joueurs</a>
-        <a class="btn ghost adminNav" href="./Admin-Utilisateurs.html" style="display:none">🛡️ Admin Utilisateurs</a>
-        <button id="logoutBtn" class="btn ghost danger" type="button" title="Se déconnecter de votre compte">Déconnexion</button>
+      <div id="menu" class="menu">
+        <a href="./Accueil.html"><i data-lucide="home"></i> Accueil</a>
+        <a href="./Duel.html"><i data-lucide="swords"></i> Duel</a>
+        <a href="./Classement-general.html"><i data-lucide="bar-chart-2"></i> Classements</a>
+        <a href="./Panel-Membre.html"><i data-lucide="user"></i> Mon espace</a>
+        <a class="adminNav" href="./Admin-Joueurs.html" style="display:none"><i data-lucide="users"></i> Admin-Joueurs</a>
+        <a class="adminNav" href="./Admin-Utilisateurs.html" style="display:none"><i data-lucide="shield"></i> Admin Utilisateurs</a>
+        <a class="adminNav" href="./Admin-Sauvegardes.html" style="display:none"><i data-lucide="database"></i> Sauvegardes</a>
+        <button id="logoutBtn" class="btn ghost danger" type="button" title="Se déconnecter de votre compte"><i data-lucide="log-out"></i></button>
       </div>
     </nav>
 
     <div class="spacer"></div>
-    <div id="season-badge" class="badge badge-top"><span class="dot"></span><span id="season-top">Saison</span></div>
 
-    <button id="themeBtn" class="btn ghost" title="Thème clair/sombre">☀️/🌙</button>
+    <button id="themeBtn" class="btn ghost" title="Thème clair/sombre">
+      <i data-lucide="sun" class="theme-icon-sun"></i>
+      <i data-lucide="moon" class="theme-icon-moon" style="display: none;"></i>
+    </button>
 
-    <!-- Menu Mobile Moderne -->
-<div id="mobileMenu" hidden>
-  <div class="mm-panel" role="dialog" aria-modal="true" aria-labelledby="mmTitle">
-    <div id="mmTitle" class="mm-title">
-      <span>Menu</span>
-      <button id="mmClose" class="btn ghost" style="position:absolute;right:12px;top:12px;padding:6px 10px;font-size:18px;line-height:1" aria-label="Fermer" title="Fermer le menu">✕</button>
-    </div>
-    <div class="mm-list">
-      <a class="mm-btn" href="./Duel.html">💪🏽 Duel</a>
-      <a class="mm-btn" href="./Classement-general.html">📊 Classements</a>
-      <a class="mm-btn" href="./Panel-Membre.html">👤 Mon espace</a>
-      <a class="mm-btn adminOnly" id="mmAdminPlayers" href="./Admin-Joueurs.html" style="display:none">👥 Admin-Joueurs</a>
-    </div>
-    <div class="mm-theme"><button id="mmTheme" class="btn ghost" title="Basculer entre thème clair et sombre">☀️ / 🌙 Thème</button></div>
-    <div class="mm-logout"><button id="mmLogout" class="btn danger" title="Se déconnecter de votre compte">Déconnexion</button></div>
-  </div>
-</div>
+
 
   </header>
 
   <!-- ===== MAIN ===== -->
   <main>
     <section class="hero">
-      <h2 class="heading">Bienvenue au club 👋</h2>
+      <h2 class="heading">Bienvenue au club</h2>
       <p class="sub">
         Ici, on vit <b>eFootball</b> à fond&nbsp;: saisons intenses, matchs aller/retour, barrages, duels d’exhibition,
         classements en temps réel et gestion stricte des rôles. Tape tes scores, compare, imprime tes feuilles de
@@ -274,7 +208,6 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
       <div class="actions">
         <a class="btn primary" href="./Duel.html">Lancer un duel</a>
         <a class="btn info" href="./Classement-general.html">Voir le classement</a>
-        <a class="btn warn" href="./Tournois.html">🏆 Tournois</a>
         <a class="btn ghost" href="./Panel-Membre.html">Mon espace membre</a>
       </div>
     </section>
@@ -297,9 +230,10 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
         <select id="dayStatus"><option value="auto" selected>Auto</option><option value="draft">Brouillon</option><option value="confirmed">Confirmée</option></select>
         <span class="tiny muted" id="dayInfo"></span>
         <span class="spacer"></span>
-        <button id="manageParticipants" class="btn primary adminOnly" style="display:none" title="Sélectionner les joueurs et générer automatiquement toutes les confrontations (round-robin)">⚙️ Gérer Participants</button>
+        <button id="manageParticipants" class="btn primary adminOnly" style="display:none" title="Sélectionner les joueurs et générer automatiquement toutes les confrontations (round-robin)">Gérer Participants</button>
         <button id="clearD1" class="btn warn adminOnly" style="display:none" title="Effacer tous les scores de la Division 1">Effacer D1</button>
         <button id="clearD2" class="btn warn adminOnly" style="display:none" title="Effacer tous les scores de la Division 2">Effacer D2</button>
+        <button id="clearAllMatches" class="btn danger adminOnly" style="display:none" title="Supprimer toutes les confrontations (D1 & D2)">Supprimer confrontations</button>
         <button id="printBtn" class="btn ghost" title="Imprimer la feuille de journée au format PDF">Imprimer (PDF)</button>
         <button id="saveEdit" class="btn info adminOnly" style="display:none" title="Enregistrer les modifications en tant que brouillon">Sauver brouillon</button>
         <button id="save" class="btn primary adminOnly" style="display:none" title="Publier la journée de manière définitive">Publier</button>
@@ -307,10 +241,21 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
 
       <datalist id="players"></datalist>
 
+      <div class="daybar" style="margin-top:4px">
+        <input id="matchSearch" type="text" placeholder="Rechercher confrontation (ID joueur ou duo)" />
+        <select id="matchSearchDiv">
+          <option value="all" selected>Division D1 + D2</option>
+          <option value="d1">Division 1</option>
+          <option value="d2">Division 2</option>
+        </select>
+        <button id="matchSearchBtn" class="btn ghost" type="button" title="Chercher et surligner la confrontation">Chercher</button>
+        <span class="tiny muted" id="matchSearchInfo"></span>
+      </div>
+
       <div class="grid-two">
         <div class="division">
           <h3>Division 1 — Confrontations (Aller/Retour)</h3>
-          <div class="table-wrap"><table id="d1_matches" class="compactScores">
+          <div class="table-wrap matches-wrap"><table id="d1_matches" class="compactScores">
             <thead><tr>
               <th>JOUEUR 1 (ID)</th>
               <th class="mid">ALLER<br><span class="muted" style="font-weight:400">RETOUR</span></th>
@@ -329,7 +274,7 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
 
         <div class="division">
           <h3>Division 2 — Confrontations (Aller/Retour)</h3>
-          <div class="table-wrap"><table id="d2_matches" class="compactScores">
+          <div class="table-wrap matches-wrap"><table id="d2_matches" class="compactScores">
             <thead><tr>
               <th>JOUEUR 1 (ID)</th>
               <th class="mid">ALLER<br><span class="muted" style="font-weight:400">RETOUR</span></th>
@@ -352,7 +297,7 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
         <div class="row" style="display:flex;gap:10px;align-items:center;margin:8px 0">
           <label>Affiche</label>
           <input id="barrage_ids" list="players" placeholder="ID_D1 – ID_D2" />
-          <button id="b_auto" class="btn ghost adminOnly" style="display:none" title="Proposer automatiquement une affiche de barrage">↺ Proposer</button>
+          <button id="b_auto" class="btn ghost adminOnly" style="display:none" title="Proposer automatiquement une affiche de barrage"><i data-lucide="rotate-ccw"></i> Proposer</button>
         </div>
         <div style="margin:16px 0;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:12px">
           <div class="muted" style="margin-bottom:12px;font-weight:600">Cocher le gagnant :</div>
@@ -380,7 +325,7 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
   </main>
 
   <footer style="text-align:center;padding:20px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif">
-    Copyright © GOUZEPE GAMING CLUB 2025
+    Copyright © GOUZEPE GAMING CLUB 2026
   </footer>
 
   <!-- ===== MODALE CONFIRMATION CHAMPIONS ===== -->
@@ -414,11 +359,25 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
     </div>
   </dialog>
 
+  <!-- MODALE STATISTIQUES JOUEUR -->
+  <dialog id="playerStatsModal" style="max-width:620px">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:800">Statistiques joueur</div>
+        <div class="muted" id="ps_player"></div>
+      </div>
+      <button id="ps_close" class="btn ghost" style="padding:6px 10px"><i data-lucide="x" style="width:16px;height:16px;vertical-align:middle"></i></button>
+    </div>
+    <div style="padding:16px;display:grid;gap:12px" id="ps_body">
+      <div class="muted">Chargement…</div>
+    </div>
+  </dialog>
+
   <!-- ===== MODALE GESTION PARTICIPANTS ===== -->
   <dialog id="participantsModal" style="max-width:900px">
     <div style="padding:16px;border-bottom:1px solid var(--border);font-weight:700;display:flex;align-items:center;justify-content:space-between">
       <span>Gérer les participants de la journée</span>
-      <button id="pm_close" class="btn ghost" style="padding:4px 8px" title="Fermer la fenêtre de gestion des participants">✕</button>
+      <button id="pm_close" class="btn ghost" style="padding:4px 8px" title="Fermer la fenêtre de gestion des participants"><i data-lucide="x"></i></button>
     </div>
     <div style="padding:16px">
       <div style="margin-bottom:16px">
@@ -453,6 +412,16 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
           • Les confrontations seront générées automatiquement (système round-robin)
         </div>
       </div>
+
+      <div style="margin-top:12px;padding:12px;border:1px dashed var(--border);border-radius:10px;display:grid;gap:8px">
+        <div style="font-weight:700">Ajouter un invité (temporaire, pour cette journée seulement)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="pm_guest_name" type="text" placeholder="Nom ou pseudo de l'invité" style="flex:1;min-width:220px;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:inherit">
+          <button class="btn primary" id="pm_guest_d1" type="button">Ajouter en D1</button>
+          <button class="btn info" id="pm_guest_d2" type="button">Ajouter en D2</button>
+        </div>
+        <div class="muted" style="font-size:12px">Ces invités ne sont pas enregistrés globalement : ils n'existent que pour la journée en cours.</div>
+      </div>
     </div>
     <div style="padding:14px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:space-between">
       <button class="btn warn" id="pm_reset" title="Réinitialiser tous les participants">Réinitialiser tout</button>
@@ -475,32 +444,6 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
 
   // logo fallback
   (function(){ const img=$('#clubLogo'); if(!img) return; img.addEventListener('error',()=>{ img.style.display='none'; }); })();
-
-  // thème harmonisé (clé 'efoot.theme')
-  (function(){ const btn=$('#themeBtn'); if(!btn) return; const apply=m=>{document.documentElement.classList.toggle('light',m==='light');localStorage.setItem('efoot.theme',m);btn.textContent=(m==='light')?'🌙':'☀️'}; apply(localStorage.getItem('efoot.theme')||'dark'); btn.addEventListener('click',()=>apply(document.documentElement.classList.contains('light')?'dark':'light')); })();
-
-  // nav responsive
-/* --- Menu Mobile Moderne --- */
-(function mobileMenu(){
-  const sheet = document.getElementById('mobileMenu');
-  const toggleBtn = document.getElementById('menuToggle');
-  const closeBtn = document.getElementById('mmClose');
-  const open = ()=>{ sheet.hidden=false; document.body.style.overflow='hidden'; };
-  const close= ()=>{ sheet.hidden=true;  document.body.style.overflow=''; };
-
-  toggleBtn?.addEventListener('click', (e)=>{ e.preventDefault(); open(); });
-  closeBtn?.addEventListener('click', close);
-  sheet?.addEventListener('click', (e)=>{ if(e.target===sheet) close(); });
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !sheet.hidden) close(); });
-
-  // Rôle admin -> affiche liens admin dans le menu mobile
-  const isAdmin = (localStorage.getItem('efoot.role')||'member').toLowerCase()==='admin';
-  document.getElementById('mmAdminPlayers').style.display = isAdmin ? '' : 'none';
-
-  // Synchronise avec les contrôles existants
-  document.getElementById('mmTheme').onclick  = ()=> document.getElementById('themeBtn').click();
-  document.getElementById('mmLogout').onclick = ()=> document.getElementById('logoutBtn').click();
-})();
 
   // déconnexion confirmée
   $('#logoutBtn').addEventListener('click', async ()=>{
@@ -553,12 +496,18 @@ html.light .bg-video{opacity:.18; filter:contrast(.95) saturate(.85)}
     }catch(_){}
   }
 
+  // Helper pour enregistrer les invités d'une journée dans le registre global avant calculs
+  function registerGuestsFromPayload(pl){
+    if(pl && pl.tempGuests && Array.isArray(pl.tempGuests)){
+      pl.tempGuests.forEach(g => PLAYERS_ROLE.set(String(g.player_id), 'INVITE'));
+    }
+  }
+
   /* ============ SAISON / JOUEURS / NEWS ============ */
   let PLAYERS_ROLE = new Map();
   async function loadSeason(){
     try{ const r=await fetch(API()+'/season/current',hd()); if(!r.ok) return null; const s=await r.json();
       $('#season-text').textContent = s.name || ('S#'+s.id);
-      $('#season-top').textContent = $('#season-text').textContent;
       return s;
     }catch(_){return null;}
   }
@@ -609,6 +558,9 @@ async function loadHeadline(){
       return;
     }
 
+    // ✅ FIX: Enregistrer les invités de cette journée pour qu'ils soient reconnus comme tels
+    registerGuestsFromPayload(payload);
+
     // Classements du jour
     const st1 = computeStandingsDay(payload.d1||[]);
     const st2 = computeStandingsDay(payload.d2||[]);
@@ -640,6 +592,7 @@ async function loadHeadline(){
           try{ const r=await fetch(API()+`/matchdays/draft/${encodeURIComponent(d)}`,hd()); if(r.ok){ const dd=await r.json(); pl=dd.payload||{}; } }catch(_){}
         }
         if(!pl) continue;
+        registerGuestsFromPayload(pl); // ✅ FIX: Important pour l'historique
         const s1 = splitAndRankDaily(computeStandingsDay(pl.d1||[])).main;
         const s2 = splitAndRankDaily(computeStandingsDay(pl.d2||[])).main;
         s1.forEach((row,i)=>{ const o=ensure(row.id); o.total += pointsD1(s1.length, i+1); o.part++; });
@@ -755,15 +708,29 @@ async function loadNextFixtures(){
   }
   function renderTable(div){
     const tb=$(`#${div}_tab tbody`); tb.innerHTML='';
-    standings(div).forEach((r,i)=>{
-      const trophySvg = i===0 ? '<svg class="trophy" viewBox="0 0 24 24" fill="currentColor" style="color:#fbbf24;width:16px;height:16px;vertical-align:-2px;margin-right:6px"><path d="M19 5h2a1 1 0 0 1 1 1c0 3.866-3.134 7-7 7h-1v2h3a1 1 0 1 1 0 2h-3v2h2a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h2v-2H7a1 1 0 1 1 0-2h3v-2H9C5.134 13 2 9.866 2 6a1 1 0 0 1 1-1h2V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v2zm-2 0V4H7v1a1 1 0 0 1-1 1H4.057A5.002 5.002 0 0 0 9 10h6a5.002 5.002 0 0 0 5-5h-1.943A1 1 0 0 1 17 5z"/></svg>' : '';
-      // ✅ Afficher les invités avec une indication visuelle (italique + couleur)
+    const st = standings(div); // This already includes guests and is sorted
+
+    // Find the rank of the first member to give them the trophy
+    const firstMemberIndex = st.findIndex(p => p.role !== 'INVITE');
+
+    st.forEach((r, i) => {
       const isGuest = r.role === 'INVITE';
       const guestStyle = isGuest ? ' style="font-style:italic;opacity:0.75"' : '';
-      const guestIcon = isGuest ? '<span style="font-size:11px;opacity:0.6">👤</span> ' : '';
+      const guestIcon = isGuest ? '<i data-lucide="user" style="width:14px;height:14px;opacity:0.6;vertical-align:middle;margin-right:4px"></i>' : '';
+
+      // Trophy only for the top-ranked member
+      const trophySvg = (i === firstMemberIndex && firstMemberIndex !== -1) ? '<i data-lucide="trophy" style="color:#fbbf24;width:16px;height:16px;vertical-align:middle;margin-right:4px"></i>' : '';
+      
       const rank = i + 1;
-      tb.insertAdjacentHTML('beforeend',`<tr${guestStyle}><td>${i===0?trophySvg:''}${guestIcon}${rank}. ${r.id}</td><td>${r.J}</td><td>${r.V}</td><td>${r.N}</td><td>${r.D}</td><td>${r.BP}</td><td>${r.BC}</td><td>${r.DIFF}</td><td>${r.PTS}</td></tr>`);
+
+      tb.insertAdjacentHTML('beforeend',
+        `<tr${guestStyle}>
+          <td>${trophySvg}${guestIcon}<button class="player-link" data-player="${r.id}">${rank}. ${r.id}</button></td>
+          <td>${r.J}</td><td>${r.V}</td><td>${r.N}</td><td>${r.D}</td><td>${r.BP}</td><td>${r.BC}</td><td>${r.DIFF}</td><td>${r.PTS}</td>
+        </tr>`
+      );
     });
+    if(window.lucide) lucide.createIcons();
   }
   function calculateAndRender(){ renderTable('d1'); renderTable('d2'); autoFillBarrage(true); }
 
@@ -776,10 +743,18 @@ async function loadNextFixtures(){
         <div class="score"><input class="r1" inputmode="numeric" maxlength="2" value="${m.r1??''}"><span class="dash">–</span><input class="r2" inputmode="numeric" maxlength="2" value="${m.r2??''}"></div>
       </td>
       <td><input list="players" class="p2" placeholder="ID" value="${m.p2||''}"></td>
-      <td><button type="button" class="btn warn del adminOnly" style="width:32px;height:32px;padding:0">🗑️</button></td>`;
+      <td><button type="button" class="btn warn del adminOnly" style="width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center"><i data-lucide="trash-2" style="width:16px;height:16px"></i></button></td>`;
     document.querySelector(`#${div}_matches tbody`).appendChild(tr);
   }
-  function rebuild(div){ const box=$(`#${div}_matches tbody`); box.innerHTML=''; (S[div]||[]).forEach(m=>row(div,m)); calculateAndRender(); setEditingEnabled(ROLE==='admin'); }
+  function rebuild(div){
+    const box=$(`#${div}_matches tbody`);
+    box.innerHTML='';
+    S[div] = sortMatches(S[div]||[]);
+    (S[div]||[]).forEach(m=>row(div,m));
+    calculateAndRender();
+    if(window.lucide) lucide.createIcons();
+    setEditingEnabled(ROLE==='admin');
+  }
 
   function readFromDOM(div){
     const rows=[...document.querySelectorAll(`#${div}_matches tbody tr`)];
@@ -806,8 +781,51 @@ async function loadNextFixtures(){
     const del=e.target.closest('.del'); if(del){ if(!confirm('Supprimer cette ligne de match ?')) return; const div=del.closest('#d1_matches')?'d1':'d2'; del.closest('tr').remove(); readFromDOM(div); calculateAndRender(); validateCross(); lastEditTs=Date.now(); localSaveDraft(); }
   }, true);
 
+  // Recherche de confrontation
+  function clearMatchHighlights(){
+    document.querySelectorAll('.match-highlight').forEach(tr=> tr.classList.remove('match-highlight'));
+    $('#matchSearchInfo').textContent='';
+  }
+  function searchMatch(){
+    clearMatchHighlights();
+    const term = ($('#matchSearch').value||'').trim().toLowerCase();
+    const div = $('#matchSearchDiv').value;
+    if(!term){ return; }
+    let found=null;
+    const tables = [];
+    if(div==='all' || div==='d1') tables.push('#d1_matches');
+    if(div==='all' || div==='d2') tables.push('#d2_matches');
+    tables.forEach(sel=>{
+      document.querySelectorAll(`${sel} tbody tr`).forEach(tr=>{
+        const p1 = (tr.querySelector('.p1')?.value||'').toLowerCase();
+        const p2 = (tr.querySelector('.p2')?.value||'').toLowerCase();
+        const duo = `${p1} ${p2}`;
+        if(p1.includes(term) || p2.includes(term) || duo.includes(term)){
+          tr.classList.add('match-highlight');
+          if(!found){ found = tr; }
+        }
+      });
+    });
+    if(found){
+      found.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
+      $('#matchSearchInfo').textContent='Confrontation surlignée';
+    }else{
+      $('#matchSearchInfo').textContent='Aucune ligne trouvée';
+    }
+  }
+  $('#matchSearchBtn').onclick = searchMatch;
+  $('#matchSearch').addEventListener('keydown', e=>{ if(e.key==='Enter') searchMatch(); });
+
   $('#clearD1').onclick=()=>{ if(ROLE!=='admin')return; if(!confirm('Effacer tous les scores D1 ?'))return; document.querySelectorAll('#d1_matches .scoresCell input').forEach(i=>i.value=''); readFromDOM('d1'); calculateAndRender(); lastEditTs=Date.now(); localSaveDraft(); };
   $('#clearD2').onclick=()=>{ if(ROLE!=='admin')return; if(!confirm('Effacer tous les scores D2 ?'))return; document.querySelectorAll('#d2_matches .scoresCell input').forEach(i=>i.value=''); readFromDOM('d2'); calculateAndRender(); lastEditTs=Date.now(); localSaveDraft(); };
+  $('#clearAllMatches').onclick=()=>{ 
+    if(ROLE!=='admin')return; 
+    if(!confirm('Supprimer toutes les confrontations (D1 & D2) ?')) return;
+    S.d1 = []; S.d2 = [];
+    rebuild('d1'); rebuild('d2');
+    lastEditTs = Date.now();
+    localSaveDraft();
+  };
 
   /* ===== Barrage ===== */
   function updateBarragePlayerNames(){
@@ -833,10 +851,10 @@ async function loadNextFixtures(){
     if(id1 && id2){
       if(winner1Checked){
         winner = id1;
-        label = `🏆 ${id1} se maintient en D1 · ${id2} reste en D2`;
+        label = `${id1} se maintient en D1 · ${id2} reste en D2`;
       } else if(winner2Checked){
         winner = id2;
-        label = `🏆 ${id2} monte en D1 · ${id1} est relégué en D2`;
+        label = `${id2} monte en D1 · ${id1} est relégué en D2`;
       } else {
         label = `Affiche : ${id1} – ${id2}`;
       }
@@ -901,7 +919,15 @@ async function loadNextFixtures(){
 
     // ✅ FIX: Barrage entre AVANT-DERNIER de D1 et DEUXIÈME de D2 (membres uniquement)
     const d2second = d2Members[1]?.id;  // Deuxième D2
-    const d1avant = d1Members.length >= 2 ? d1Members[d1Members.length - 2].id : null;  // Avant-dernier D1
+    
+    // Si plus de 2 joueurs, on prend l'avant-dernier. Si seulement 2 joueurs, on prend le dernier (index 1) pour éviter de prendre le champion (index 0).
+    let d1avant = null;
+    if (d1Members.length > 2) {
+      d1avant = d1Members[d1Members.length - 2].id;
+    } else if (d1Members.length === 2) {
+      d1avant = d1Members[1].id;
+    }
+    
     if(d1avant&&d2second) fld.value=`${d1avant} – ${d2second}`;
     computeBarrageLabel();
   }
@@ -941,12 +967,13 @@ async function loadNextFixtures(){
   /* ===== GESTION PARTICIPANTS & GÉNÉRATION AUTOMATIQUE ===== */
   let PM_STATE = { d1: new Set(), d2: new Set() }; // Participants par division
   let ALL_PLAYERS = []; // Liste de tous les joueurs disponibles
+  let TEMP_GUESTS = []; // Invités éphémères pour la journée en cours
 
   // Algorithme Round-Robin pour générer toutes les confrontations
   function generateRoundRobin(playerIds) {
     if (playerIds.length < 2) return [];
 
-    const players = [...playerIds];
+    const players = [...playerIds].sort((a,b)=>String(a).localeCompare(String(b)));
     const matches = [];
 
     // Si nombre impair, ajouter un "bye" (repos)
@@ -1154,6 +1181,9 @@ async function loadNextFixtures(){
     return card;
   }
 
+  const matchKey = (m)=>`${m.p1||''}__${m.p2||''}`;
+  const sortMatches = (list)=> [...list].sort((a,b)=> (String(a.p1||'').localeCompare(String(b.p1||'')) || String(a.p2||'').localeCompare(String(b.p2||''))));
+
   // Valider et générer les matchs
   function validateAndGenerateMatches() {
     if (PM_STATE.d1.size < 2 && PM_STATE.d2.size < 2) {
@@ -1165,23 +1195,45 @@ async function loadNextFixtures(){
       return;
     }
 
-    // Générer les matchs pour D1
+    // Reconstruire TEMP_GUESTS pour ne garder que les invités réellement sélectionnés
+    // Cela évite de perdre les infos des invités lors de la régénération
+    const selectedIds = new Set([...PM_STATE.d1, ...PM_STATE.d2]);
+    const newTempGuests = [];
+    selectedIds.forEach(id => {
+      const sid = String(id);
+      const p = ALL_PLAYERS.find(x => String(x.player_id) === sid);
+      if(p && (p.role === 'INVITE' || PLAYERS_ROLE.get(sid) === 'INVITE')){
+        newTempGuests.push({ player_id: p.player_id, name: p.name || p.player_id, role: 'INVITE' });
+      }
+    });
+    TEMP_GUESTS = newTempGuests;
+
+    const mergeMatches = (existing, desired)=>{
+      const map = new Map(existing.map(m=>[matchKey(m), m]));
+      const merged = desired.map(m=>{
+        const keep = map.get(matchKey(m));
+        return keep ? keep : {...m};
+      });
+      return sortMatches(merged);
+    };
+
+    // Générer et fusionner D1
     if (PM_STATE.d1.size >= 2) {
-      S.d1 = generateRoundRobin([...PM_STATE.d1]);
-      rebuild('d1');
+      const desired = generateRoundRobin([...PM_STATE.d1]);
+      S.d1 = mergeMatches(S.d1, desired);
     } else {
       S.d1 = [];
-      rebuild('d1');
     }
+    rebuild('d1');
 
-    // Générer les matchs pour D2
+    // Générer et fusionner D2
     if (PM_STATE.d2.size >= 2) {
-      S.d2 = generateRoundRobin([...PM_STATE.d2]);
-      rebuild('d2');
+      const desired = generateRoundRobin([...PM_STATE.d2]);
+      S.d2 = mergeMatches(S.d2, desired);
     } else {
       S.d2 = [];
-      rebuild('d2');
     }
+    rebuild('d2');
 
     lastEditTs = Date.now();
     localSaveDraft();
@@ -1208,6 +1260,8 @@ async function loadNextFixtures(){
   $('#pm_validate').onclick = validateAndGenerateMatches;
   $('#pm_reset').onclick = resetAllParticipants;
   $('#pm_search').addEventListener('input', renderParticipantsModal);
+  $('#pm_guest_d1').onclick = ()=>{ const g=pushTempGuest($('#pm_guest_name').value); if(!g) return; PM_STATE.d1.add(g.player_id); PM_STATE.d2.delete(g.player_id); renderParticipantsModal(); };
+  $('#pm_guest_d2').onclick = ()=>{ const g=pushTempGuest($('#pm_guest_name').value); if(!g) return; PM_STATE.d2.add(g.player_id); PM_STATE.d1.delete(g.player_id); renderParticipantsModal(); };
 
   // Charger ALL_PLAYERS depuis l'API
   async function loadAllPlayers() {
@@ -1219,6 +1273,30 @@ async function loadNextFixtures(){
       console.error('Erreur chargement joueurs:', e);
       ALL_PLAYERS = [];
     }
+  }
+
+  function pushTempGuest(name){
+    const clean = (name||'').trim();
+    if(!clean){ alert('Saisis un nom pour l\'invité.'); return null; }
+    const id = clean; // ID exact saisi
+    
+    const existing = ALL_PLAYERS.find(p => String(p.player_id) === id);
+    if (existing) {
+      if (existing.role !== 'INVITE') {
+        alert(`Le joueur "${id}" existe déjà en tant que membre. Veuillez le sélectionner dans la liste principale.`);
+        return null;
+      }
+      // Réutiliser l'invité existant (ex: d'une autre journée chargée)
+      if (!TEMP_GUESTS.some(g => String(g.player_id) === id)) TEMP_GUESTS.push(existing);
+      return existing;
+    }
+
+    const guest = { player_id:id, name:clean, role:'INVITE' };
+    TEMP_GUESTS.push(guest);
+    ALL_PLAYERS.push(guest);
+    PLAYERS_ROLE.set(String(id), 'INVITE');
+    const dl=$('#players'); if(dl){ const o=document.createElement('option'); o.value=id; o.label=`${id} — ${clean} (Invité)`; dl.appendChild(o); }
+    return guest;
   }
 
   /* ===== Validations & restrictions ===== */
@@ -1248,7 +1326,30 @@ async function loadNextFixtures(){
   }
 
   /* ===== Draft / Confirm / Sync ===== */
-  function payload(){ return { d1:S.d1, d2:S.d2, barrage:S.barr||{}, champions:S.champions||{} }; }
+  function syncTempGuestsFromMatches(){
+    const activeIds = new Set();
+    [...(S.d1||[]), ...(S.d2||[])].forEach(m => {
+      if(m.p1) activeIds.add(m.p1);
+      if(m.p2) activeIds.add(m.p2);
+    });
+    
+    const currentTempIds = new Set(TEMP_GUESTS.map(g=>String(g.player_id)));
+    
+    activeIds.forEach(id => {
+      const sid = String(id);
+      if(!currentTempIds.has(sid) && PLAYERS_ROLE.get(sid) === 'INVITE'){
+         const p = ALL_PLAYERS.find(x => String(x.player_id) === sid);
+         if(p){
+           TEMP_GUESTS.push({ player_id: p.player_id, name: p.name || p.player_id, role: 'INVITE' });
+           currentTempIds.add(sid);
+         }
+      }
+    });
+  }
+  function payload(){ 
+    syncTempGuestsFromMatches();
+    return { d1:S.d1, d2:S.d2, barrage:S.barr||{}, champions:S.champions||{}, tempGuests:TEMP_GUESTS }; 
+  }
 
   async function saveDraftAPI(date, body){ await fetch(API()+`/matchdays/draft/${encodeURIComponent(date)}`, { ...hd('PUT'), body: JSON.stringify({ date, ...body }) }); }
   async function publishAPI(date, body, tok=TOKEN){ const r=await fetch(API()+'/matchdays/confirm', { ...hd('POST',tok), body: JSON.stringify({ date, ...body }) }); if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||'Publish failed'); }
@@ -1257,6 +1358,61 @@ async function loadNextFixtures(){
     try{ const r=await fetch(API()+`/matchdays/${encodeURIComponent(date)}`,hd()); if(r.ok){ const p=await r.json(); return { source:'confirmed', payload:p }; } }catch(_){}
     try{ const r=await fetch(API()+`/matchdays/draft/${encodeURIComponent(date)}`,hd()); if(r.ok){ const d=await r.json(); return { source:'draft', payload:d.payload||{} }; } }catch(_){}
     return { source:'none', payload:{} };
+  }
+
+  function setDayInfo(text){ $('#dayInfo').textContent = text||''; }
+
+  function applyTempGuests(list){
+    const dl=$('#players');
+    TEMP_GUESTS = (list||[]).map(g=>({ ...g, role:'INVITE' }));
+    const existing = new Set(ALL_PLAYERS.map(p=>String(p.player_id)));
+    TEMP_GUESTS.forEach(g=>{
+      const id=String(g.player_id);
+      PLAYERS_ROLE.set(id,'INVITE');
+      if(!existing.has(id)){
+        ALL_PLAYERS.push(g);
+        if(dl){
+          const o=document.createElement('option'); o.value=id; o.label=`${id} — ${g.name||id} (Invité)`; dl.appendChild(o);
+        }
+      }
+    });
+  }
+
+  function applyPayload(pp, source){
+    S.d1=(pp?.d1)||[];
+    S.d2=(pp?.d2)||[];
+    S.barr=(pp?.barrage)||{};
+    S.champions=(pp?.champions)||{};
+    applyTempGuests(pp?.tempGuests||[]);
+    rebuild('d1'); rebuild('d2'); restoreBarrageState(); validateCross();
+    if(source==='local') setDayInfo('Brouillon local chargé');
+    else if(source==='draft') setDayInfo('Brouillon serveur chargé');
+    else if(source==='confirmed') setDayInfo('Journée confirmée • '+($('#dayPicker').value||'')); 
+    else setDayInfo('');
+  }
+
+  async function loadDay(date, mode='auto'){
+    if(!date) return;
+    setDayInfo('Chargement...');
+
+    const local = localLoadDraft(date);
+    if(mode!=='confirmed' && local){
+      applyPayload(local.payload||{}, 'local');
+      return;
+    }
+
+    let fetched={source:'none', payload:{}};
+    if(mode==='confirmed'){
+      try{ const r=await fetch(API()+`/matchdays/${encodeURIComponent(date)}`,hd()); if(r.ok){ fetched={source:'confirmed', payload:await r.json()}; } }catch(_){}
+    }else if(mode==='draft'){
+      try{ const r=await fetch(API()+`/matchdays/draft/${encodeURIComponent(date)}`,hd()); if(r.ok){ const d=await r.json(); fetched={source:'draft', payload:d.payload||{}}; } }catch(_){}
+    }else{
+      fetched = await fetchDay(date);
+    }
+
+    applyPayload(fetched.payload, fetched.source);
+    if(fetched.source!=='none' && mode!=='confirmed') localSaveDraft();
+    $('#dayStatus').value = mode;
   }
 
   const LSKEY = d => `efoot.draft.${d}`;
@@ -1305,14 +1461,20 @@ async function loadNextFixtures(){
       await publishAPI(d, payload());
       localStorage.removeItem(LSKEY(d));
       $('#dayStatus').value='confirmed';
-      $('#dayInfo').textContent='Journée confirmée • '+d;
+      setDayInfo('Journée confirmée • '+d);
       alert('Journée publiée.');
       $('#confirm').close();
     }catch(e){ alert(e.message||'Erreur'); }
   };
 
   /* ===== Impression style "Classement général" ===== */
-  function roleOf(id){ return (PLAYERS_ROLE.get(String(id))||'MEMBRE').toUpperCase(); }
+  function roleOf(id){
+    const sid=String(id||'');
+    const known = PLAYERS_ROLE.get(sid);
+    if(known) return known.toUpperCase();
+    if (TEMP_GUESTS.some(g=>String(g.player_id)===sid) || /^guest_/i.test(sid)) return 'INVITE';
+    return 'MEMBRE';
+  }
   function escapeHtml(t){return String(t||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
   function computeStandingsDay(rows){
     const agg={};
@@ -1352,16 +1514,32 @@ async function loadNextFixtures(){
   async function printDayA4(){
     const date = document.getElementById('dayPicker')?.value || '';
     if(!date){ alert('Choisis une date.'); return; }
-    // récupère depuis serveur (confirmé sinon brouillon)
-    let payload=null;
-    try{ const r=await fetch(API()+`/matchdays/${encodeURIComponent(date)}`,hd()); if(r.ok) payload=await r.json(); }catch(_){}
-    if(!payload){
-      try{ const r=await fetch(API()+`/matchdays/draft/${encodeURIComponent(date)}`,hd()); if(r.ok){ const d=await r.json(); payload=d.payload||{}; } }catch(_){}
+    
+    let data=null;
+    // Utiliser les données locales si on imprime la journée en cours (WYSIWYG)
+    if(date === $('#dayPicker').value){
+      data = payload(); 
+    } else {
+      try{ const r=await fetch(API()+`/matchdays/${encodeURIComponent(date)}`,hd()); if(r.ok) data=await r.json(); }catch(_){}
+      if(!data){
+        try{ const r=await fetch(API()+`/matchdays/draft/${encodeURIComponent(date)}`,hd()); if(r.ok){ const d=await r.json(); data=d.payload||{}; } }catch(_){}
+      }
     }
-    if(!payload){ alert(`Rien à imprimer pour ${date}.`); return; }
+    if(!data){ alert(`Rien à imprimer pour ${date}.`); return; }
+
+    // ✅ FIX: Utiliser le helper centralisé
+    registerGuestsFromPayload(data);
+
+    // Force guest recognition locally for this print (safety net)
+    const guestIDs = new Set((data.tempGuests||[]).map(g=>String(g.player_id)));
+    const fixRoles = (st) => st.map(r => {
+      if(guestIDs.has(String(r.id))) return {...r, role:'INVITE'};
+      return r;
+    });
 
     // standings D1/D2
-    const st1 = computeStandingsDay(payload.d1||[]), st2=computeStandingsDay(payload.d2||[]);
+    const st1 = fixRoles(computeStandingsDay(data.d1||[]));
+    const st2 = fixRoles(computeStandingsDay(data.d2||[]));
     const {main:main1,inv:inv1}=splitAndRankDaily(st1);
     const {main:main2,inv:inv2}=splitAndRankDaily(st2);
 
@@ -1376,7 +1554,7 @@ async function loadNextFixtures(){
       main.forEach(r=>h+=row(r)); if(inv.length){ h+=`<tr class="sepRow"><td colspan="10">Invités</td></tr>`; inv.forEach(r=>h+=row(r)); }
       return h+'</tbody></table>'; };
 
-    const c1=payload?.champions?.d1||{}, c2=payload?.champions?.d2||{}, barr=payload?.barrage||payload?.champions?.barrage||{};
+    const c1=data?.champions?.d1||{}, c2=data?.champions?.d2||{}, barr=data?.barrage||data?.champions?.barrage||{};
     const team1=(c1.team||'').toUpperCase()||'—', team2=(c2.team||'').toUpperCase()||'—';
     const logo=await logoDataURL();
 
@@ -1384,8 +1562,8 @@ async function loadNextFixtures(){
 
     let html='<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Journée '+esc(date)+'</title><style>'+css+'</style></head><body onload="window.print()">';
     html+= `<h1>${logo?`<img src="${logo}" alt="logo">`:''}GOUZEPE GAMING CLUB — Journée du ${new Date(date).toLocaleDateString('fr-FR')}</h1>`;
-    html+= '<h2>SCORES D1</h2>'+tblMatches(payload.d1||[])+`<div class="champ">🏆 ${esc(c1.id||'—')} — CHAMPION avec ${esc(team1)}</div>`+tblStand('CLASSEMENT D1',main1,inv1);
-    html+= '<h2>SCORES D2</h2>'+tblMatches(payload.d2||[])+`<div class="champ">🏆 ${esc(c2.id||'—')} — CHAMPION avec ${esc(team2)}</div>`+tblStand('CLASSEMENT D2',main2,inv2);
+    html+= '<h2>SCORES D1</h2>'+tblMatches(data.d1||[])+`<div class="champ">&#127942; ${esc(c1.id||'—')} — CHAMPION avec ${esc(team1)}</div>`+tblStand('CLASSEMENT D1',main1,inv1);
+    html+= '<h2>SCORES D2</h2>'+tblMatches(data.d2||[])+`<div class="champ">&#127942; ${esc(c2.id||'—')} — CHAMPION avec ${esc(team2)}</div>`+tblStand('CLASSEMENT D2',main2,inv2);
     html+= '<h2>BARRAGES</h2><table class="tbl"><thead><tr><th>Affiche</th><th>Gagnant</th></tr></thead><tbody>';
     html+= `<tr><td>${esc(barr?.ids||'—')}</td><td style="font-weight:700;color:#16a34a">${esc(barr?.winner||'—')}</td></tr></tbody></table>`;
     html+= `<div class="verdict">*** ${esc(barr?.label||'—')}</div>`;
@@ -1420,12 +1598,13 @@ async function loadNextFixtures(){
   /* ===== Sync 15s: auto-save & auto-refresh (CORRIGÉ) ===== */
   async function syncCycle(){
     const d=$('#dayPicker').value; if(!d) return;
+    const mode = $('#dayStatus').value || 'auto';
 
     // ✅ FIX #1: Augmenter le délai à 20 secondes (au lieu de 5)
     const recentlyEditing = (Date.now() - lastEditTs) < 20000;
 
     // Auto-save pour admin si édition récente
-    if(ROLE==='admin' && recentlyEditing){
+    if(ROLE==='admin' && recentlyEditing && mode!=='confirmed'){
       try{
         await saveDraftAPI(d, payload());
         // ✅ FIX #2: Mettre à jour le timestamp local après save réussi
@@ -1437,7 +1616,14 @@ async function loadNextFixtures(){
     // Auto-refresh UNIQUEMENT si pas d'édition récente
     if(!recentlyEditing){
       try{
-        const { source, payload:pp } = await fetchDay(d);
+        const targetMode = mode==='confirmed' ? 'confirmed' : 'auto';
+        const { source, payload:pp } = targetMode==='auto' ? await fetchDay(d) : await (async()=>{
+          if(targetMode==='confirmed'){
+            const r=await fetch(API()+`/matchdays/${encodeURIComponent(d)}`,hd()); if(r.ok) return {source:'confirmed', payload:await r.json()};
+            return {source:'none', payload:{}};
+          }
+          return await fetchDay(d);
+        })();
         if(source && pp){
           // ✅ FIX #3: Vérifier le localStorage pour la priorité
           const localData = localLoadDraft(d);
@@ -1446,7 +1632,7 @@ async function loadNextFixtures(){
 
           // ✅ FIX #4: Ne pas écraser si données locales < 60 secondes
           if(timeSinceLocal < 60000){
-            console.log('[Sync] Données locales récentes, conservation.');
+            // console.log('[Sync] Données locales récentes, conservation.');
             return;
           }
 
@@ -1471,6 +1657,7 @@ async function loadNextFixtures(){
             S.d2 = (pp?.d2)||[];
             S.barr = (pp?.barrage)||{};
             S.champions = (pp?.champions) || preservedChampions || {};
+            applyTempGuests(pp?.tempGuests||[]);
 
             rebuild('d1'); rebuild('d2'); restoreBarrageState(); validateCross();
             localSaveDraft();
@@ -1484,29 +1671,81 @@ async function loadNextFixtures(){
   }
   setInterval(syncCycle, 15000);
 
+  /* ===== Stats joueur (titres & historiques) ===== */
+  async function fetchPlayerStats(playerId){
+    const body = $('#ps_body');
+    $('#ps_player').textContent = playerId;
+    body.innerHTML = '<div class="muted">Chargement…</div>';
+    try{
+      const season = await loadSeason();
+      if(!season?.id){ body.innerHTML = '<div class="muted">Aucune saison active</div>'; return; }
+      const daysRes = await fetch(API()+`/seasons/${season.id}/matchdays`, hd());
+      if(!daysRes.ok){ body.innerHTML = '<div class="muted">Impossible de charger les journées</div>'; return; }
+      const days = ((await daysRes.json()).days||[]).sort();
+
+      let titlesD1=0, titlesD2=0;
+      const teamsD1=new Set(), teamsD2=new Set();
+      const details=[];
+
+      for(const d of days){
+        let payload=null;
+        try{ const r=await fetch(API()+`/matchdays/${encodeURIComponent(d)}`,hd()); if(r.ok) payload=await r.json(); }catch(_){}
+        if(!payload) continue;
+        const c1 = payload?.champions?.d1;
+        const c2 = payload?.champions?.d2;
+        if(c1?.id && String(c1.id)===String(playerId)){
+          titlesD1++; if(c1.team) teamsD1.add(c1.team);
+          details.push({date:d, div:'D1', team:c1.team||'—'});
+        }
+        if(c2?.id && String(c2.id)===String(playerId)){
+          titlesD2++; if(c2.team) teamsD2.add(c2.team);
+          details.push({date:d, div:'D2', team:c2.team||'—'});
+        }
+      }
+
+      if(!titlesD1 && !titlesD2){
+        body.innerHTML = '<div class="muted">Aucun titre trouvé pour cette saison.</div>';
+        return;
+      }
+
+      const fmtDate = d=> new Date(d).toLocaleDateString('fr-FR',{weekday:'long', day:'2-digit', month:'short', year:'numeric'});
+      let html = '';
+      html += `<div><strong>Titres D1 :</strong> ${titlesD1} &nbsp;|&nbsp; <strong>Titres D2 :</strong> ${titlesD2}</div>`;
+      html += `<div class="muted" style="font-size:12px">Équipes utilisées — D1: ${[...teamsD1].join(', ')||'—'} • D2: ${[...teamsD2].join(', ')||'—'}</div>`;
+      html += `<div style="margin-top:10px;font-weight:700">Détails par date</div>`;
+      html += `<div style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:10px">`;
+      html += `<table style="width:100%;border-collapse:collapse;font-size:13px">`;
+      html += `<thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid var(--border)">Date</th><th style="text-align:left;padding:8px;border-bottom:1px solid var(--border)">Division</th><th style="text-align:left;padding:8px;border-bottom:1px solid var(--border)">Équipe</th></tr></thead><tbody>`;
+      details.sort((a,b)=> a.date.localeCompare(b.date));
+      details.forEach(row=>{
+        html += `<tr><td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtDate(row.date)}</td><td style="padding:6px 8px;border-bottom:1px solid var(--border)}">${row.div}</td><td style="padding:6px 8px;border-bottom:1px solid var(--border)}">${row.team||'—'}</td></tr>`;
+      });
+      html += `</tbody></table></div>`;
+      body.innerHTML = html;
+    }catch(e){
+      console.error('player stats', e);
+      body.innerHTML = '<div class="muted">Erreur lors du chargement.</div>';
+    }
+  }
+
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.player-link');
+    if(!btn) return;
+    const pid = btn.dataset.player;
+    const dlg = document.getElementById('playerStatsModal');
+    fetchPlayerStats(pid);
+    dlg.showModal();
+  });
+  document.getElementById('ps_close').onclick = ()=> document.getElementById('playerStatsModal').close();
+
   // change de date -> charge serveur ou local si dispo
-  $('#dayPicker').addEventListener('change', async e=>{
+  $('#dayPicker').addEventListener('change', e=>{
     const d=e.target.value; if(!d) return;
-    const local = localLoadDraft(d);
-    if(local){
-      // ✅ FIX #7: Charger aussi les champions depuis le localStorage
-      S.d1=local.payload.d1||[];
-      S.d2=local.payload.d2||[];
-      S.barr=local.payload.barrage||{};
-      S.champions=local.payload.champions||{};
-      rebuild('d1'); rebuild('d2'); restoreBarrageState(); validateCross();
-    }
-    else{
-      const { source, payload:pp } = await fetchDay(d);
-      // ✅ FIX #8: Charger aussi les champions depuis le serveur
-      S.d1=(pp?.d1)||[];
-      S.d2=(pp?.d2)||[];
-      S.barr=(pp?.barrage)||{};
-      S.champions=(pp?.champions)||{};
-      rebuild('d1'); rebuild('d2'); restoreBarrageState(); validateCross();
-      localSaveDraft();
-      $('#dayInfo').textContent = source==='confirmed' ? ('Journée confirmée • '+d) : (source==='draft'?'Brouillon chargé':'Nouveau brouillon');
-    }
+    loadDay(d, $('#dayStatus').value||'auto');
+  });
+  $('#dayStatus').addEventListener('change', ()=>{
+    const d=$('#dayPicker').value; if(!d) return;
+    loadDay(d, $('#dayStatus').value||'auto');
   });
 
   (function(){
@@ -1528,26 +1767,10 @@ async function loadNextFixtures(){
     await prefillDateToNextSaturday();
 
     const d=$('#dayPicker').value;
-    const local = localLoadDraft(d);
-    if(local){
-      // ✅ FIX #9: Charger tous les champs au démarrage (localStorage)
-      S.d1=local.payload.d1||[];
-      S.d2=local.payload.d2||[];
-      S.barr=local.payload.barrage||{};
-      S.champions=local.payload.champions||{};
-    }
-    else{
-      const fetched = await fetchDay(d);
-      // ✅ FIX #10: Charger tous les champs au démarrage (serveur)
-      S.d1=fetched.payload.d1||[];
-      S.d2=fetched.payload.d2||[];
-      S.barr=fetched.payload.barrage||{};
-      S.champions=fetched.payload.champions||{};
-    }
-    rebuild('d1'); rebuild('d2'); restoreBarrageState(); validateCross();
-
+    await loadDay(d, $('#dayStatus').value||'auto');
     setEditingEnabled(ROLE==='admin');
   })();
+
   </script>
 
   <!-- PWA Initialization -->

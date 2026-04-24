@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
 <head>
   <meta charset="utf-8"/>
@@ -12,49 +12,14 @@
 
   <!-- Styles globaux -->
   <link rel="stylesheet" href="theme.css"/>
+  <link rel="stylesheet" href="common.css"/>
   <link rel="stylesheet" href="mobile.css"/>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script defer src="common.js"></script>
 
   <!-- Styles spécifiques (léger) -->
   <style>
-    :root{
-      --font-ui: system-ui,-apple-system,Segoe UI,Roboto,Inter,Ubuntu,"Trebuchet MS",sans-serif;
-      --lh:1.45; --tracking:.01em;
-      --pad:clamp(12px,2.5vw,22px);
-    }
-    html,body{font-family:var(--font-ui); line-height:var(--lh); letter-spacing:var(--tracking)}
-    .wrap{max-width:1200px;margin:auto;padding:12px}
     .status{margin:8px 0;color:var(--muted)}
-
-    /* ===== TOP ===== */
-    .top{
-      position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;
-      padding:10px var(--pad);background:rgba(10,14,22,.65);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)
-    }
-    html.light .top{background:rgba(255,255,255,.75)}
-    .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;user-select:none}
-    .logo{width:42px;height:42px;border-radius:12px;object-fit:cover;border:1px solid var(--border);background:#0d1420}
-    .brand-title{display:flex;flex-direction:column;line-height:1.1}
-    .brand-title h1{margin:0;font-size:18px;letter-spacing:.3px;font-weight:800}
-    .season-sub{margin:0;color:var(--muted);font-size:12px}
-    #menuToggle{display:none;flex:0 0 auto;appearance:none;border:1px solid var(--border);background:transparent;color:inherit;border-radius:10px;padding:8px 10px;align-items:center;gap:8px}
-    .nav{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:4px 0;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-    #menu{display:flex;gap:8px}
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;border-radius:999px;font-weight:600;border:1px solid var(--border);background:transparent;color:inherit;text-decoration:none;line-height:1;white-space:nowrap;transition:filter .15s,transform .02s}
-    .btn:hover{filter:brightness(1.1)} .btn:active{transform:translateY(1px)}
-    .btn.primary{background:rgba(22,163,74,.15);border-color:#1e3a2f}
-    .btn.info{background:rgba(59,130,246,.14);border-color:#1e3a8a}
-    .btn.warn{background:rgba(245,158,11,.14);border-color:#7c2d12}
-    .btn.ghost{background:transparent}
-    .btn.danger{background:#2a0c0c;border-color:#7f1d1d;color:#fecaca}
-    .spacer{flex:1 1 auto} .tiny{font-size:12px;opacity:.8}
-    .badge{display:inline-flex;align-items:center;gap:8px;padding:4px 8px;border:1px dashed var(--border);border-radius:999px;font-weight:600;opacity:.9}
-    .badge .dot{width:8px;height:8px;border-radius:50%;background:var(--brand)}
-    .badge-top{display:none}
-    @media (max-width: 900px){
-      #menuToggle{display:inline-flex}
-      .nav{display:none}
-      .top.nav-open .nav{display:flex}
-    }
 
     /* Sections rétractables */
     .section{ margin-top:12px }
@@ -93,9 +58,6 @@
     .form5 .D{background:#1f2937;color:#e5e7eb}
     .form5 .L{background:#5b0b0b;color:#fed7d7}
 
-    /* Modale Face-à-face (déjà en place, peaufinée) */
-    dialog{border:none;border-radius:14px;max-width:980px;width:min(96vw,980px);padding:0;background:var(--panel);color:var(--text)}
-    dialog::backdrop{background:rgba(0,0,0,.4);backdrop-filter:blur(1.5px)}
     .h2h-h{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);font-weight:700}
     .h2h-b{padding:14px 16px;display:grid;gap:10px}
     .h2h-f{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
@@ -103,60 +65,23 @@
     .h2h-hero{display:flex;align-items:center;gap:14px;border:1px solid var(--border);border-radius:14px;padding:10px 12px}
     .h2h-hero img{width:40px;height:40px;border-radius:10px;object-fit:cover;border:1px solid var(--border)}
     .h2h-hero .wdl{display:flex;gap:8px;margin-left:auto}
-    .badge{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--border);font-weight:600}
     .badge.win{background:#064e3b;color:#b7fbdc}
     .badge.draw{background:#1f2937;color:#e5e7eb}
     .badge.lose{background:#5b0b0b;color:#fed7d7}
 
-    /* === Menu Mobile Moderne === */
-    #mobileMenu{
-      position:fixed; inset:0; z-index:60;
-      background:rgba(0,0,0,.65); backdrop-filter:blur(4px);
-      display:flex; align-items:flex-start; justify-content:center;
-      padding:0; opacity:0; pointer-events:none;
-      transition:opacity .25s ease;
-    }
-    #mobileMenu:not([hidden]){ opacity:1; pointer-events:auto; }
-    #mobileMenu[hidden]{ display:none }
+    /* Fix double affichage classement : Table sur PC, Cartes sur Mobile */
+    @media (min-width: 761px) { #seasonCards { display: none !important; } }
+    @media (max-width: 760px) { #seasonTable { display: none !important; } }
 
-    .mm-panel{
-      width:min(94vw,400px); margin-top:0;
-      background:var(--panel); color:var(--text);
-      border:none; border-bottom-left-radius:16px; border-bottom-right-radius:16px;
-      box-shadow:0 8px 32px rgba(0,0,0,.4);
-      padding:0; max-height:90vh; overflow-y:auto;
-      transform:translateY(-100%); transition:transform .3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    #mobileMenu:not([hidden]) .mm-panel{ transform:translateY(0); }
-
-    .mm-title{
-      font-weight:800; text-align:center; padding:16px;
-      border-bottom:1px solid var(--border); margin:0;
-      position:sticky; top:0; background:var(--panel); z-index:1;
-    }
-    .mm-list{display:flex; flex-direction:column; gap:0; padding:8px;}
-    .mm-btn{
-      display:flex; align-items:center; justify-content:flex-start; gap:12px;
-      padding:14px 16px; border-radius:12px; border:none;
-      background:transparent; color:inherit; text-decoration:none; font-weight:600;
-      transition:background .2s ease;
-    }
-    .mm-btn:hover, .mm-btn:active{ background:rgba(255,255,255,.06); }
-    .mm-theme{display:flex; justify-content:center; padding:8px 16px; border-top:1px solid var(--border);}
-    .mm-logout{display:flex; justify-content:center; padding:12px 16px; border-top:1px solid var(--border);}
-    .mm-logout .btn{background:rgba(239,68,68,.12);border-color:#7f1d1d;color:#fca5a5; width:100%;}
-    .menu-toggle{ display:inline-flex; }
-    @media (min-width:841px){ #mobileMenu{ display:none !important } .menu-toggle{ display:none; } }
-    @media (min-width: 900px){
-      .menu-toggle{display:none !important}
-      .nav-desktop{display:flex !important}
+    /* Scroll vertical pour les confrontations */
+    #confBody .tableWrap {
+      max-height: 350px;
+      overflow-y: auto;
     }
   </style>
 </head>
 
 <body>
-<div class="wrap">
-
   <!-- ===== TOP ===== -->
   <header class="top" id="topbar">
     <a class="brand" href="./Accueil.html" aria-label="Accueil GOUZEPE">
@@ -167,59 +92,40 @@
       </div>
     </a>
 
-    <button id="menuToggle" class="btn ghost" aria-controls="menu" aria-expanded="false" title="Ouvrir le menu de navigation">☰ Menu</button>
+    <button id="menuToggle" class="btn ghost" aria-controls="menu" aria-expanded="false" title="Ouvrir le menu de navigation"><i data-lucide="menu"></i> Menu</button>
     <nav class="nav" aria-label="Navigation principale">
-      <div id="menu">
-        <a class="btn ghost" href="./Accueil.html">🏠 Accueil</a>
-        <a class="btn ghost" href="./Duel.html">💪🏽 Duel</a>
-        <a class="btn ghost" href="./Classement-general.html">📊 Classements</a>
-        <a class="btn ghost" href="./Tournois.html">🏆 Tournois</a>
-        <a class="btn ghost" href="./Panel-Membre.html">👤 Mon espace</a>
-        <a class="btn ghost adminNav" href="./Admin-Joueurs.html" style="display:none">👥 Admin-Joueurs</a>
-        <a class="btn ghost adminNav" href="./Admin-Utilisateurs.html" style="display:none">🛡️ Admin Utilisateurs</a>
-        <button id="logoutBtn" class="btn ghost danger" type="button" title="Se déconnecter de votre compte">Déconnexion</button>
+      <div id="menu" class="menu">
+        <a href="./Accueil.html"><i data-lucide="home"></i> Accueil</a>
+        <a href="./Duel.html"><i data-lucide="swords"></i> Duel</a>
+        <a href="./Classement-general.html"><i data-lucide="bar-chart-2"></i> Classements</a>
+        <a href="./Panel-Membre.html"><i data-lucide="user"></i> Mon espace</a>
+        <a class="adminNav" href="./Admin-Joueurs.html" style="display:none"><i data-lucide="users"></i> Admin-Joueurs</a>
+        <a class="adminNav" href="./Admin-Utilisateurs.html" style="display:none"><i data-lucide="shield"></i> Admin Utilisateurs</a>
+        <a class="adminNav" href="./Admin-Sauvegardes.html" style="display:none"><i data-lucide="database"></i> Sauvegardes</a>
+        <button id="logoutBtn" class="btn ghost danger" type="button" title="Se déconnecter de votre compte"><i data-lucide="log-out"></i></button>
       </div>
     </nav>
 
     <div class="spacer"></div>
-    <div id="season-badge" class="badge badge-top"><span class="dot"></span><span id="season-top">Saison</span></div>
 
-    <button id="theme" class="btn ghost" title="Thème clair/sombre">☀️/🌙</button>
+    <button id="themeBtn" class="btn ghost" title="Thème clair/sombre">
+      <i data-lucide="sun" class="theme-icon-sun"></i>
+      <i data-lucide="moon" class="theme-icon-moon" style="display: none;"></i>
+    </button>
 
-    <!-- Menu Mobile Moderne -->
-<div id="mobileMenu" hidden>
-  <div class="mm-panel" role="dialog" aria-modal="true" aria-labelledby="mmTitle">
-    <div id="mmTitle" class="mm-title">
-      <span>Menu</span>
-      <button id="mmClose" class="btn ghost" style="position:absolute;right:12px;top:12px;padding:6px 10px;font-size:18px;line-height:1" aria-label="Fermer" title="Fermer le menu">✕</button>
-    </div>
-    <div class="mm-list">
-      <a class="mm-btn" href="./Accueil.html">🏠 Accueil</a>
-      <a class="mm-btn" href="./Duel.html">💪🏽 Duel</a>
-      <a class="mm-btn" href="./Classement-general.html">📊 Classements</a>
-      <a class="mm-btn" href="./Panel-Membre.html">👤 Mon espace</a>
-      <a class="mm-btn adminOnly" id="mmAdminPlayers" href="./Admin-Joueurs.html" style="display:none">👥 Admin-Joueurs</a>
-    </div>
-    <div class="mm-theme"><button id="mmTheme" class="btn ghost" title="Basculer entre thème clair et sombre">☀️ / 🌙 Thème</button></div>
-    <div class="mm-logout"><button id="mmLogout" class="btn danger" title="Se déconnecter de votre compte">Déconnexion</button></div>
-  </div>
-</div>
+
 
   </header>
 
+<div class="wrap">
   <main style="margin-top:12px">
-    <div id="status" class="status">—</div>
 
     <!-- Identité -->
     <section class="card section">
       <div class="section-head">
         <h3 style="margin:6px 0">Mon espace</h3>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <label>Saison :</label>
-          <select id="seasonSel">
-            <option value="current">En cours</option>
-            <option value="previous">Précédente</option>
-          </select>
+          <select id="seasonSel" aria-label="Saison pour les statistiques"></select>
         </div>
       </div>
       <div class="section-body">
@@ -255,20 +161,29 @@
         <button class="btn toggle-card" aria-expanded="true" aria-controls="profilBody" title="Réduire ou développer cette section">Réduire</button>
       </div>
       <div id="profilBody" class="section-body">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input id="nameInp" placeholder="Votre nom"/>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;align-items:end">
+          <div>
+            <label for="nameInp" style="font-size:12px;margin-bottom:4px;display:block">Nom d'affichage</label>
+            <input id="nameInp" placeholder="Votre nom" style="width:100%"/>
+          </div>
           <button id="saveName" class="btn" title="Enregistrer votre nouveau nom">Enregistrer</button>
+          
+          <div style="grid-column:1/-1;border-top:1px solid var(--border);margin-top:8px;padding-top:8px"></div>
+
+          <div class="muted" style="grid-column:1/-1;font-size:14px;font-weight:700">Sécurité</div>
+          <form style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" onsubmit="event.preventDefault()">
+            <input type="text" name="username" autocomplete="username" style="display:none" aria-hidden="true">
+            <input id="curPwd" type="password" autocomplete="current-password" placeholder="Mot de passe actuel (optionnel)">
+            <input id="newPwd" type="password" autocomplete="new-password" placeholder="Nouveau mot de passe (min 6)">
+            <button id="savePwd" class="btn" type="button" title="Mettre à jour votre mot de passe">Mettre à jour</button>
+          </form>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-          <input id="photoInp" type="file" accept="image/*">
-          <button id="savePhoto" class="btn" title="Télécharger et enregistrer votre nouvelle photo de profil">Changer la photo</button>
-        </div>
-        <div style="margin-top:10px">
-          <div class="muted">Changer le mot de passe</div>
+        
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+          <label style="font-size:12px;margin-bottom:6px;display:block">Photo de profil</label>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input id="curPwd" type="password" placeholder="Mot de passe actuel (optionnel)">
-            <input id="newPwd" type="password" placeholder="Nouveau mot de passe (min 6)">
-            <button id="savePwd" class="btn" title="Mettre à jour votre mot de passe">Mettre à jour</button>
+            <input id="photoInp" type="file" accept="image/*" style="flex:1">
+            <button id="savePhoto" class="btn" title="Télécharger et enregistrer votre nouvelle photo de profil">Changer la photo</button>
           </div>
         </div>
       </div>
@@ -279,11 +194,7 @@
       <div class="section-head">
         <h3 style="margin:6px 0">Mes confrontations récentes</h3>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <label>Saison :</label>
-          <select id="seasonConfSel">
-            <option value="current">En cours</option>
-            <option value="previous">Précédente</option>
-          </select>
+          <select id="seasonConfSel" aria-label="Saison pour les confrontations"></select>
           <label>Limite</label>
           <select id="confLimit"><option>5</option><option selected>10</option><option>15</option><option value="all">Tous</option></select>
           <button class="btn toggle-card" aria-expanded="true" aria-controls="confBody" title="Réduire ou développer cette section">Réduire</button>
@@ -304,11 +215,7 @@
       <div class="section-head">
         <h3 style="margin:6px 0">Comparateur de joueurs</h3>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <label>Saison :</label>
-          <select id="cmpSeason">
-            <option value="current" selected>En cours</option>
-            <option value="previous">Précédente</option>
-          </select>
+          <select id="cmpSeason" aria-label="Saison pour le comparateur"></select>
           <button class="btn toggle-card" aria-expanded="true" aria-controls="cmpBody" title="Réduire ou développer cette section">Réduire</button>
         </div>
       </div>
@@ -361,7 +268,7 @@
                 <th>Moy.</th>
                 <th>D1 gagnés</th>
                 <th>D2 gagnés</th>
-                <th>Équipes diff.</th>
+                <th>Equipes diff.</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -387,10 +294,7 @@
       </div>
     </div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-      <select id="pmSeason">
-        <option value="current">Saison en cours</option>
-        <option value="previous">Saison précédente</option>
-      </select>
+      <select id="pmSeason" aria-label="Saison"></select>
       <button id="pmH2hBtn" class="btn" type="button" title="Voir vos confrontations face-à-face avec ce joueur">Voir face-à-face</button>
     </div>
     <div id="pmStats" class="muted">—</div>
@@ -411,14 +315,11 @@
   <form method="dialog" style="margin:0">
     <div class="h2h-h">
       <div id="h2hTitle">Face-à-face</div>
-      <button class="btn" value="close" aria-label="Fermer" title="Fermer cette fenêtre">✖</button>
+      <button class="btn" value="close" aria-label="Fermer" title="Fermer cette fenêtre">âœ–</button>
     </div>
     <div class="h2h-b">
       <div class="h2h-toolbar">
-        <select id="h2hSeason" title="Saison">
-          <option value="current">Saison en cours</option>
-          <option value="previous">Saison précédente</option>
-        </select>
+        <select id="h2hSeason" title="Saison"></select>
         <select id="h2hDay" title="Journée">
           <option value="">Toutes journées</option>
         </select>
@@ -463,6 +364,13 @@ const DEF_API = ()=> (location.protocol.startsWith('http') ? location.protocol :
 const API = (localStorage.getItem('efoot.api')||DEF_API()).replace(/\/+$/,'');
 const TOKEN = localStorage.getItem('efoot.token');
 
+// Helper pour les images de profil
+function getProfilePicUrl(url) {
+  if (!url) return 'assets/icons/apple-touch-icon.png';
+  if (url.startsWith('http') || url.startsWith('https')) return url;
+  return API + url;
+}
+
 /* ===== Helper safeFetch (défini en premier pour l'auth guard) ===== */
 async function safeFetch(url,opt={},ms=12000){
   const c=new AbortController(); const t=setTimeout(()=>c.abort(),ms);
@@ -475,32 +383,6 @@ async function safeFetch(url,opt={},ms=12000){
   if(!TOKEN || Date.now()>=expAt){
     location.href='login.html';
   }
-})();
-
-/* ===== Thème ===== */
-(function(){
-  const k='efoot.theme';
-  const apply=m=>{document.documentElement.classList.toggle('light',m==='light');localStorage.setItem(k,m);$('#theme').textContent=m==='light'?'🌙':'☀️'};
-  apply(localStorage.getItem(k)||'dark');
-  $('#theme').onclick=()=>apply(document.documentElement.classList.contains('light')?'dark':'light');
-})();
-
-/* ===== Menu Mobile Moderne ===== */
-(function(){
-  const sheet = $('#mobileMenu');
-  const toggle = $('#menuToggle');
-  const closeBtn = $('#mmClose');
-  const open = ()=>{ sheet.hidden=false; document.body.style.overflow='hidden'; };
-  const close= ()=>{ sheet.hidden=true;  document.body.style.overflow=''; };
-
-  toggle?.addEventListener('click', (e)=>{ e.preventDefault(); open(); });
-  closeBtn?.addEventListener('click', close);
-  sheet?.addEventListener('click', (e)=>{ if(e.target===sheet) close(); });
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !sheet.hidden) close(); });
-
-  // Synchronise avec les contrôles existants
-  $('#mmTheme').onclick = ()=> $('#theme').click();
-  $('#mmLogout').onclick = ()=> $('#logoutBtn').click();
 })();
 
 /* ===== Déconnexion (avec confirmation) ===== */
@@ -536,25 +418,34 @@ $('#logoutBtn').onclick=async ()=>{
   try{
     const rSeasons = await safeFetch(API+'/seasons', { headers:{Authorization:'Bearer '+TOKEN} }, 8000);
     const dSeasons = await rSeasons.json();
-    const seasonSel = $('#seasonSel');
-    seasonSel.innerHTML = '<option value="">Choisir une saison...</option>';
+    
+    // IDs des sélecteurs à peupler
+    const selectIds = ['seasonSel', 'seasonConfSel', 'cmpSeason', 'pmSeason', 'h2hSeason'];
+    
+    selectIds.forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.innerHTML = '';
+    });
 
     if(dSeasons.seasons && dSeasons.seasons.length > 0){
       // Trouver la saison active
       let activeSeason = dSeasons.seasons.find(s => !s.is_closed);
       if(!activeSeason) activeSeason = dSeasons.seasons[0]; // Fallback sur la première
 
-      dSeasons.seasons.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.id;
-        opt.textContent = s.name || `Saison #${s.id}`;
-        if(s.id === activeSeason.id) opt.selected = true;
-        seasonSel.appendChild(opt);
+      selectIds.forEach(id => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        dSeasons.seasons.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = s.name || `Saison #${s.id}`;
+          if(s.id === activeSeason.id) opt.selected = true;
+          el.appendChild(opt);
+        });
       });
     }
   }catch(e){
     console.error('Erreur chargement saisons:', e);
-    $('#seasonSel').innerHTML = '<option value="">Erreur chargement saisons</option>';
   }
 
   // Charger l'identité du joueur
@@ -563,14 +454,14 @@ $('#logoutBtn').onclick=async ()=>{
     const dp = await rp.json();
     $('#playerName').textContent = dp.player?.name || '—';
     $('#playerId').textContent   = dp.player?.player_id || '—';
-    $('#avatar').src = dp.player?.profile_pic_url ? (API+dp.player.profile_pic_url) : 'assets/icons/apple-touch-icon.png';
+    $('#avatar').src = getProfilePicUrl(dp.player?.profile_pic_url);
   }catch(e){
     console.error('Erreur chargement profil:', e);
     $('#playerName').textContent = 'Erreur';
     $('#playerId').textContent = '—';
   }
 
-  async function refresh(){
+  async function refreshStats(){
     const season = $('#seasonSel').value;
     if(!season){
       // Pas de saison sélectionnée
@@ -580,7 +471,6 @@ $('#logoutBtn').onclick=async ()=>{
       $('#k_rank').textContent = '—';
       $('#k_pts').textContent = '—';
       $('#k_avg').textContent = '—';
-      $('#confTbody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Sélectionnez une saison</td></tr>';
       return;
     }
     try{
@@ -604,7 +494,14 @@ $('#logoutBtn').onclick=async ()=>{
       $('#k_pts').textContent = '—';
       $('#k_avg').textContent = '—';
     }
+  }
 
+  async function refreshMatches(){
+    const season = $('#seasonConfSel').value;
+    if(!season){
+      $('#confTbody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Sélectionnez une saison</td></tr>';
+      return;
+    }
     try{
       const rm = await safeFetch(API+'/me/matches?season='+season, { headers:{Authorization:'Bearer '+TOKEN} });
       const dm = await rm.json();
@@ -636,16 +533,19 @@ $('#logoutBtn').onclick=async ()=>{
       $('#confTbody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#ef4444">Erreur de chargement des confrontations</td></tr>';
     }
   }
-  $('#seasonSel').onchange = refresh;
-  $('#confLimit').onchange = refresh;
-  $('#seasonConfSel').onchange = refresh;
+  
+  $('#seasonSel').onchange = refreshStats;
+  $('#seasonConfSel').onchange = refreshMatches;
+  $('#confLimit').onchange = refreshMatches;
+  
   $('#confTbody').addEventListener('click',(e)=>{
     const pid=e.target?.dataset?.view; if(!pid) return; openH2H(pid);
   });
 
-  // Appeler refresh() seulement si une saison est sélectionnée
+  // Initialisation
   if($('#seasonSel').value){
-    await refresh();
+    await refreshStats();
+    await refreshMatches();
   }
 })();
 
@@ -685,7 +585,7 @@ async function searchPlayers(){
   const d = await r.json();
   (d.players||[]).forEach(p=>{
     const card=document.createElement('div'); card.className='card';
-    const img = p.profile_pic_url ? (API+p.profile_pic_url) : 'assets/icons/apple-touch-icon.png';
+    const img = getProfilePicUrl(p.profile_pic_url);
     card.innerHTML = `
       <div style="display:flex;gap:10px;align-items:center">
         <img src="${img}" style="width:48px;height:48px;border-radius:12px;object-fit:cover;border:1px solid var(--border)">
@@ -708,15 +608,15 @@ async function openPlayerPreview(pid){
     const pd = await pr.json();
     $('#pmName').textContent = pd.player?.name || '—';
     $('#pmId').textContent   = pd.player?.player_id || pid;
-    $('#pmAvatar').src = pd.player?.profile_pic_url ? (API+pd.player.profile_pic_url) : 'assets/icons/apple-touch-icon.png';
+    $('#pmAvatar').src = getProfilePicUrl(pd.player?.profile_pic_url);
 
     const ss=seasonSel.value;
     const sr = await fetch(API+`/players/${pid}/summary?season=${ss}`, { headers:{Authorization:'Bearer '+TOKEN} });
     const sd = await sr.json();
     $('#pmStats').textContent =
-      `Rang ${sd.rank ?? '—'} • Points ${sd.points ?? '—'} • Moyenne ${sd.moyenne ?? '—'} • `+
-      `Manches ${sd.legs ?? 0} • BM ${sd.goals_for ?? 0} • BC ${sd.goals_against ?? 0}` +
-      (sd.best?.date ? ` • Best ${sd.best.gf}-${sd.best.ga} (${sd.best.leg}, ${sd.best.division})` : '');
+      `Rang ${sd.rank ?? '—'}• Points ${sd.points ?? '—'}• Moyenne ${sd.moyenne ?? '—'}• `+
+      `Manches ${sd.legs ?? 0}• BM ${sd.goals_for ?? 0}• BC ${sd.goals_against ?? 0}` +
+      (sd.best?.date ? `• Best ${sd.best.gf}-${sd.best.ga} (${sd.best.leg}, ${sd.best.division})` : '');
 
     const mr = await fetch(API+`/players/${pid}/matches?season=${ss}`, { headers:{Authorization:'Bearer '+TOKEN} });
     const md = await mr.json(); const tb=$('#pmMatches'); tb.innerHTML='';
@@ -741,7 +641,7 @@ async function openH2H(oppId){
     const d = await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
     const t = d.totals || {legs:0,wins:0,draws:0,losses:0,gf:0,ga:0};
     $('#h2hTitle').textContent = `Face-à-face : ${(d.me?.name||'Moi')} vs ${(d.opponent?.name||'Adversaire')}`;
-    $('#h2hMePic').src = d.me?.profile_pic_url ? (API+d.me.profile_pic_url) : 'assets/icons/apple-touch-icon.png';
+    $('#h2hMePic').src = getProfilePicUrl(d.me?.profile_pic_url);
     $('#h2hW').textContent = `V ${t.wins}`; $('#h2hD').textContent = `N ${t.draws}`; $('#h2hL').textContent = `D ${t.losses}`;
     $('#h2hGFGA').textContent = `${t.gf}-${t.ga}`;
 
@@ -752,7 +652,7 @@ async function openH2H(oppId){
       tr.innerHTML = `<td>${new Date(L.date).toLocaleDateString('fr-FR')}</td>
                       <td>${L.division||''}</td>
                       <td>${L.leg||''}</td>
-                      <td><span class="score-pill ${badge}">${L.gf}&nbsp;–&nbsp;${L.ga}</span></td>`;
+                      <td><span class="score-pill ${badge}">${L.gf}&nbsp;—&nbsp;${L.ga}</span></td>`;
       tb.appendChild(tr);
     });
   }
@@ -775,7 +675,7 @@ async function loadPlayersList(){
   const d=await r.json();
   (d.players||[]).forEach(p=>{
     NAME_BY_ID.set(p.player_id, p.name||p.player_id);
-    PIC_BY_ID.set(p.player_id, p.profile_pic_url ? (API+p.profile_pic_url) : 'assets/icons/apple-touch-icon.png');
+    PIC_BY_ID.set(p.player_id, getProfilePicUrl(p.profile_pic_url));
   });
 }
 function fillSelectOptions(sel){
@@ -798,40 +698,75 @@ function formDotsHTML(form){
   return '<div class="form5">'+ form.map(c=>`<span class="dot ${c}">${c}</span>`).join('') + '</div>';
 }
 async function getSummary(pid, season){
-  // 1) résumé
-  const rs = await fetch(API+`/players/${pid}/summary?season=${season}`, { headers:{Authorization:'Bearer '+TOKEN} });
-  const sum = await rs.json();
+  const sParam = season ? `?season=${season}` : '';
+  let sum = {};
+  let matches = [];
 
-  // 2) matches (pour calcul de forme)
-  const rm = await fetch(API+`/players/${pid}/matches?season=${season}`, { headers:{Authorization:'Bearer '+TOKEN} });
-  const mat = await rm.json();
+  // 1) résumé (sécurisé)
+  try {
+    const rs = await fetch(API+`/players/${pid}/summary${sParam}`, { headers:{Authorization:'Bearer '+TOKEN} });
+    if(rs.ok) {
+      sum = await rs.json();
+      if(!sum.legs && sum.played_legs) sum.legs = sum.played_legs;
+    }
+  } catch(e) { /* Ignorer 404 si pas de stats */ }
+
+  // 2) matches (sécurisé)
+  try {
+    const rm = await fetch(API+`/players/${pid}/matches${sParam}`, { headers:{Authorization:'Bearer '+TOKEN} });
+    if(rm.ok) {
+      const mat = await rm.json();
+      matches = mat.matches || [];
+      
+      // FIX: Recalculer si les données sommaires semblent incomplètes (pas de buts ou pas de manches)
+      if (matches.length > 0 && (!sum.legs || typeof sum.goals_for !== 'number')) {
+        let l=0, gf=0, ga=0;
+        matches.forEach(m => {
+           if(m.aller) { l++; gf+=m.aller.gf; ga+=m.aller.ga; }
+           if(m.retour) { l++; gf+=m.retour.gf; ga+=m.retour.ga; }
+        });
+        sum.legs = l;
+        sum.goals_for = gf;
+        sum.goals_against = ga;
+      }
+    }
+  } catch(e) { /* Ignorer 404 si pas de matchs */ }
 
   // 3) fallback : si l'API n'a pas (encore) won_d1/won_d2, va les chercher dans le standings
   if (typeof sum.won_d1 !== 'number' || typeof sum.won_d2 !== 'number') {
     try{
-      const r2 = await fetch(API+`/season/standings?season=${season}`, { headers:{Authorization:'Bearer '+TOKEN} });
-      const d2 = await r2.json();
-      const rec = (d2.standings||[]).find(x=>x.id===pid);
-      if(rec){
-        sum.won_d1 = rec.won_d1 ?? 0;
-        sum.won_d2 = rec.won_d2 ?? 0;
-        if(typeof sum.points!=='number')   sum.points   = rec.total ?? sum.points;
-        if(typeof sum.moyenne!=='number')  sum.moyenne  = rec.moyenne ?? sum.moyenne;
-        if(typeof sum.rank!=='number')     sum.rank     = (d2.standings||[]).findIndex(x=>x.id===pid)+1 || sum.rank;
+      const r2 = await fetch(API+`/season/standings${sParam}`, { headers:{Authorization:'Bearer '+TOKEN} });
+      if(r2.ok){
+        const d2 = await r2.json();
+        const rec = (d2.standings||[]).find(x=>x.id===pid);
+        if(rec){
+          sum.won_d1 = rec.won_d1 ?? 0;
+          sum.won_d2 = rec.won_d2 ?? 0;
+          if(typeof sum.points!=='number')   sum.points   = rec.total ?? sum.points;
+          if(typeof sum.moyenne!=='number')  sum.moyenne  = rec.moyenne ?? sum.moyenne;
+          if(typeof sum.rank!=='number')     sum.rank     = (d2.standings||[]).findIndex(x=>x.id===pid)+1 || sum.rank;
+          if(!sum.legs)                      sum.legs     = rec.participations ?? rec.J ?? 0;
+          if(typeof sum.goals_for!=='number') sum.goals_for = rec.BP ?? 0;
+          if(typeof sum.goals_against!=='number') sum.goals_against = rec.BC ?? 0;
+        }
       }
     }catch(_) {}
   }
 
-  return { sum, matches: mat.matches||[] };
+  return { sum, matches };
 }
 function buildCmpCard(pid, data){
   const name = NAME_BY_ID.get(pid)||pid;
-  const pic  = PIC_BY_ID.get(pid)||'assets/icons/apple-touch-icon.png';
+  const pic  = getProfilePicUrl(PIC_BY_ID.get(pid));
   const s = data.sum||{};
   const form = formDotsHTML( last5Form(data.matches||[]) );
 const wonD1 = (typeof s.won_d1 === 'number') ? s.won_d1 : '—';
 const wonD2 = (typeof s.won_d2 === 'number') ? s.won_d2 : '—';
 
+  // Calcul moyennes BM/BC
+  const legs = s.legs || s.played_legs || 0;
+  const avgBM = legs > 0 ? ((s.goals_for||0) / legs).toFixed(2) : '0.00';
+  const avgBC = legs > 0 ? ((s.goals_against||0) / legs).toFixed(2) : '0.00';
 
   const block = document.createElement('div');
   block.className='card cmp-card';
@@ -847,17 +782,21 @@ const wonD2 = (typeof s.won_d2 === 'number') ? s.won_d2 : '—';
     <div class="stat-row"><span class="muted">Rang</span><b>${s.rank ?? '—'}</b></div>
     <div class="stat-row"><span class="muted">Points</span><b>${s.points ?? '—'}</b></div>
     <div class="stat-row"><span class="muted">Moyenne</span><b>${(s.moyenne ?? '—')}</b></div>
-    <div class="stat-row"><span class="muted">Manches</span><b>${s.legs ?? 0}</b></div>
-    <div class="stat-row"><span class="muted">BM / BC</span><b>${s.goals_for ?? 0} / ${s.goals_against ?? 0}</b></div>
+    <div class="stat-row"><span class="muted">Manches</span><b>${legs}</b></div>
+    <div class="stat-row"><span class="muted">Moy. BM / BC</span><b>${avgBM} / ${avgBC}</b></div>
     <div class="stat-row"><span class="muted">Titres D1 / D2</span><b>${wonD1} / ${wonD2}</b></div>
     <div class="stat-row"><span class="muted">Forme (5)</span>${form}</div>
   `;
   return block;
 }
 (async function initComparator(){
-  await loadPlayersList();
-  fillSelectOptions($('#cmpA'));
-  fillSelectOptions($('#cmpB'));
+  try {
+    await loadPlayersList();
+    fillSelectOptions($('#cmpA'));
+    fillSelectOptions($('#cmpB'));
+  } catch (e) {
+    console.error("Erreur init comparateur", e);
+  }
 
   $('#cmpSwap').onclick = ()=>{
     const a=$('#cmpA').value, b=$('#cmpB').value;
@@ -865,7 +804,8 @@ const wonD2 = (typeof s.won_d2 === 'number') ? s.won_d2 : '—';
   };
 
   $('#cmpRun').onclick = async ()=>{
-    const A=$('#cmpA').value, B=$('#cmpB').value, season=$('#cmpSeason').value;
+    const A=$('#cmpA').value, B=$('#cmpB').value;
+    const season=$('#cmpSeason').value || 'current'; // Force 'current' si vide
     if(!A || !B || A===B) return alert('Choisir deux joueurs différents.');
     $('#cmpOut').innerHTML = '<div class="muted">Chargement…</div>';
     try{
@@ -918,7 +858,7 @@ function renderSeason(){
       + '<div><span class="muted">Moy.:</span> '+((p.moyenne??0).toFixed? (p.moyenne||0).toFixed(2): (p.moyenne??0))+'</div>'
       + '<div><span class="muted">D1 gagnés:</span> '+(p.won_d1??0)+'</div>'
       + '<div><span class="muted">D2 gagnés:</span> '+(p.won_d2??0)+'</div>'
-      + '<div><span class="muted">Équipes diff.:</span> '+(p.teams_used??0)+'</div>'
+      + '<div><span class="muted">Equipes diff.:</span> '+(p.teams_used??0)+'</div>'
       + '</div>';
     cards.appendChild(div);
   });
@@ -950,39 +890,11 @@ bindToggles();
   const ping = ()=> fetch(`${API}/presence/ping`, { method:'POST', headers:{Authorization:`Bearer ${TOKEN}`}}).catch(()=>{});
   ping(); setInterval(ping, 15000);
 })();
-</script>
 
-<!-- === GOUZEPE additive patch (non-destructif) === -->
-<script>
-(function(){
-  try{
-    const isPrivateNet=(h)=>/^(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)$/.test(h||'');
-    const DEF_API=()=>{
-      const host=(location.hostname && location.hostname!=='')?location.hostname:'localhost';
-      return 'http://'+host+':3005';
-    };
-    if(!window.API){ window.API = (localStorage.getItem('efoot.api')||DEF_API()).replace(/\/+$/,''); }
-    // Auth guard
-    (function(){
-      const here=(location.pathname.split('/').pop()||'').toLowerCase();
-      if(here==='login.html') return;
-      const tok=localStorage.getItem('efoot.token')||'';
-      const exp=+localStorage.getItem('efoot.expAt')||0;
-      if(!tok || Date.now()>=exp){ location.href='login.html'; return; }
-      const role=(localStorage.getItem('efoot.role')||'member').toLowerCase();
-      const isAdminPage = /^admin-/.test(here) || here==='admin-joueurs.html' || here==='admin-utilisateurs.html';
-      if(isAdminPage && role!=='admin'){ location.href='Accueil.html'; }
-    })();
-    // .adminOnly & .adminNav helper
-    document.querySelectorAll('.adminOnly, .adminNav').forEach(el=>{
-      const r=(localStorage.getItem('efoot.role')||'member').toLowerCase();
-      el.style.display = r==='admin' ? '' : 'none';
-    });
-  }catch(e){ console.warn('additive patch error', e); }
-})();
 </script>
 
   <script src="pwa-init.js"></script>
 </body>
 </html>
+
 

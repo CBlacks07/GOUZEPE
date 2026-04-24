@@ -1,135 +1,30 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
 <head>
 <meta charset="utf-8" />
 <title>GOUZEPE — Admin Joueurs</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="mobile.css">
 <link rel="stylesheet" href="common.css">
-<script src="common.js"></script>
+<link rel="stylesheet" href="mobile.css">
+<script defer src="common.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
 <meta name="color-scheme" content="dark light">
 
 <style>
-  :root{--bg:#0b1220;--panel:#0f1627;--card:#0c1426;--text:#e5e7eb;--muted:#94a3b8;--border:#1f2937;--accent:#2563eb;--brand:#16a34a;--pad:clamp(12px,2.5vw,22px)}
-  :root.light{--bg:#f4f6fb;--panel:#fff;--card:#fff;--text:#0f172a;--muted:#475569;--border:#e2e8f0;--accent:#2563eb;--brand:#16a34a}
-
-  *{box-sizing:border-box} html,body{height:100%}
-  body{margin:0;color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Trebuchet MS",sans-serif;
-    background:
-      radial-gradient(900px 600px at 20% 0%, rgba(96,165,250,.12), transparent 40%),
-      radial-gradient(900px 600px at 80% 100%, rgba(34,197,94,.10), transparent 40%),
-      linear-gradient(180deg, rgba(7,10,22,.94), rgba(15,23,42,.96)),
-      url('assets/icons/apple-touch-icon.png') center/cover fixed no-repeat;}
-  html.light body{background:
-      radial-gradient(900px 600px at 20% 0%, rgba(96,165,250,.18), transparent 42%),
-      radial-gradient(900px 600px at 80% 100%, rgba(34,197,94,.16), transparent 42%),
-      linear-gradient(180deg, rgba(255,255,255,.86), rgba(245,247,251,.92)),
-      url('assets/icons/apple-touch-icon.png') center/cover fixed no-repeat;}
-
-  .wrap{max-width:1100px;margin:auto;padding:12px}
-
-  /* ===== TOP ===== */
-  .top{
-    position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;
-    padding:10px var(--pad);background:rgba(10,14,22,.65);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)
-  }
-  html.light .top{background:rgba(255,255,255,.75)}
-  .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;user-select:none}
-  .logo{width:42px;height:42px;border-radius:12px;object-fit:cover;border:1px solid var(--border);background:#0d1420}
-  .brand-title{display:flex;flex-direction:column;line-height:1.1}
-  .brand-title h1{margin:0;font-size:18px;letter-spacing:.3px;font-weight:800}
-  .season-sub{margin:0;color:var(--muted);font-size:12px}
-  #menuToggle{display:none;flex:0 0 auto;appearance:none;border:1px solid var(--border);background:transparent;color:inherit;border-radius:10px;padding:8px 10px;align-items:center;gap:8px}
-  .nav{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:4px 0;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-  #menu{display:flex;gap:8px}
-  .spacer{flex:1 1 auto} .tiny{font-size:12px;opacity:.8}
-  @media (max-width: 900px){
-    #menuToggle{display:inline-flex}
-    .nav{display:none}
-    .top.nav-open .nav{display:flex}
-  }
-
-  /* === Menu Mobile Moderne === */
-  #mobileMenu{
-    position:fixed; inset:0; z-index:60;
-    background:rgba(0,0,0,.65); backdrop-filter:blur(4px);
-    display:flex; align-items:flex-start; justify-content:center;
-    padding:0; opacity:0; pointer-events:none;
-    transition:opacity .25s ease;
-  }
-  #mobileMenu:not([hidden]){ opacity:1; pointer-events:auto; }
-  #mobileMenu[hidden]{ display:none }
-
-  .mm-panel{
-    width:min(94vw,400px); margin-top:0;
-    background:var(--panel); color:var(--text);
-    border:none; border-bottom-left-radius:16px; border-bottom-right-radius:16px;
-    box-shadow:0 8px 32px rgba(0,0,0,.4);
-    padding:0; max-height:90vh; overflow-y:auto;
-    transform:translateY(-100%); transition:transform .3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  #mobileMenu:not([hidden]) .mm-panel{ transform:translateY(0); }
-
-  .mm-title{
-    font-weight:800; text-align:center; padding:16px;
-    border-bottom:1px solid var(--border); margin:0;
-    position:sticky; top:0; background:var(--panel); z-index:1;
-  }
-  .mm-list{display:flex; flex-direction:column; gap:0; padding:8px;}
-  .mm-btn{
-    display:flex; align-items:center; justify-content:flex-start; gap:12px;
-    padding:14px 16px; border-radius:12px; border:none;
-    background:transparent; color:inherit; text-decoration:none; font-weight:600;
-    transition:background .2s ease;
-  }
-  .mm-btn:hover, .mm-btn:active{ background:rgba(255,255,255,.06); }
-  .mm-theme{display:flex; justify-content:center; padding:8px 16px; border-top:1px solid var(--border);}
-  .mm-logout{display:flex; justify-content:center; padding:12px 16px; border-top:1px solid var(--border);}
-  .mm-logout .btn{background:rgba(239,68,68,.12);border-color:#7f1d1d;color:#fca5a5; width:100%;}
-  @media (min-width:841px){ #mobileMenu{ display:none !important } .menu-toggle{ display:none; } }
-
-  @media (min-width: 900px){
-    .menu-toggle{display:none !important}
-    .nav-desktop{display:flex !important}
-  }
-
-  /* Boutons boost */
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;border-radius:999px;font-weight:600;border:1px solid var(--border);background:transparent;color:inherit;text-decoration:none;line-height:1;white-space:nowrap;transition:filter .15s,transform .02s}
-  .btn:hover{filter:brightness(1.1)} .btn:active{transform:translateY(1px)}
-  .btn.primary{background:rgba(22,163,74,.15);border-color:#1e3a2f}
-  .btn.info{background:rgba(59,130,246,.14);border-color:#1e3a8a}
-  .btn.warn{background:rgba(245,158,11,.14);border-color:#7c2d12}
-  .btn.ghost{background:transparent}
-  .btn.danger{background:#2a0c0c;border-color:#7f1d1d;color:#fecaca}
-  html.light .btn.danger{background:#dc2626;border-color:#b91c1c;color:#fff}
-  html.light .btn.primary{background:#16a34a;border-color:#15803d;color:#fff}
-
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.24)}
-  html.light .card{box-shadow:0 8px 24px rgba(2,6,23,.08)}
-  .row{display:flex;gap:12px;flex-wrap:wrap}
-  input,select{border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;background:#0b1020;color:var(--text)}
-  html.light input,html.light select{background:#fff;border-color:#cbd5e1}
-  table{width:100%;border-collapse:collapse;border:1px solid var(--border);background:var(--card);border-radius:12px;overflow:hidden}
-  th,td{padding:10px;border-bottom:1px solid var(--border);text-align:center}
-  th{color:var(--muted)}
-  html.light th{background:#f1f5f9;border-bottom:1px solid #e2e8f0}
-  html.light td{border-bottom:1px solid #eef2f7}
-  .muted{color:var(--muted)}
-  .badge{display:inline-flex;align-items:center;gap:8px;padding:4px 8px;border:1px dashed var(--border);border-radius:999px;font-weight:600;opacity:.9}
-  .badge .dot{width:8px;height:8px;border-radius:50%;background:var(--brand)}
-  .badge-top{display:none}
-
-  dialog{border:none;border-radius:14px;max-width:520px;width:min(92vw,520px);padding:0;background:var(--panel);color:var(--text)}
-  dialog::backdrop{background:rgba(0,0,0,.35)}
   .dlg-h{padding:14px 16px;border-bottom:1px solid var(--border);font-weight:700}
   .dlg-b{padding:14px 16px;display:grid;gap:10px}
   .dlg-f{padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
   .keepcase{text-transform:none !important}
 
-  /* pastille présence simple */
-  .dot{display:inline-block;width:10px;height:10px;border-radius:999px;background:#64748b;margin-right:6px}
+  /* Pastille présence */
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#64748b;margin-right:6px}
   .dot.online{background:#22c55e}
+
+  /* Badges */
+  .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase}
+  .badge.mem{background:rgba(37,99,235,.15);color:#60a5fa;border:1px solid rgba(37,99,235,.3)}
+  .badge.inv{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3)}
 </style>
 </head>
 
@@ -155,19 +50,19 @@
     <label>Email (par défaut : nom@gz.local)</label>
     <input id="e_email" placeholder="ex: zidane@gz.local">
     <label>Nouveau mot de passe (optionnel)</label>
-    <input id="e_pwd" type="password" placeholder="••••••">
+    <input id="e_pwd" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢">
 
     <div id="editMsg" class="muted">—</div>
   </div>
   <div class="dlg-f">
+    <button class="btn danger" id="unlinkUser" style="display:none" title="Dissocier le compte utilisateur">Détacher</button>
     <button class="btn" id="editCancel" title="Annuler et fermer sans enregistrer">Annuler</button>
     <button class="btn" id="linkUser" title="Lier ou mettre à jour le compte membre associé">Lier/MAJ compte</button>
     <button class="btn primary" id="editSave" title="Enregistrer les modifications du joueur">Enregistrer</button>
   </div>
 </dialog>
 
-<body class="container">
-<div class="wrap">
+<body>
   <!-- ===== TOP ===== -->
   <header class="top" id="topbar">
     <a class="brand" href="./Accueil.html" aria-label="Accueil GOUZEPE">
@@ -178,46 +73,32 @@
       </div>
     </a>
 
-    <button id="menuToggle" class="btn ghost" aria-controls="menu" aria-expanded="false" title="Ouvrir le menu de navigation">☰ Menu</button>
+    <button id="menuToggle" class="btn ghost" aria-controls="menu" aria-expanded="false" title="Ouvrir le menu de navigation"><i data-lucide="menu"></i> Menu</button>
     <nav class="nav" aria-label="Navigation principale">
-      <div id="menu">
-        <a class="btn ghost" href="./Accueil.html">🏠 Accueil</a>
-        <a class="btn ghost" href="./Duel.html">💪🏽 Duel</a>
-        <a class="btn ghost" href="./Classement-general.html">📊 Classements</a>
-        <a class="btn ghost" href="./Tournois.html">🏆 Tournois</a>
-        <a class="btn ghost" href="./Panel-Membre.html">👤 Mon espace</a>
-        <a class="btn ghost adminNav" href="./Admin-Joueurs.html" style="display:none">👥 Admin-Joueurs</a>
-        <a class="btn ghost adminNav" href="./Admin-Utilisateurs.html" style="display:none">🛡️ Admin Utilisateurs</a>
-        <button id="logoutBtn" class="btn ghost danger" type="button" title="Se déconnecter de votre compte">Déconnexion</button>
+      <div id="menu" class="menu">
+        <a href="./Accueil.html"><i data-lucide="home"></i> Accueil</a>
+        <a href="./Duel.html"><i data-lucide="swords"></i> Duel</a>
+        <a href="./Classement-general.html"><i data-lucide="bar-chart-2"></i> Classements</a>
+        <a href="./Panel-Membre.html"><i data-lucide="user"></i> Mon espace</a>
+        <a class="adminNav" href="./Admin-Joueurs.html" style="display:none"><i data-lucide="users"></i> Admin-Joueurs</a>
+        <a class="adminNav" href="./Admin-Utilisateurs.html" style="display:none"><i data-lucide="shield"></i> Admin Utilisateurs</a>
+        <a class="adminNav" href="./Admin-Sauvegardes.html" style="display:none"><i data-lucide="database"></i> Sauvegardes</a>
+        <button id="logoutBtn" class="btn ghost danger" type="button" title="Se déconnecter de votre compte"><i data-lucide="log-out"></i></button>
       </div>
     </nav>
 
     <div class="spacer"></div>
-    <div id="season-badge" class="badge badge-top"><span class="dot"></span><span id="season-top">Saison</span></div>
 
-    <button id="theme" class="btn ghost" title="Thème clair/sombre">☀️/🌙</button>
+    <button id="themeBtn" class="btn ghost" title="Thème clair/sombre">
+      <i data-lucide="sun" class="theme-icon-sun"></i>
+      <i data-lucide="moon" class="theme-icon-moon" style="display: none;"></i>
+    </button>
 
-    <!-- Menu Mobile Moderne -->
-<div id="mobileMenu" hidden>
-  <div class="mm-panel" role="dialog" aria-modal="true" aria-labelledby="mmTitle">
-    <div id="mmTitle" class="mm-title">
-      <span>Menu</span>
-      <button id="mmClose" class="btn ghost" style="position:absolute;right:12px;top:12px;padding:6px 10px;font-size:18px;line-height:1" aria-label="Fermer" title="Fermer le menu">✕</button>
-    </div>
-    <div class="mm-list">
-      <a class="mm-btn" href="./Accueil.html">🏠 Accueil</a>
-      <a class="mm-btn" href="./Duel.html">💪🏽 Duel</a>
-      <a class="mm-btn" href="./Classement-general.html">📊 Classements</a>
-      <a class="mm-btn" href="./Panel-Membre.html">👤 Mon espace</a>
-      <a class="mm-btn adminOnly" id="mmAdminPlayers" href="./Admin-Joueurs.html" style="display:none">👥 Admin-Joueurs</a>
-    </div>
-    <div class="mm-theme"><button id="mmTheme" class="btn ghost" title="Basculer entre thème clair et sombre">☀️ / 🌙 Thème</button></div>
-    <div class="mm-logout"><button id="mmLogout" class="btn danger" title="Se déconnecter de votre compte">Déconnexion</button></div>
-  </div>
-</div>
+
 
   </header>
 
+<div class="wrap">
   <section class="card adminOnly" style="margin-top:12px">
     <h3 style="margin:6px 0">Créer / modifier un joueur</h3>
     <div class="row">
@@ -250,67 +131,6 @@
 </div>
 
 <script>
-/* ===== Bootstrap minimal si common.js indispo ===== */
-const DEF_API = ()=> `${location.protocol.startsWith('http')?location.protocol:'http:'}//${location.hostname}:3005`;
-const API=(window.API || (localStorage.getItem('efoot.api')||DEF_API())).replace(/\/+$/,'');
-const token=window.token || localStorage.getItem('efoot.token');
-const role =(window.role || localStorage.getItem('efoot.role')||'member').toLowerCase();
-if(!token){ location.href='login.html' }
-
-/* ===== Thème + menu + logout (robuste) ===== */
-(function(){
-  const k='efoot.theme';
-  const apply=m=>{document.documentElement.classList.toggle('light',m==='light');localStorage.setItem(k,m);document.getElementById('theme').textContent=m==='light'?'🌙':'☀️'};
-  apply(localStorage.getItem(k)||'dark');
-  document.getElementById('theme').onclick=()=>apply(document.documentElement.classList.contains('light')?'dark':'light');
-
-  // Menu Mobile Moderne
-  const sheet = document.getElementById('mobileMenu');
-  const toggleBtn = document.getElementById('menuToggle');
-  const closeBtn = document.getElementById('mmClose');
-  if(sheet && toggleBtn){
-    const open = ()=>{ sheet.hidden=false; document.body.style.overflow='hidden'; };
-    const close= ()=>{ sheet.hidden=true;  document.body.style.overflow=''; };
-
-    toggleBtn.addEventListener('click', (e)=>{ e.preventDefault(); open(); });
-    closeBtn?.addEventListener('click', close);
-    sheet.addEventListener('click', (e)=>{ if(e.target===sheet) close(); });
-    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !sheet.hidden) close(); });
-
-    // Synchronise avec les contrôles existants
-    document.getElementById('mmTheme').onclick = ()=> document.getElementById('theme').click();
-    document.getElementById('mmLogout').onclick = ()=> document.getElementById('logoutBtn').click();
-  }
-
-  document.getElementById('logoutBtn')?.addEventListener('click',async ()=>{
-    if(!confirm('Voulez-vous vraiment vous déconnecter ?')) return;
-
-    // Appel API logout
-    try{ await fetch(`${API}/auth/logout`, {method:'POST',headers:{'Authorization':`Bearer ${token}`}}); }catch(_){}
-
-    // Nettoyage complet du localStorage (sauf thème)
-    const keep = new Set(['efoot.theme']);
-    for(let i=localStorage.length-1; i>=0; i--){
-      const k = localStorage.key(i);
-      if(!keep.has(k)) localStorage.removeItem(k);
-    }
-
-    // Nettoyage sessionStorage
-    sessionStorage.clear();
-
-    // Nettoyage des caches si service worker présent
-    if('caches' in window){
-      caches.keys().then(names=>{ for(let name of names) caches.delete(name); });
-    }
-
-    // Redirection avec reload forcé
-    location.replace('login.html');
-    location.reload(true);
-  });
-
-  // visibilité admin-only
-  document.querySelectorAll('.adminOnly').forEach(el=>el.style.display=(role==='admin')?'inline-flex':'none');
-})();
 
 /* ===== Chargement joueurs + présence ===== */
 let players=[];
@@ -318,14 +138,14 @@ let ONLINE = new Set();
 
 async function loadPresence(){
   try{
-    const r = await fetch(`${API}/presence/players`, { headers:{Authorization:`Bearer ${token}`} });
+    const r = await fetch(`${API}/presence/players`, { headers:{Authorization:`Bearer ${window.token}`} });
     const d = await r.json();
     ONLINE = new Set(d.online || []);
   }catch(_){ ONLINE = new Set(); }
 }
 async function load(){
   try{
-    const r=await fetch(`${API}/players`,{headers:{'Authorization':`Bearer ${token}`}});
+    const r=await fetch(`${API}/players`,{headers:{'Authorization':`Bearer ${window.token}`}});
     const d=await r.json(); players=d.players||[];
     await loadPresence();
     render();
@@ -338,17 +158,17 @@ function render(){
   const q=(document.getElementById('q').value||'').toLowerCase();
   const rows=players.filter(p=>(p.player_id||'').toLowerCase().includes(q)||(p.name||'').toLowerCase().includes(q));
   const tb=document.getElementById('list'); tb.innerHTML='';
-  const isAdmin = role === 'admin';
+  const isAdmin = window.role === 'admin';
   rows.forEach(p=>{
     const tr=document.createElement('tr');
     const online = ONLINE.has(p.player_id);
     tr.innerHTML =
       `<td>${p.player_id}</td>
        <td>${p.name||''}</td>
-       <td>${p.role||'MEMBRE'}</td>
+       <td><span class="badge ${p.role==='INVITE'?'inv':'mem'}">${p.role||'MEMBRE'}</span></td>
        ${
          isAdmin
-         ? `<td>${p.user_email ? '✅ '+p.user_email : '—'}</td>`
+         ? `<td>${p.user_email ? '<i data-lucide="check" style="width:14px;height:14px;vertical-align:middle"></i> '+p.user_email : '—'}</td>`
          : `<td>${online ? '<span class="dot online"></span> En ligne' : '<span class="dot"></span> Hors ligne'}</td>`
        }
        ${isAdmin ? `<td>
@@ -357,11 +177,12 @@ function render(){
         </td>` : `<td class="adminOnly"></td>`}`;
     tb.appendChild(tr);
   });
+  if(window.lucide) lucide.createIcons();
 }
 
 /* ===== CRUD ===== */
 async function write(method,url,body){
-  const opt={method,headers:{'Authorization':`Bearer ${token}`}};
+  const opt={method,headers:{'Authorization':`Bearer ${window.token}`}};
   if(body){opt.headers['Content-Type']='application/json';opt.body=JSON.stringify(body);}
   const r=await fetch(url,opt); const d=await r.json().catch(()=>({}));
   if(!r.ok) throw new Error(d.error||`Erreur ${r.status}`);
@@ -391,7 +212,7 @@ document.getElementById('list').addEventListener('click',async (e)=>{
 document.getElementById('reload').onclick=load;
 document.getElementById('q').addEventListener('input',render);
 
-/* ===== Édition modale (joueur + liaison compte) ===== */
+/* ===== Addition modale (joueur + liaison compte) ===== */
 function slugifyNameToEmail(name){
   const domain = (localStorage.getItem('efoot.emailDomain')||'gz.local');
   const loc = (name||'')
@@ -409,6 +230,7 @@ async function openEditPlayer(id){
   const pemail= document.getElementById('e_email');
   const ppwd  = document.getElementById('e_pwd');
   const msg   = document.getElementById('editMsg');
+  const btnUnlink = document.getElementById('unlinkUser');
 
   pid.value   = p.player_id || '';
   pidOld.value= p.player_id || '';
@@ -417,6 +239,9 @@ async function openEditPlayer(id){
   pemail.value= p.user_email || slugifyNameToEmail(p.name||p.player_id);
   ppwd.value  = '';
   msg.textContent = '—';
+  
+  // Afficher le bouton détacher si un email est déjà lié
+  btnUnlink.style.display = p.user_email ? 'inline-flex' : 'none';
   dlg.showModal();
 
   document.getElementById('editCancel').onclick=()=>dlg.close();
@@ -438,7 +263,7 @@ async function openEditPlayer(id){
 
       // Si l'ID a changé, inclure le nouveau player_id
       if(newId !== oldId) {
-        if(!confirm(`⚠️ Modifier l'ID "${oldId}" → "${newId}"?\nCela affectera toutes les références (matchs, stats, etc.)`)) {
+        if(!confirm(`âš ï¸ Modifier l'ID "${oldId}" â†’ "${newId}"?\nCela affectera toutes les références (matchs, stats, etc.)`)) {
           return;
         }
         body.player_id = newId;
@@ -460,43 +285,26 @@ async function openEditPlayer(id){
       await load();
     }catch(e){ msg.textContent=e.message||'Erreur'; }
   };
+
+  btnUnlink.onclick = async () => {
+    if(!confirm('Voulez-vous vraiment dissocier le compte utilisateur de ce joueur ?')) return;
+    try {
+      msg.textContent = 'Dissociation...';
+      await write('POST', `${API}/admin/players/${encodeURIComponent(id)}/detach_user`);
+      msg.textContent = 'Compte dissocié';
+      dlg.close(); await load();
+    } catch(e) { msg.textContent = e.message || 'Erreur'; }
+  };
 }
 
 /* init */
-load();
+document.addEventListener('DOMContentLoaded', load);
+
 </script>
 
 <footer style="text-align:center;font-family:'Gill Sans','Gill Sans MT',Calibri,'Trebuchet MS',sans-serif;">Copyright © -GOUZEPE GAMING CLUB 2025</footer>
 
-<!-- === GOUZEPE additive patch (non-destructif) === -->
-<script>
-(function(){
-  try{
-    const isPrivateNet=(h)=>/^(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)$/.test(h||'');
-    const DEF_API=()=>{
-      const host=(location.hostname && location.hostname!=='')?location.hostname:'localhost';
-      return 'http://'+host+':3005';
-    };
-    if(!window.API){ window.API = (localStorage.getItem('efoot.api')||DEF_API()).replace(/\/+$/,''); }
-    // Auth guard
-    (function(){
-      const here=(location.pathname.split('/').pop()||'').toLowerCase();
-      if(here==='login.html') return;
-      const tok=localStorage.getItem('efoot.token')||'';
-      const exp=+localStorage.getItem('efoot.expAt')||0;
-      if(!tok || Date.now()>=exp){ location.href='login.html'; return; }
-      const role=(localStorage.getItem('efoot.role')||'member').toLowerCase();
-      const isAdminPage = /^admin-/.test(here) || here==='admin-joueurs.html' || here==='admin-utilisateurs.html';
-      if(isAdminPage && role!=='admin'){ location.href='Accueil.html'; }
-    })();
-    // .adminOnly helper
-    document.querySelectorAll('.adminOnly').forEach(el=>{
-      const r=(localStorage.getItem('efoot.role')||'member').toLowerCase();
-      el.style.display = r==='admin' ? '' : 'none';
-    });
-  }catch(e){ console.warn('additive patch error', e); }
-})();
-</script>
-
 </body>
 </html>
+
+

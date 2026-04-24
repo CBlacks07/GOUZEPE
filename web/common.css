@@ -1,355 +1,144 @@
-/* ===== Design tokens (dark / light) ===== */
-:root{
-  --bg:#0b1220; --panel:#0f1627; --card:#0c1426; --border:#1f2937;
-  --text:#e5e7eb; --muted:#94a3b8;
+/* Shared utility layer (non-destructive) */
 
-  --brand:#22c55e; --brand-600:#16a34a; --brand-700:#15803d;
-  --info:#0ea5e9; --warn:#f59e0b; --danger:#ef4444;
-
-  --radius:14px; --radius-lg:18px;
-  --shadow-1:0 8px 24px rgba(0,0,0,.30);
-  --shadow-2:0 12px 50px rgba(0,0,0,.40);
-  --ring:0 0 0 3px rgba(34,197,94,.25);
-  --speed:220ms;
-}
-:root.light{
-  --bg:#f4f6fb; --panel:#ffffff; --card:#ffffff; --border:#e5e7eb;
-  --text:#0f172a; --muted:#475569;
-  --shadow-1:0 8px 24px rgba(0,0,0,.10);
-  --shadow-2:0 12px 40px rgba(0,0,0,.12);
-  --ring:0 0 0 3px rgba(34,197,94,.18);
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px;
 }
 
-/* ===== Layout helpers ===== */
-.container{max-width:1200px;margin:auto;padding:12px}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.stack{display:grid;gap:10px}
-.center{text-align:center}
-
-/* ===== Topbar “glassy” par défaut ===== */
-.top{
-  background:rgba(12,18,32,.55);
-  backdrop-filter:blur(6px);
-  border:1px solid var(--border);
-  border-radius:var(--radius-lg);
-}
-html.light .top{background:rgba(255,255,255,.7)}
-
-/* ===== Cards ===== */
-.card{
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:var(--radius-lg);
-  box-shadow:var(--shadow-1);
-  transition:transform var(--speed), box-shadow var(--speed), border-color var(--speed);
-}
-.card:hover{transform:translateY(-1px); box-shadow:var(--shadow-2)}
-
-/* ===== Buttons ===== */
-.btn{
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:10px 14px;
-  background:#10192c; color:var(--text);
-  transition:transform var(--speed), box-shadow var(--speed), border-color var(--speed), background var(--speed);
-  cursor:pointer; user-select:none;
-}
-html.light .btn{background:#fff}
-.btn:hover{transform:translateY(-1px); box-shadow:0 6px 18px rgba(0,0,0,.15)}
-.btn:active{transform:translateY(0)}
-.btn:focus-visible{outline:none; box-shadow:var(--ring)}
-.btn.primary{background:linear-gradient(180deg,var(--brand),var(--brand-600)); border-color:var(--brand-700); color:#062b12}
-.btn.primary:hover{filter:brightness(1.05)}
-.btn.warn{background:#1a120b; border-color:#7c2d12; color:#fde68a}
-.btn.danger{background:#2a0c0c; border-color:#7f1d1d; color:#fecaca}
-.iconbtn{border:1px solid var(--border); background:transparent; border-radius:12px; padding:10px 12px; cursor:pointer}
-.iconbtn:focus-visible{outline:none; box-shadow:var(--ring)}
-
-/* ===== Inputs ===== */
-input, select, textarea{
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:10px 12px;
-  background:hwb(210 0% 99%); color:var(--text);
-  transition:border-color var(--speed), box-shadow var(--speed);
-}
-html.light input, html.light select, html.light textarea{background:hsl(0, 0%, 0%)}
-input:focus-visible, select:focus-visible, textarea:focus-visible{
-  outline:none; border-color:var(--brand-600); box-shadow:var(--ring);
+.wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px;
 }
 
-/* ===== Badges pour rôles ===== */
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:.85rem;border:1px solid var(--border);gap:6px}
-.badge.admin{background:rgba(14,165,233,.15); color:#38bdf8; border-color:rgba(14,165,233,.35)}
-.badge.member{background:rgba(34,197,94,.12); color:#22c55e; border-color:rgba(34,197,94,.3)}
-.badge.invite{background:rgba(148,163,184,.16); color:#cbd5e1}
-
-/* ===== Tables génériques ===== */
-.table-wrap{overflow:auto; border-radius:12px; border:1px solid var(--border); background:var(--card)}
-.table{width:100%; border-collapse:collapse}
-.table th,.table td{padding:10px; border-bottom:1px solid var(--border)}
-.table thead th{position:sticky; top:0; background:var(--card); color:var(--muted)}
-.table tr:hover td{background:rgba(255,255,255,.03)}
-html.light .table tr:hover td{background:rgba(0,0,0,.02)}
-.table th,.table td{text-align:center}
-.table th.left,.table td.left{text-align:left}
-
-/* ===== Brancher automatiquement tes tables existantes (pas besoin de changer ton HTML) ===== */
-/* Saison */
-#seasonTable{border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--card)}
-#seasonTable th,#seasonTable td{padding:10px; border-bottom:1px solid var(--border)}
-#seasonTable thead th{position:sticky; top:0; background:var(--card); color:var(--muted)}
-/* Accueil : matches + classements */
-#d1_matches, #d2_matches, #d1_tab, #d2_tab, .tbl{
-  width:100%; border-collapse:collapse; border:1px solid var(--border); background:var(--card)
-}
-#d1_matches th,#d2_matches th,#d1_tab th,#d2_tab th,.tbl th,
-#d1_matches td,#d2_matches td,#d1_tab td,#d2_tab td,.tbl td{
-  padding:10px; border-bottom:1px solid var(--border); text-align:center
-}
-#d1_matches thead th,#d2_matches thead th,#d1_tab thead th,#d2_tab thead th,.tbl thead th{
-  position:sticky; top:0; background:var(--card); color:var(--muted)
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
-/* ===== Dialogs ===== */
-dialog{border:none;border-radius:14px;max-width:900px;width:min(94vw,900px);padding:0;background:var(--panel);color:var(--text);box-shadow:var(--shadow-2)}
-dialog::backdrop{background:rgba(0,0,0,.4);backdrop-filter:blur(1.5px)}
-.dlg-body{padding:12px;text-align:center}
-.fade-in{animation:fade .25s ease}
-@keyframes fade{from{opacity:0; transform:translateY(2px)} to{opacity:1; transform:none}}
-
-/* --- Badge saison (vert, blink lent) --- */
-.season-badge{
-  margin-left:8px; padding:2px 10px; border-radius:999px;
-  border:1px solid color-mix(in oklab, var(--success, #22c55e) 35%, transparent);
-  background: color-mix(in oklab, #22c55e 12%, transparent);
-  color:#22c55e; font-weight:700; font-size:.95rem;
+.stack {
+  display: grid;
+  gap: 10px;
 }
-@keyframes softblink { 0%,100%{ opacity:1 } 50%{ opacity:.35 } }
-.blink-slow{ animation: softblink 2.6s ease-in-out infinite }
 
-/* Sticky première colonne pour lisibilité dans les tableaux */
-.table td:first-child, .table th:first-child{
-  position: sticky; left: 0; z-index: 2;
+.center {
+  text-align: center;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.hint,
+.tiny {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.table-wrap {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   background: var(--card);
 }
 
-/* Confort tactile mobile */
-@media (max-width: 700px){
-  .btn{ width:100%; min-height:44px }
-  input, select, textarea{ font-size:16px; min-height:44px }
-}
-
-/* ==============================
-   MOBILE FIX PACK — Layout/UX
-   ============================== */
-
-/* Bouton(s) plus confortables au doigt */
-@media (max-width: 700px){
-  .btn{ width:100%; min-height:44px }
-  input, select, textarea{ font-size:16px; min-height:44px } /* anti-zoom iOS */
-}
-
-/* Conteneur scroll pour TOUTES les tables */
-.table-wrap{
-  overflow:auto;
-  border-radius: var(--radius-lg, 14px);
-  border:1px solid var(--border);
-  background: var(--card);
-  box-shadow: var(--shadow-1);
-}
-.table{
-  width:100%;
+.table,
+.tbl {
+  width: 100%;
   border-collapse: collapse;
 }
-.table th, .table td{
-  padding:10px;
-  border-bottom:1px solid var(--border);
+
+.table th,
+.table td,
+.tbl th,
+.tbl td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
 }
-.table thead th{
-  position: sticky; top: 0;
+
+.table thead th,
+.tbl thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   background: var(--card);
   color: var(--muted);
-  z-index: 1;
-}
-/* 1ère colonne “figée” pour la lisibilité */
-.table td:first-child, .table th:first-child{
-  position: sticky; left: 0; z-index: 2;
-  background: var(--card);
 }
 
-/* Menu mobile (si présent dans la page) */
-@media (max-width: 840px){
-  .menu{ display:none }
-  .menu.open{ display:flex }
+.table th.left,
+.table td.left,
+.tbl th.left,
+.tbl td.left {
+  text-align: left;
 }
 
-/* ==== Boutons & champs - boost visibilité (dark & light) ==== */
-
-/* Palette (reste compatible avec tes variables) */
-:root{
-  /* ombres */
-  --btn-shadow: 0 6px 16px rgba(0,0,0,.28);
-  --btn-shadow-hover: 0 10px 24px rgba(0,0,0,.30);
-  --btn-shadow-active: 0 4px 12px rgba(0,0,0,.22);
-
-  /* bases */
-  --btn-bg: #10192c;
-  --btn-fg: var(--text);
-  --btn-border: #2b3548;
-
-  /* variantes */
-  --btn-primary-bg: #0b1b0f;
-  --btn-primary-br: #15803d; /* vert */
-  --btn-primary-fg: #d1fae5;
-
-  --btn-warn-bg: #1f1403;
-  --btn-warn-br: #b45309;    /* ambre */
-  --btn-warn-fg: #fde68a;
-
-  --btn-danger-bg: #2a0c0c;
-  --btn-danger-br: #b91c1c;  /* rouge */
-  --btn-danger-fg: #fecaca;
-
-  --focus-ring: 3px solid var(--accent, #2563eb);
+.badge.admin {
+  background: rgba(14, 165, 233, 0.14);
+  border-color: rgba(14, 165, 233, 0.28);
 }
 
-html.light{
-  --btn-shadow: 0 6px 16px rgba(2,6,23,.10);
-  --btn-shadow-hover: 0 10px 24px rgba(2,6,23,.12);
-  --btn-shadow-active: 0 4px 12px rgba(2,6,23,.08);
-
-  --btn-bg: #ffffff;
-  --btn-fg: var(--text);
-  --btn-border: #cbd5e1;
-
-  --btn-primary-bg: #16a34a; /* vert 600 */
-  --btn-primary-br: #16a34a;
-  --btn-primary-fg: #ffffff;
-
-  --btn-warn-bg: #f59e0b;    /* ambre 500 */
-  --btn-warn-br: #f59e0b;
-  --btn-warn-fg: #1f2937;
-
-  --btn-danger-bg: #dc2626;  /* rouge 600 */
-  --btn-danger-br: #dc2626;
-  --btn-danger-fg: #ffffff;
+.badge.member {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.26);
 }
 
-/* Bouton générique */
-.btn{
-  display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  padding:12px 16px; border-radius:12px;
-  border:1.6px solid var(--btn-border);
-  background:var(--btn-bg); color:var(--btn-fg);
-  font-weight:700; letter-spacing:.2px;
-  box-shadow:var(--btn-shadow);
-  cursor:pointer; user-select:none;
-  transition:transform .05s, box-shadow .18s, background .18s, border-color .18s, color .18s;
-}
-.btn:hover{ transform:translateY(-1px); box-shadow:var(--btn-shadow-hover); }
-.btn:active{ transform:translateY(0); box-shadow:var(--btn-shadow-active); }
-.btn:focus-visible{ outline:var(--focus-ring); outline-offset:2px; }
-.btn[disabled], .btn:disabled{ opacity:.6; filter:saturate(.7); cursor:not-allowed; box-shadow:none; }
-
-/* Variantes */
-.btn.primary{ background:var(--btn-primary-bg); border-color:var(--btn-primary-br); color:var(--btn-primary-fg); }
-.btn.warn   { background:var(--btn-warn-bg);    border-color:var(--btn-warn-br);    color:var(--btn-warn-fg); }
-.btn.danger { background:var(--btn-danger-bg);  border-color:var(--btn-danger-br);  color:var(--btn-danger-fg); }
-.btn.ghost  { background:transparent; color:var(--text); }
-
-/* États au survol en clair pour plus de peps */
-html.light .btn.primary:hover{ filter:brightness(1.05); }
-html.light .btn.warn:hover   { filter:brightness(1.05); }
-html.light .btn.danger:hover { filter:brightness(1.05); }
-
-/* Liens-boutons dans les barres de menu */
-.menu .btn{ padding:10px 14px; }
-
-/* Champs & selects — focus visible et espacement cohérent */
-input, select{
-  padding:11px 14px; border-radius:12px;
-  border:1.5px solid var(--border); background:var(--card); color:var(--text);
-  transition:border-color .15s, box-shadow .15s, background .15s;
-}
-html.light input, html.light select{ background:#fff; }
-input:focus-visible, select:focus-visible{
-  outline:var(--focus-ring); outline-offset:2px;
-  border-color:var(--accent,#2563eb);
+.badge.invite {
+  background: rgba(148, 163, 184, 0.16);
 }
 
-/* Groupes d’actions — un peu plus d’air entre les boutons */
-.toolbar, .row{ display:flex; gap:12px; flex-wrap:wrap; }
-.card{ padding:14px; } /* léger lift universel */
-
-/* ========== LIGHT MODE BOOSTER — all pages ========== */
-
-/* Boutons très visibles en clair */
-html.light .btn{
-  background:#ffffff; color:#0f172a;
-  border:1.6px solid #cbd5e1;
-  box-shadow:0 6px 16px rgba(2,6,23,.10);
-}
-html.light .btn:hover{ background:#f8fafc; box-shadow:0 10px 24px rgba(2,6,23,.12) }
-html.light .btn:active{ box-shadow:0 4px 12px rgba(2,6,23,.08) }
-html.light .btn:focus-visible{ outline:3px solid rgba(59,130,246,.45); outline-offset:2px }
-
-html.light .btn.primary{ background:#16a34a; border-color:#15803d; color:#fff }
-html.light .btn.primary:hover{ filter:brightness(1.05) }
-
-html.light .btn.warn{ background:#f59e0b; border-color:#b45309; color:#1f2937 }
-html.light .btn.warn:hover{ filter:brightness(1.05) }
-
-html.light .btn.danger{ background:#dc2626; border-color:#b91c1c; color:#fff }
-html.light .btn.danger:hover{ filter:brightness(1.05) }
-
-html.light .btn.ghost,
-html.light .toggle-card{
-  background:#f1f5f9; border-color:#cbd5e1; color:#0f172a;
-}
-html.light .btn.ghost:hover,
-html.light .toggle-card:hover{ background:#e2e8f0 }
-
-/* Inputs / selects */
-html.light input, html.light select, html.light textarea{
-  background:#fff; color:#0f172a; border:1.5px solid #cbd5e1; border-radius:12px;
-}
-html.light input:focus-visible, html.light select:focus-visible, html.light textarea:focus-visible{
-  outline:3px solid rgba(59,130,246,.45); outline-offset:2px; border-color:#2563eb;
+dialog.day {
+  width: min(96vw, 980px);
+  max-width: 980px;
+  padding: 0;
 }
 
-/* Cartes / panneaux */
-html.light .card{ background:#ffffff; border:1px solid #e2e8f0; box-shadow:0 6px 20px rgba(2,6,23,.06) }
-html.light .card-head{ border-bottom:1px solid #e2e8f0 }
-html.light .panel, html.light .top{ background:#ffffff; border:1px solid #e2e8f0; box-shadow:0 8px 24px rgba(2,6,23,.08) }
-
-/* Tableaux (admin, classements, comparateurs) */
-html.light table{ background:#fff; border:1px solid #e2e8f0 }
-html.light th{ background:#f1f5f9; color:#0f172a; border-bottom:1px solid #e2e8f0 }
-html.light td{ border-bottom:1px solid #eef2f7 }
-html.light .tbl th, html.light .tbl td{ border-color:#e2e8f0 }
-html.light tr:nth-child(2n) td{ background:#fcfdff }
-
-/* Badges / pastilles */
-html.light .badge{ background:#f1f5f9; border:1px solid #cbd5e1; color:#0f172a }
-html.light .badge.div1{ background:linear-gradient(90deg, rgba(37,99,235,.16), transparent) }
-html.light .badge.div2{ background:linear-gradient(90deg, rgba(16,185,129,.16), transparent) }
-html.light .season-badge,
-html.light .pill{
-  background:#ecfdf5; color:#064e3b; border:1px solid #86efac;
+.day-head {
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-/* Barres de progression % (participation, etc.) */
-html.light .progress{ background:#e5e7eb; border-radius:999px; height:8px }
-html.light .progress > span{ background:#22c55e }
+.day-body,
+#day-body {
+  padding: 12px 14px;
+  max-height: 72vh;
+  overflow: auto;
+}
 
-/* États disabled en clair : toujours visibles */
-html.light .btn:disabled{ background:#eef2f7; border-color:#e2e8f0; color:#94a3b8; box-shadow:none; opacity:.9 }
-html.light .btn.primary:disabled{ background:#93e2b3; color:#0f172a }
-html.light .btn.warn:disabled{ background:#f8d7a1; color:#0f172a }
-html.light .btn.danger:disabled{ background:#f9a8a8; color:#0f172a }
+.hid-m {
+  display: table-cell;
+}
 
-/* Contrastes en en-têtes / barres outils communes */
-html.light .toolbar, html.light .row.toolbar{ gap:12px }
-html.light .menu .btn{ background:#fff; border-color:#cbd5e1 }
-html.light .menu .btn:hover{ background:#f8fafc }
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 700px) {
+  .btn {
+    min-height: 42px;
+  }
+
+  input,
+  select,
+  textarea {
+    min-height: 42px;
+    font-size: 16px;
+  }
+
+  .hid-m {
+    display: none;
+  }
+}

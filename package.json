@@ -1,71 +1,15 @@
 {
-  "name": "gouzepe-efootball-desktop",
+  "name": "gouzepe-efootball",
   "version": "1.0.0",
-  "description": "GOUZEPE eFOOT - Application Desktop",
-  "main": "electron/main.js",
-  "homepage": "https://github.com/gouzepe/efootball",
-  "author": {
-    "name": "GOUZEPE",
-    "email": "contact@gouzepe.com"
-  },
+  "description": "GOUZEPE eFOOT - Application web",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev",
-    "build": "electron-builder",
-    "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux",
-    "postinstall": "cd api && npm install"
-  },
-  "build": {
-    "appId": "com.gouzepe.efootball",
-    "productName": "GOUZEPE eFOOT",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "electron/**/*",
-      "web/**/*",
-      "api/**/*",
-      "index.html",
-      "!api/node_modules/.bin",
-      "!**/*.map"
-    ],
-    "extraResources": [
-      {
-        "from": "api",
-        "to": "api",
-        "filter": ["**/*"]
-      }
-    ],
-    "win": {
-      "target": ["nsis"],
-      "icon": "electron/icons/icon.png"
-    },
-    "mac": {
-      "target": ["dmg"],
-      "icon": "electron/icons/icon.png",
-      "category": "public.app-category.sports"
-    },
-    "linux": {
-      "target": ["AppImage", "deb"],
-      "icon": "electron/icons/icon.png",
-      "category": "Game",
-      "maintainer": "GOUZEPE <contact@gouzepe.com>"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    }
-  },
-  "dependencies": {
-    "electron-squirrel-startup": "^1.0.0"
-  },
-  "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "start": "npm --prefix api start",
+    "dev": "npm --prefix api run dev",
+    "dev:api": "npm --prefix api run dev",
+    "dev:vue": "npm --prefix frontend run dev -- --host 0.0.0.0",
+    "build:vue": "npm --prefix frontend run build",
+    "install:api": "npm --prefix api install",
+    "install:vue": "npm --prefix frontend install"
   },
   "engines": {
     "node": ">=18.0.0"

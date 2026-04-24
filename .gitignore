@@ -15,6 +15,14 @@ logs/
 .env
 .env.local
 .env.*.local
+.env.docker
+
+# Claude Code local settings
+.claude/
+
+# Frontend build
+frontend/dist/
+frontend/node_modules/
 
 # OS files
 .DS_Store
