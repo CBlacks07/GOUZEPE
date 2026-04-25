@@ -88,7 +88,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { EyeIcon, EyeOffIcon, Loader2Icon, MoonIcon, SunIcon } from 'lucide-vue-next'
-import { useAPI } from '@/composables/useAPI'
+import { useAPI, resolveBaseURL } from '@/composables/useAPI'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 
@@ -105,9 +105,7 @@ const loading = ref(false)
 const error = ref('')
 const bootMessage = ref('')
 
-const currentApiUrl = computed(() =>
-  (localStorage.getItem('efoot.api') || `http://${location.hostname || 'localhost'}:3005`).replace(/\/+$/, '')
-)
+const currentApiUrl = computed(() => resolveBaseURL())
 
 function normalizeEmail(raw) {
   const email = String(raw || '').trim().toLowerCase()

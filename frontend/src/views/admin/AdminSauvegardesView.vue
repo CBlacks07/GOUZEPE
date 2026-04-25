@@ -139,7 +139,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { useAPI } from '@/composables/useAPI'
+import { useAPI, resolveBaseURL } from '@/composables/useAPI'
 import {
   CalendarIcon,
   DatabaseIcon,
@@ -164,7 +164,7 @@ const statusOk = ref(true)
 const fileInput = ref(null)
 const selectedUploadName = ref('')
 
-const apiBase = computed(() => localStorage.getItem('efoot.api') || ('http://' + location.hostname + ':3005'))
+const apiBase = computed(() => resolveBaseURL())
 
 onMounted(async () => {
   await loadBackups()

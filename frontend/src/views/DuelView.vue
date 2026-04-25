@@ -193,7 +193,7 @@
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useAPI } from '@/composables/useAPI'
+import { useAPI, resolveBaseURL } from '@/composables/useAPI'
 import { useToast } from '@/composables/useToast'
 import { SwordsIcon, UsersIcon, ClockIcon, RefreshCwIcon, Loader2Icon } from 'lucide-vue-next'
 
@@ -226,10 +226,7 @@ const resultOptions = [
 ]
 
 // ── Computed ───────────────────────────────────────────────────
-const apiBase = computed(() => {
-  const stored = localStorage.getItem('efoot.api')
-  return stored || ('http://' + location.hostname + ':3005')
-})
+const apiBase = computed(() => resolveBaseURL())
 
 const csvUrl = computed(() => {
   const qs = histParams()

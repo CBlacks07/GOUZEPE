@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { resolveBaseURL } from '@/composables/useAPI'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('efoot.token') || '')
@@ -41,8 +42,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (hydrationPromise.value) return hydrationPromise.value
 
     const base =
-      (localStorage.getItem('efoot.api') || `http://${location.hostname || 'localhost'}:3005`)
-        .replace(/\/+$/, '')
+      resolveBaseURL()
 
     hydrationPromise.value = (async () => {
       try {
@@ -74,9 +74,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout({ remote = true } = {}) {
     if (remote && token.value) {
       try {
-        const apiBase =
-          (localStorage.getItem('efoot.api') || `http://${location.hostname || 'localhost'}:3005`)
-            .replace(/\/+$/, '')
+        const apiBase = resolveBaseURL()
         await fetch(`${apiBase}/auth/logout`, {
           method: 'POST',
           headers: { Authorization: 'Bearer ' + token.value }
