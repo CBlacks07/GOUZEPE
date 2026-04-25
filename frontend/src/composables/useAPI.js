@@ -2,10 +2,10 @@ import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 
 // Résolution de l'URL base (compatible navigateur + Docker)
-function resolveBaseURL() {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
+export function resolveBaseURL() {
+  if (import.meta.env.VITE_API_URL) return String(import.meta.env.VITE_API_URL).replace(/\/+$/, '')
   const stored = localStorage.getItem('efoot.api')
-  if (stored) return stored
+  if (stored) return stored.replace(/\/+$/, '')
   const host = (location.hostname && location.hostname !== '') ? location.hostname : 'localhost'
   return 'http://' + host + ':3005'
 }

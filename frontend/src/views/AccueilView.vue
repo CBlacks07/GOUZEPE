@@ -48,7 +48,7 @@
             <div class="hero-ring hero-ring-inner"></div>
             <div class="hero-glow"></div>
             <Transition name="hero-img" mode="out-in">
-              <div :key="heroSlideIndex" :class="['hero-img-wrap', heroSlides[heroSlideIndex].anim]">
+              <div v-if="heroSlides[heroSlideIndex]" :key="heroSlideIndex" :class="['hero-img-wrap', heroSlides[heroSlideIndex].anim]">
                 <img :src="heroSlides[heroSlideIndex].src" :alt="heroSlides[heroSlideIndex].alt" class="hero-slide-img" />
               </div>
             </Transition>
