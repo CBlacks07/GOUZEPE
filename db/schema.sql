@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
   nb_groups        SMALLINT,
   qualifiers_per_group SMALLINT,
   created_by       INTEGER REFERENCES users(id) ON DELETE SET NULL,
-  season_id        INTEGER REFERENCES seasons(id) ON DELETE SET NULL,
+  season_id        INTEGER,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
   CHECK (format IN ('single_elimination','round_robin','double_elimination','groups_knockout')),
