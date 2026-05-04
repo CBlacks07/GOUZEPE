@@ -3280,7 +3280,7 @@ app.get('/season/guest-stats', auth, async (req, res) => {
   ok(res, { season_id: seasonId, guests: r.rows })
 })
 
-app.post('/admin/season/guest-stats/rebuild', auth, admin, async (req, res) => {
+app.post('/admin/season/guest-stats/rebuild', auth, adminOnly, async (req, res) => {
   const sid = req.query.season_id ? +req.query.season_id : null
   let seasonId
   if (sid) {
