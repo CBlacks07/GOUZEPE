@@ -5,7 +5,22 @@
     <section class="rr-section">
       <div class="rr-head">
         <h3 class="rr-heading">Matchs</h3>
-        <span class="text-xs text-gz-muted">{{ matches.length }} confrontation(s)</span>
+        <div class="rr-head-right">
+          <span class="text-xs text-gz-muted">{{ matches.length }} confrontation(s)</span>
+          <!-- 🔧 FEATURE: Batch mode toggle -->
+          <div v-if="adminMode" class="batch-controls">
+            <button v-if="!batchMode" @click="startBatchMode" class="btn btn-sm" title="Mode édition rapide">
+              📋 Rapide
+            </button>
+            <template v-else>
+              <span class="text-xs text-gz-muted">{{ batchEdits.size }} en attente</span>
+              <button @click="validateAllBatch" :disabled="saving || batchEdits.size === 0" class="btn btn-primary btn-sm" title="Valider tous">
+                {{ saving ? '…' : '✓ Valider' }}
+              </button>
+              <button @click="cancelBatchMode" class="btn btn-sm" title="Annuler">✕</button>
+            </template>
+          </div>
+        </div>
       </div>
 
       <div v-if="pairRows.length" class="rr-results-shell">
@@ -29,7 +44,7 @@
 
               <!-- Aller -->
               <td class="cell-score text-center">
-                <template v-if="editingIdx === i">
+                <template v-if="editingIdx === i && !batchMode">
                   <div class="score-edit">
                     <input v-model.number="editA.s1" type="number" min="0" class="score-inp"
                            @keydown.enter="saveEditingPair(p)" />
@@ -38,8 +53,24 @@
                            @keydown.enter="saveEditingPair(p)" />
                   </div>
                 </template>
+                <template v-else-if="batchMode && p.aller">
+                  <div class="score-edit">
+                    <input
+                      :value="getBatch(p.aller.id, 's1')"
+                      @input="e => setBatch(p.aller.id, 's1', e.target.value)"
+                      type="number" min="0" class="score-inp batch-inp" />
+                    <span class="score-dash">–</span>
+                    <input
+                      :value="getBatch(p.aller.id, 's2')"
+                      @input="e => setBatch(p.aller.id, 's2', e.target.value)"
+                      type="number" min="0" class="score-inp batch-inp" />
+                  </div>
+                </template>
                 <template v-else>
-                  <span v-if="isDone(p.aller)" class="score-pill" :class="pillClass(p.aller)">
+                  <span v-if="batchEdits.has(p.aller?.id)" class="score-pill score-pending-batch" title="En attente">
+                    {{ batchEdits.get(p.aller.id).s1 }} – {{ batchEdits.get(p.aller.id).s2 }} ⏳
+                  </span>
+                  <span v-else-if="isDone(p.aller)" class="score-pill" :class="pillClass(p.aller)">
                     {{ p.aller.score1 }} – {{ p.aller.score2 }}
                   </span>
                   <span v-else class="score-pending">—</span>
@@ -48,7 +79,7 @@
 
               <!-- Retour -->
               <td v-if="hasRetour" class="cell-score text-center">
-                <template v-if="editingIdx === i && p.retour">
+                <template v-if="editingIdx === i && !batchMode && p.retour">
                   <div class="score-edit">
                     <input v-model.number="editR.s1" type="number" min="0" class="score-inp"
                            @keydown.enter="saveEditingPair(p)" />
@@ -57,8 +88,24 @@
                            @keydown.enter="saveEditingPair(p)" />
                   </div>
                 </template>
+                <template v-else-if="batchMode && p.retour">
+                  <div class="score-edit">
+                    <input
+                      :value="getBatch(p.retour.id, 's1')"
+                      @input="e => setBatch(p.retour.id, 's1', e.target.value)"
+                      type="number" min="0" class="score-inp batch-inp" />
+                    <span class="score-dash">–</span>
+                    <input
+                      :value="getBatch(p.retour.id, 's2')"
+                      @input="e => setBatch(p.retour.id, 's2', e.target.value)"
+                      type="number" min="0" class="score-inp batch-inp" />
+                  </div>
+                </template>
                 <template v-else-if="p.retour">
-                  <span v-if="isDone(p.retour)" class="score-pill" :class="pillClass(p.retour)">
+                  <span v-if="batchEdits.has(p.retour.id)" class="score-pill score-pending-batch" title="En attente">
+                    {{ batchEdits.get(p.retour.id).s1 }} – {{ batchEdits.get(p.retour.id).s2 }} ⏳
+                  </span>
+                  <span v-else-if="isDone(p.retour)" class="score-pill" :class="pillClass(p.retour)">
                     {{ p.retour.score1 }} – {{ p.retour.score2 }}
                   </span>
                   <span v-else class="score-pending">—</span>
@@ -190,7 +237,7 @@ const props = defineProps({
   adminMode: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['score-saved'])
+const emit = defineEmits(['score-saved', 'batch-scores-saved'])
 
 const showGoalColumns = computed(() => String(props.standingsMode || 'goals') !== 'wins')
 
@@ -199,6 +246,22 @@ const editingIdx = ref(-1)
 const editA = ref({ s1: 0, s2: 0 })
 const editR = ref({ s1: 0, s2: 0 })
 const saving = ref(false)
+
+const batchMode = ref(false)
+const batchEdits = ref(new Map()) // matchId -> { s1, s2 }
+
+function getBatch(matchId, key) {
+  if (!matchId) return ''
+  const entry = batchEdits.value.get(matchId)
+  return entry ? entry[key] : ''
+}
+
+function setBatch(matchId, key, raw) {
+  if (!matchId) return
+  const val = raw === '' ? '' : Number(raw)
+  const existing = batchEdits.value.get(matchId) || { s1: '', s2: '' }
+  batchEdits.value.set(matchId, { ...existing, [key]: val })
+}
 
 /* ---- Pair grouping ---- */
 const matchPairs = computed(() => {
@@ -271,6 +334,58 @@ async function saveEditingPair(pair) {
     editingIdx.value = -1
   } catch (_) { /* toast is handled by parent */ }
   saving.value = false
+}
+
+// 🔧 FEATURE: Batch mode functions
+async function validateAllBatch() {
+  if (batchEdits.value.size === 0) return
+  saving.value = true
+  const edits = Array.from(batchEdits.value.entries())
+    .filter(([, s]) => s.s1 !== '' && s.s2 !== '')
+    .map(([matchId, scores]) => ({
+      matchId,
+      score1: Number(scores.s1),
+      score2: Number(scores.s2),
+    }))
+  if (!edits.length) { saving.value = false; return }
+  emit('batch-scores-saved', { edits, done: onBatchValidated, fail: onBatchFailed })
+}
+
+function onBatchValidated() {
+  batchEdits.value.clear()
+  batchMode.value = false
+  saving.value = false
+  editingIdx.value = -1
+}
+
+function onBatchFailed() {
+  saving.value = false
+}
+
+function startBatchMode() {
+  batchEdits.value.clear()
+  // Pré-remplir depuis les scores existants
+  for (const p of pairRows.value) {
+    if (p.aller?.id) {
+      batchEdits.value.set(p.aller.id, {
+        s1: p.aller.score1 ?? '',
+        s2: p.aller.score2 ?? '',
+      })
+    }
+    if (p.retour?.id) {
+      batchEdits.value.set(p.retour.id, {
+        s1: p.retour.score1 ?? '',
+        s2: p.retour.score2 ?? '',
+      })
+    }
+  }
+  batchMode.value = true
+}
+
+function cancelBatchMode() {
+  batchEdits.value.clear()
+  batchMode.value = false
+  editingIdx.value = -1
 }
 
 /* ---- Cross-table ---- */
@@ -368,6 +483,20 @@ function playedOf(s) {
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.65rem;
+}
+
+/* 🔧 FEATURE: Batch mode controls */
+.rr-head-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.batch-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
 }
 
 .rr-heading {
@@ -511,6 +640,19 @@ function playedOf(s) {
 .score-inp::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+/* 🔧 FEATURE: Batch mode input highlight */
+.batch-inp {
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  background: rgba(59, 130, 246, 0.12) !important;
+}
+
+/* Pending batch edit badge */
+.score-pending-batch {
+  background: color-mix(in srgb, var(--blue) 16%, transparent) !important;
+  color: #60a5fa !important;
+  opacity: 0.85;
 }
 
 .score-dash {
