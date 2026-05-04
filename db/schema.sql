@@ -176,3 +176,24 @@ CREATE TABLE IF NOT EXISTS champion_result (
 );
 
 CREATE INDEX IF NOT EXISTS idx_champion_name ON champion_result(champion_name);
+
+-- Stats des invités par saison (recalculées à chaque journée publiée)
+CREATE TABLE IF NOT EXISTS guest_season_stats (
+  player_id    TEXT NOT NULL REFERENCES players(player_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  season_id    INTEGER NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+  journees     INTEGER NOT NULL DEFAULT 0,
+  pts          INTEGER NOT NULL DEFAULT 0,
+  wins         INTEGER NOT NULL DEFAULT 0,
+  draws        INTEGER NOT NULL DEFAULT 0,
+  losses       INTEGER NOT NULL DEFAULT 0,
+  bp           INTEGER NOT NULL DEFAULT 0,
+  bc           INTEGER NOT NULL DEFAULT 0,
+  last_date    DATE,
+  last_div     TEXT,
+  last_rank    INTEGER,
+  last_total   INTEGER,
+  updated_at   TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (player_id, season_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_guest_stats_season ON guest_season_stats(season_id);

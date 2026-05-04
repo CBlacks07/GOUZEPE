@@ -318,7 +318,7 @@
               <h4 class="font-medium">Division 1 — Confrontations (Aller/Retour)</h4>
               <button v-if="auth.isAdmin" @click="addMatch('d1')" class="btn text-xs" title="Ajouter une confrontation vide en D1">Ajouter ligne</button>
             </div>
-            <div class="overflow-x-auto table-shell" style="max-height:480px;overflow-y:auto">
+            <div class="overflow-x-auto table-shell" style="max-height:480px;overflow-y:auto;-webkit-overflow-scrolling:touch">
               <table class="w-full text-sm matches-table" style="border-collapse:separate;border-spacing:0 4px">
                 <thead>
                   <tr class="text-xs uppercase" style="color:var(--muted)">
@@ -440,7 +440,7 @@
               <h4 class="font-medium">Division 2 — Confrontations (Aller/Retour)</h4>
               <button v-if="auth.isAdmin" @click="addMatch('d2')" class="btn text-xs" title="Ajouter une confrontation vide en D2">Ajouter ligne</button>
             </div>
-            <div class="overflow-x-auto table-shell" style="max-height:480px;overflow-y:auto">
+            <div class="overflow-x-auto table-shell" style="max-height:480px;overflow-y:auto;-webkit-overflow-scrolling:touch">
               <table class="w-full text-sm matches-table" style="border-collapse:separate;border-spacing:0 4px">
                 <thead>
                   <tr class="text-xs uppercase" style="color:var(--muted)">
@@ -783,7 +783,8 @@ const headlineFlashes   = ref([])
 const headlineFlashIndex = ref(0)
 const nextInsights      = ref([])
 const nextInsightIndex  = ref(0)
-const featuredInvite    = ref(null)
+const featuredInvite    = ref([])   // tableau trié avg desc
+const guestStatsLoaded  = ref(false)
 let realtimeOffDraftUpdate = null
 let realtimeOffDayConfirmed = null
 let realtimeOffDayUpdated = null
@@ -1946,80 +1947,32 @@ function rankLabel(rank) {
   return rank === 1 ? '1er' : `${rank}e`
 }
 
-function computeInviteSpotlight(recentDays) {
-  // Only use the last 4 days for performance-based ranking
-  const recent = recentDays.slice(0, 4)
-  const byInvite = new Map()
-
-  for (const day of recent) {
-    // Build a local set of invite IDs for THIS day (tempGuests + G_ prefix + DB role)
-    const dayInviteIds = new Set(
-      (day.payload?.tempGuests || []).map(g => String(g.player_id))
-    )
-    for (const divKey of ['d1', 'd2']) {
-      for (const m of day.payload?.[divKey] || []) {
-        for (const pid of [m.p1, m.p2]) {
-          if (!pid) continue
-          const sid = String(pid)
-          if (sid.startsWith('G_')) dayInviteIds.add(sid)
-          if (inferRoleForPlayer(sid) === 'INVITE') dayInviteIds.add(sid)
-        }
-      }
-    }
-
-    for (const divKey of ['d1', 'd2']) {
-      const standings = computeStandingsSimple(day?.payload?.[divKey] || [])
-      standings.forEach((row, idx) => {
-        const id = String(row?.id || '')
-        if (!id || !dayInviteIds.has(id)) return
-
-        if (!byInvite.has(id)) {
-          byInvite.set(id, {
-            id,
-            pts: 0,
-            diff: 0,
-            bp: 0,
-            bc: 0,
-            V: 0,
-            apps: 0,
-            lastDate: '',
-            lastDivision: '',
-            lastRank: null,
-            lastTotal: 0
-          })
-        }
-        const agg = byInvite.get(id)
-        agg.pts += Number(row.PTS || 0)
-        agg.diff += Number(row.DIFF || 0)
-        agg.bp += Number(row.BP || 0)
-        agg.bc += Number(row.BC || 0)
-        agg.V += Number(row.V || 0)
-        agg.apps += 1
-
-        const isNewerDay = !agg.lastDate || day.date > agg.lastDate
-        if (isNewerDay) {
-          agg.lastDate = day.date
-          agg.lastDivision = divKey.toUpperCase()
-          agg.lastRank = idx + 1
-          agg.lastTotal = standings.length
-        }
-      })
-    }
-  }
-
-  return [...byInvite.values()]
-    .map(inv => ({ ...inv, avg: inv.apps ? inv.pts / inv.apps : 0 }))
-    .sort((a, b) =>
-      b.avg - a.avg ||
-      b.pts - a.pts ||
-      b.diff - a.diff ||
-      b.bp - a.bp ||
-      String(a.id).localeCompare(String(b.id))
-    )
+async function loadGuestStats() {
+  try {
+    const { data } = await api.get('/season/guest-stats')
+    // Adapter format pour compatibilité avec le reste du code
+    featuredInvite.value = (data.guests || []).map(g => ({
+      id:         g.player_id,
+      name:       g.name || '',
+      pts:        +g.pts,
+      V:          +g.wins,
+      n:          +g.draws,
+      d:          +g.losses,
+      bp:         +g.bp,
+      bc:         +g.bc,
+      apps:       +g.journees,
+      avg:        +g.avg_pts,
+      diff:       +g.bp - +g.bc,
+      lastDate:   g.last_date ? String(g.last_date).slice(0, 10) : '',
+      lastDivision: g.last_div || '',
+      lastRank:   g.last_rank,
+      lastTotal:  g.last_total,
+    }))
+    guestStatsLoaded.value = true
+  } catch (_) {}
 }
 
 function buildHeadlineFlashes(recentDays) {
-  featuredInvite.value = computeInviteSpotlight(recentDays)
   if (!featuredInvite.value || !featuredInvite.value.length) {
     return [{
       tag: 'Invité en vue',
@@ -2386,6 +2339,7 @@ async function loadHeadline() {
       { title: 'Champion D2', meta: championD2Label }
     ]
 
+    await loadGuestStats()
     headlineFlashes.value = buildHeadlineFlashes(recentConfirmedDays.value)
     headlineFlashIndex.value = 0
   } catch (_) {
@@ -2570,6 +2524,9 @@ async function loadNextFixture() {
   border-radius: 12px;
   padding: 4px;
   background: rgba(15, 23, 42, 0.18);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .table-shell .matches-table thead th,
@@ -2599,6 +2556,9 @@ async function loadNextFixture() {
   font-size: 10px;
   opacity: 0.8;
 }
+
+.standings-table { min-width: 520px; }
+.matches-table { min-width: 560px; }
 
 .matches-table th:nth-child(1),
 .matches-table td:nth-child(1),

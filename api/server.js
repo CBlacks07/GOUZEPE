@@ -649,6 +649,26 @@ async function ensureSchema(){
   EXCEPTION WHEN duplicate_object THEN NULL;
   END$$`);
 
+  /* table stats invités */
+  await q(`CREATE TABLE IF NOT EXISTS guest_season_stats (
+    player_id  TEXT NOT NULL,
+    season_id  INTEGER NOT NULL,
+    journees   INTEGER NOT NULL DEFAULT 0,
+    pts        INTEGER NOT NULL DEFAULT 0,
+    wins       INTEGER NOT NULL DEFAULT 0,
+    draws      INTEGER NOT NULL DEFAULT 0,
+    losses     INTEGER NOT NULL DEFAULT 0,
+    bp         INTEGER NOT NULL DEFAULT 0,
+    bc         INTEGER NOT NULL DEFAULT 0,
+    last_date  DATE,
+    last_div   TEXT,
+    last_rank  INTEGER,
+    last_total INTEGER,
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (player_id, season_id)
+  )`);
+  await q(`CREATE INDEX IF NOT EXISTS idx_guest_stats_season ON guest_season_stats(season_id)`);
+
   /* seed admin (optional) */
   const seedAdmin = process.env.SEED_ADMIN_ON_BOOT === 'true';
   if (seedAdmin) {
@@ -1159,6 +1179,12 @@ async function resolveLoserRoute(client, tournamentId, matchRow) {
   const wbMaxRound = Number(maxWbRes.rows?.[0]?.max_round || 0);
   if (!wbMaxRound) return { targetMatchId, targetSlot };
 
+  // 🔧 FIX: Handle 2-player edge case (WB final only, no LB needed)
+  if (wbMaxRound === 1) {
+    // Only 2 players: WB final is the only match, no loser route
+    return { targetMatchId: null, targetSlot };
+  }
+
   let expectedLbRound;
   let expectedLbSlot;
   let expectedLbEntrySlot;
@@ -1427,6 +1453,42 @@ async function checkRoundRobinCompletion(client, tournamentId) {
       UPDATE tournaments SET status='completed', winner_name=$1, ended_at=now(), updated_at=now()
       WHERE id=$2
     `, [winner?.name || null, tournamentId]);
+  }
+}
+
+// 🔧 FIX Bug #7: Recompute Round Robin standings when match is re-edited
+async function updateRoundRobinStandings(client, tournamentId) {
+  const standings = await computeRoundRobinStandings(client, tournamentId);
+  if (standings.length > 0) {
+    const winner = standings[0];
+    // Update stored winner in tournament for live display
+    await client.query(`
+      UPDATE tournaments SET winner_name=$1, updated_at=now() WHERE id=$2
+    `, [winner?.name || null, tournamentId]);
+  }
+}
+
+// 🔧 FIX Bug #8: Check if all group matches are completed and mark tournament as completed
+async function checkGroupTournamentCompletion(client, tournamentId) {
+  const t = await client.query(`SELECT format, nb_groups FROM tournaments WHERE id=$1`, [tournamentId]);
+  if (!t.rowCount) return;
+  const tournament = t.rows[0];
+  if (tournament.format !== 'groups_knockout') return;
+  
+  // Count all group matches and completed group matches
+  const groupMatches = await client.query(`
+    SELECT COUNT(*) as total, 
+           SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as completed
+    FROM tournament_matches 
+    WHERE tournament_id=$1 AND (bracket_side='G' OR group_no IS NOT NULL)
+  `, [tournamentId]);
+  
+  const total = Number(groupMatches.rows[0]?.total || 0);
+  const completed = Number(groupMatches.rows[0]?.completed || 0);
+  
+  // If all group matches are completed, transition to knockout phase
+  if (total > 0 && total === completed) {
+    await client.query(`UPDATE tournaments SET status='live', updated_at=now() WHERE id=$1 AND status='draft'`, [tournamentId]);
   }
 }
 
@@ -2009,6 +2071,26 @@ app.post('/admin/tournaments/:id/generate', auth, adminOnly, async (req, res) =>
       return bad(res, 400, 'Il faut au moins 2 participants');
     }
 
+    // 🔧 FIX: Validate bracket generation constraints
+    if (fmt === 'groups_knockout') {
+      const nb_groups = Math.max(2, parseInt(req.body?.nb_groups || 2, 10));
+      const qual_per_group = Math.max(1, parseInt(req.body?.qualifiers_per_group || 2, 10));
+      
+      if (nb_groups > count) {
+        await client.query('ROLLBACK');
+        return bad(res, 400, `Impossible d'avoir ${nb_groups} groupes avec ${count} participants`);
+      }
+      if (qual_per_group > Math.floor(count / nb_groups)) {
+        await client.query('ROLLBACK');
+        return bad(res, 400, `Impossible d'avoir ${qual_per_group} qualifiés/groupe avec ${count} participants et ${nb_groups} groupes`);
+      }
+    }
+    
+    if (fmt === 'double_elimination' && count < 2) {
+      await client.query('ROLLBACK');
+      return bad(res, 400, 'La double élimination nécessite au moins 2 participants');
+    }
+
     await client.query(`DELETE FROM tournament_matches WHERE tournament_id=$1`, [id]);
 
     if (fmt === 'round_robin') {
@@ -2111,6 +2193,12 @@ app.post('/admin/tournaments/:id/matches/:matchId/result', auth, adminOnly, asyn
   const score1 = parseScoreValue(req.body?.score_p1);
   const score2 = parseScoreValue(req.body?.score_p2);
   if (score1 === null || score2 === null) return bad(res, 400, 'Scores invalides');
+  
+  // 🔧 FIX: Validate score bounds (prevent database/UI corruption from extreme values)
+  const MAX_SCORE = 99;
+  if (score1 < 0 || score2 < 0 || score1 > MAX_SCORE || score2 > MAX_SCORE) {
+    return bad(res, 400, `Scores doivent être entre 0 et ${MAX_SCORE}`);
+  }
 
   const client = await pool.connect();
   try {
@@ -2124,6 +2212,13 @@ app.post('/admin/tournaments/:id/matches/:matchId/result', auth, adminOnly, asyn
       await client.query('ROLLBACK');
       return bad(res, 400, 'Tournoi archivé');
     }
+    
+    // 🔧 FIX: Prevent match editing on completed tournaments (except admin reverting)
+    if (t.rows[0].status === 'completed' && !req.body?.allow_revert) {
+      await client.query('ROLLBACK');
+      return bad(res, 400, 'Impossible de modifier un tournoi terminé. Remetrre en direct pour modifier.');
+    }
+    
     const format = t.rows[0].format;
 
     const m = await client.query(`
@@ -2160,8 +2255,15 @@ app.post('/admin/tournaments/:id/matches/:matchId/result', auth, adminOnly, asyn
       `, [score1, score2, winnerRR, match.id]);
       if (format === 'round_robin') {
         await checkRoundRobinCompletion(client, tournamentId);
+        // 🔧 FIX Bug #7: Always recompute standings when a match is updated (even if re-editing)
+        if (isReedit) {
+          await updateRoundRobinStandings(client, tournamentId);
+        }
+      } else if (format === 'groups_knockout') {
+        // 🔧 FIX Bug #8: Check if all group matches are completed
+        await checkGroupTournamentCompletion(client, tournamentId);
       } else {
-        // Phase de groupes : s'assurer que le tournoi est live
+        // Phase de groupes (standalone): s'assurer que le tournoi est live
         await client.query(`UPDATE tournaments SET status='live', updated_at=now() WHERE id=$1 AND status='draft'`, [tournamentId]);
       }
     } else {
@@ -2172,6 +2274,22 @@ app.post('/admin/tournaments/:id/matches/:matchId/result', auth, adminOnly, asyn
       }
       const newWinner = score1 > score2 ? match.p1_participant_id : match.p2_participant_id;
       const newLoser  = score1 > score2 ? match.p2_participant_id : match.p1_participant_id;
+      
+      // 🔧 FIX: Validate winner exists in tournament_participants
+      if (!newWinner) {
+        await client.query('ROLLBACK');
+        return bad(res, 400, 'Vainqueur invalide: participant introuvable');
+      }
+      
+      const winnerCheck = await client.query(
+        'SELECT id FROM tournament_participants WHERE id=$1 AND tournament_id=$2',
+        [newWinner, tournamentId]
+      );
+      if (!winnerCheck.rowCount) {
+        await client.query('ROLLBACK');
+        return bad(res, 400, 'Vainqueur invalide: participant inexistant');
+      }
+      
       const oldWinner = match.winner_participant_id;
       const oldLoser = oldWinner
         ? (oldWinner === match.p1_participant_id ? match.p2_participant_id : match.p1_participant_id)
@@ -3138,6 +3256,117 @@ app.get('/seasons/:id/matchdays', auth, async (req,res)=>{
   const r = await q(`SELECT day FROM matchday WHERE season_id=$1 ORDER BY day ASC`,[sid]);
   ok(res,{ days: r.rows.map(x=>dayjs(x.day).format('YYYY-MM-DD')) });
 });
+
+/* ====== Stats invités ====== */
+app.get('/season/guest-stats', auth, async (req, res) => {
+  const sid = req.query.season_id ? +req.query.season_id : null
+  let seasonId
+  if (sid) {
+    seasonId = sid
+  } else {
+    const sRes = await q(`SELECT id FROM seasons WHERE is_closed=false ORDER BY id DESC LIMIT 1`)
+    if (!sRes.rowCount) return ok(res, { guests: [] })
+    seasonId = sRes.rows[0].id
+  }
+  const r = await q(`
+    SELECT g.player_id, p.name, g.journees, g.pts, g.wins, g.draws, g.losses,
+           g.bp, g.bc, g.last_date, g.last_div, g.last_rank, g.last_total, g.updated_at,
+           CASE WHEN g.journees > 0 THEN ROUND(g.pts::numeric / g.journees, 2) ELSE 0 END AS avg_pts
+    FROM guest_season_stats g
+    JOIN players p ON p.player_id = g.player_id
+    WHERE g.season_id = $1
+    ORDER BY avg_pts DESC, g.pts DESC, g.journees DESC
+  `, [seasonId])
+  ok(res, { season_id: seasonId, guests: r.rows })
+})
+
+app.post('/admin/season/guest-stats/rebuild', auth, admin, async (req, res) => {
+  const sid = req.query.season_id ? +req.query.season_id : null
+  let seasonId
+  if (sid) {
+    seasonId = sid
+  } else {
+    const sRes = await q(`SELECT id FROM seasons WHERE is_closed=false ORDER BY id DESC LIMIT 1`)
+    if (!sRes.rowCount) return bad(res, 404, 'saison introuvable')
+    seasonId = sRes.rows[0].id
+  }
+  await rebuildGuestStats(seasonId)
+  ok(res, { rebuilt: true, season_id: seasonId })
+})
+
+async function rebuildGuestStats(seasonId) {
+  const inviteRoles = await q(`SELECT player_id FROM players WHERE UPPER(role)='INVITE'`)
+  const inviteIds = new Set(inviteRoles.rows.map(r => r.player_id))
+  if (!inviteIds.size) return
+
+  const days = await q(`SELECT day, payload FROM matchday WHERE season_id=$1 ORDER BY day ASC`, [seasonId])
+  const stats = new Map()
+
+  for (const row of days.rows) {
+    const day = dayjs(row.day).format('YYYY-MM-DD')
+    const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
+
+    for (const divKey of ['d1', 'd2']) {
+      const matches = payload[divKey] || []
+      const agg = new Map()
+      const ensure = id => {
+        if (!agg.has(id)) agg.set(id, { v: 0, n: 0, d: 0, bp: 0, bc: 0 })
+        return agg.get(id)
+      }
+      for (const m of matches) {
+        const a1 = m.a1 != null && m.a1 !== '' ? +m.a1 : null
+        const a2 = m.a2 != null && m.a2 !== '' ? +m.a2 : null
+        const r1 = m.r1 != null && m.r1 !== '' ? +m.r1 : null
+        const r2 = m.r2 != null && m.r2 !== '' ? +m.r2 : null
+        if (a1 !== null && a2 !== null) {
+          const A = ensure(m.p1), B = ensure(m.p2)
+          A.bp += a1; A.bc += a2; B.bp += a2; B.bc += a1
+          if (a1 > a2) { A.v++; B.d++ } else if (a1 < a2) { B.v++; A.d++ } else { A.n++; B.n++ }
+        }
+        if (r1 !== null && r2 !== null) {
+          const A = ensure(m.p2), B = ensure(m.p1)
+          A.bp += r2; A.bc += r1; B.bp += r1; B.bc += r2
+          if (r2 > r1) { A.v++; B.d++ } else if (r2 < r1) { B.v++; A.d++ } else { A.n++; B.n++ }
+        }
+      }
+      const ranked = [...agg.entries()]
+        .map(([id, s]) => ({ id, pts: s.v * 3 + s.n, ...s }))
+        .sort((a, b) => b.pts - a.pts || (b.bp - b.bc) - (a.bp - a.bc) || b.bp - a.bp)
+
+      ranked.forEach((row, idx) => {
+        const id = row.id
+        if (!inviteIds.has(id)) return
+        if (!stats.has(id)) stats.set(id, { journees: 0, pts: 0, v: 0, n: 0, d: 0, bp: 0, bc: 0, last_date: null, last_div: null, last_rank: null, last_total: null })
+        const s = stats.get(id)
+        s.journees += 1
+        s.pts += row.pts
+        s.v += row.v
+        s.n += row.n
+        s.d += row.d
+        s.bp += row.bp
+        s.bc += row.bc
+        if (!s.last_date || day > s.last_date) {
+          s.last_date = day
+          s.last_div = divKey.toUpperCase()
+          s.last_rank = idx + 1
+          s.last_total = ranked.length
+        }
+      })
+    }
+  }
+
+  for (const [playerId, s] of stats.entries()) {
+    await q(`
+      INSERT INTO guest_season_stats
+        (player_id, season_id, journees, pts, wins, draws, losses, bp, bc, last_date, last_div, last_rank, last_total, updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now())
+      ON CONFLICT (player_id, season_id) DO UPDATE SET
+        journees=$3, pts=$4, wins=$5, draws=$6, losses=$7, bp=$8, bc=$9,
+        last_date=$10, last_div=$11, last_rank=$12, last_total=$13, updated_at=now()
+    `, [playerId, seasonId, s.journees, s.pts, s.v, s.n, s.d, s.bp, s.bc,
+        s.last_date, s.last_div, s.last_rank, s.last_total])
+  }
+}
 
 /* ====== Face-Ã -face ====== */
 app.get('/faceoff/:oppId', auth, async (req,res)=>{
