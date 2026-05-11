@@ -233,67 +233,123 @@
     </BaseModal>
 
     <!-- Modal: Comparateur -->
-    <BaseModal :open="compareModal" title="Comparateur de joueurs" @close="compareModal = false" size="md">
+    <BaseModal :open="compareModal" title="Comparateur de joueurs" @close="compareModal = false" size="lg">
       <div class="space-y-4">
+        <!-- Sélecteurs -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="label">Joueur A</label>
             <select v-model="cmpA" class="input">
               <option value="">—</option>
-              <option v-for="p in allPlayers" :key="p.id" :value="p.id">
-                {{ p.name }} ({{ p.id }})
-              </option>
+              <option v-for="p in allPlayers" :key="p.id" :value="p.id">{{ p.name }} ({{ p.id }})</option>
             </select>
           </div>
           <div>
             <label class="label">Joueur B</label>
             <select v-model="cmpB" class="input">
               <option value="">—</option>
-              <option v-for="p in allPlayers" :key="p.id" :value="p.id"
-                      :disabled="p.id === cmpA">
-                {{ p.name }} ({{ p.id }})
-              </option>
+              <option v-for="p in allPlayers" :key="p.id" :value="p.id" :disabled="p.id === cmpA">{{ p.name }} ({{ p.id }})</option>
             </select>
           </div>
         </div>
         <button @click="runCompare" class="btn-primary" :disabled="!cmpA || !cmpB || cmpLoading">
           <Loader2Icon v-if="cmpLoading" class="w-3.5 h-3.5 animate-spin" /> Comparer
         </button>
-        <div v-if="cmpResult" class="mt-2 rounded-xl overflow-hidden text-sm"
-             style="border:1px solid var(--border)">
+
+        <div v-if="cmpResult" class="space-y-3 text-sm">
+
           <!-- En-tête noms -->
-          <div class="grid grid-cols-3 font-bold text-center py-2 px-3"
-               style="background:var(--panel);border-bottom:1px solid var(--border)">
+          <div class="grid grid-cols-3 font-bold text-center py-2 px-3 rounded-xl"
+               style="background:var(--panel);border:1px solid var(--border)">
             <span class="truncate text-left">{{ cmpResult.nameA }}</span>
             <span style="color:var(--muted)" class="text-xs self-center">vs</span>
             <span class="truncate text-right">{{ cmpResult.nameB }}</span>
           </div>
-          <!-- Tableau des stats -->
-          <div v-for="row in cmpResult.rows" :key="row.label"
-               class="grid grid-cols-3 text-center py-1.5 px-3"
-               style="border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent)">
-            <span :class="[
-              row.desc !== null && Number(row.a) > Number(row.b) ? 'font-bold' : '',
-              row.desc !== null && Number(row.a) > Number(row.b) ? 'text-gz-green' :
-              row.desc !== null && Number(row.a) < Number(row.b) ? 'text-gz-red' : ''
-            ]">{{ row.a }}</span>
-            <span class="text-xs" style="color:var(--muted)">{{ row.label }}</span>
-            <span :class="[
-              row.desc !== null && Number(row.b) > Number(row.a) ? 'font-bold' : '',
-              row.desc !== null && Number(row.b) > Number(row.a) ? 'text-gz-green' :
-              row.desc !== null && Number(row.b) < Number(row.a) ? 'text-gz-red' : ''
-            ]">{{ row.b }}</span>
+
+          <!-- Stats saison générales -->
+          <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border)">
+            <div class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide" style="background:var(--panel);color:var(--muted);border-bottom:1px solid var(--border)">
+              Classement général
+            </div>
+            <div v-for="row in cmpResult.rows" :key="row.label"
+                 class="grid grid-cols-3 text-center py-1.5 px-3"
+                 style="border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent)">
+              <span :class="row.desc !== null && Number(row.a) > Number(row.b) ? 'font-bold text-gz-green' : row.desc !== null && Number(row.a) < Number(row.b) ? 'text-gz-red' : ''">{{ row.a }}</span>
+              <span class="text-xs" style="color:var(--muted)">{{ row.label }}</span>
+              <span :class="row.desc !== null && Number(row.b) > Number(row.a) ? 'font-bold text-gz-green' : row.desc !== null && Number(row.b) < Number(row.a) ? 'text-gz-red' : ''">{{ row.b }}</span>
+            </div>
           </div>
-          <!-- H2H duels -->
-          <div v-if="cmpResult.h2h.legs > 0"
-               class="py-2 px-3 text-center text-xs"
-               style="background:var(--panel);color:var(--muted)">
-            Face-à-face : {{ cmpResult.h2h.wins }}V – {{ cmpResult.h2h.draws }}N – {{ cmpResult.h2h.losses }}D
-            ({{ cmpResult.h2h.gf }}–{{ cmpResult.h2h.ga }} buts) sur {{ cmpResult.h2h.legs }} match(s)
+
+          <!-- Face-à-face journées -->
+          <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border)">
+            <div class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide" style="background:var(--panel);color:var(--muted);border-bottom:1px solid var(--border)">
+              Confrontations journées — {{ cmpResult.h2h.total }} match(s) au total
+            </div>
+
+            <template v-if="cmpResult.h2h.total > 0">
+              <!-- Bilan W-D-L centré -->
+              <div class="grid grid-cols-3 text-center py-3 px-3"
+                   style="border-bottom:1px solid color-mix(in srgb,var(--border) 40%,transparent)">
+                <div>
+                  <div class="text-xl font-bold"
+                       :class="cmpResult.h2h.p1.wins > cmpResult.h2h.p2.wins ? 'text-gz-green' : cmpResult.h2h.p1.wins < cmpResult.h2h.p2.wins ? 'text-gz-red' : ''">
+                    {{ cmpResult.h2h.p1.wins }}
+                  </div>
+                  <div class="text-xs" style="color:var(--muted)">Victoires</div>
+                </div>
+                <div>
+                  <div class="text-xl font-bold" style="color:var(--muted)">{{ cmpResult.h2h.p1.draws }}</div>
+                  <div class="text-xs" style="color:var(--muted)">Nuls</div>
+                </div>
+                <div>
+                  <div class="text-xl font-bold"
+                       :class="cmpResult.h2h.p2.wins > cmpResult.h2h.p1.wins ? 'text-gz-green' : cmpResult.h2h.p2.wins < cmpResult.h2h.p1.wins ? 'text-gz-red' : ''">
+                    {{ cmpResult.h2h.p2.wins }}
+                  </div>
+                  <div class="text-xs" style="color:var(--muted)">Victoires</div>
+                </div>
+              </div>
+              <!-- Buts -->
+              <template v-for="stat in [
+                { label:'Buts marqués',   a: cmpResult.h2h.p1.gf, b: cmpResult.h2h.p2.gf, desc: true },
+                { label:'Buts encaissés', a: cmpResult.h2h.p1.ga, b: cmpResult.h2h.p2.ga, desc: false },
+              ]" :key="stat.label">
+                <div class="grid grid-cols-3 text-center py-1.5 px-3"
+                     style="border-bottom:1px solid color-mix(in srgb,var(--border) 40%,transparent)">
+                  <span :class="stat.desc ? (stat.a > stat.b ? 'font-bold text-gz-green' : stat.a < stat.b ? 'text-gz-red' : '') : (stat.a < stat.b ? 'font-bold text-gz-green' : stat.a > stat.b ? 'text-gz-red' : '')">{{ stat.a }}</span>
+                  <span class="text-xs" style="color:var(--muted)">{{ stat.label }}</span>
+                  <span :class="stat.desc ? (stat.b > stat.a ? 'font-bold text-gz-green' : stat.b < stat.a ? 'text-gz-red' : '') : (stat.b < stat.a ? 'font-bold text-gz-green' : stat.b > stat.a ? 'text-gz-red' : '')">{{ stat.b }}</span>
+                </div>
+              </template>
+
+              <!-- Par division -->
+              <template v-for="(dv, divName) in cmpResult.h2h.byDiv" :key="divName">
+                <div v-if="dv.legs > 0" class="grid grid-cols-3 text-center py-1.5 px-3"
+                     style="border-bottom:1px solid color-mix(in srgb,var(--border) 40%,transparent)">
+                  <span :class="dv.wins1 > dv.wins2 ? 'font-bold text-gz-green' : dv.wins1 < dv.wins2 ? 'text-gz-red' : ''">{{ dv.wins1 }}V {{ dv.draws }}N {{ dv.wins2 }}D</span>
+                  <span class="text-xs" style="color:var(--muted)">{{ divName }} ({{ dv.legs }} matchs)</span>
+                  <span :class="dv.wins2 > dv.wins1 ? 'font-bold text-gz-green' : dv.wins2 < dv.wins1 ? 'text-gz-red' : ''">{{ dv.wins2 }}V {{ dv.draws }}N {{ dv.wins1 }}D</span>
+                </div>
+              </template>
+
+              <!-- 5 dernières confrontations -->
+              <div v-if="cmpResult.h2h.recent.length" class="px-3 py-2">
+                <div class="text-xs font-semibold uppercase tracking-wide mb-2" style="color:var(--muted)">5 dernières confrontations</div>
+                <div v-for="leg in cmpResult.h2h.recent.slice(0,5)" :key="leg.date+leg.leg+leg.div"
+                     class="flex items-center justify-between py-1 text-xs"
+                     style="border-bottom:1px solid color-mix(in srgb,var(--border) 30%,transparent)">
+                  <span style="color:var(--muted)">{{ leg.date }} · {{ leg.div }} · {{ leg.leg }}</span>
+                  <span :class="leg.gf1 > leg.ga1 ? 'text-gz-green font-bold' : leg.gf1 < leg.ga1 ? 'text-gz-red' : ''">
+                    {{ leg.gf1 }} – {{ leg.ga1 }}
+                  </span>
+                </div>
+              </div>
+            </template>
+            <div v-else class="py-3 px-3 text-center text-xs" style="color:var(--muted)">
+              Aucune confrontation dans les journées enregistrées.
+            </div>
           </div>
-          <div v-else class="py-2 px-3 text-center text-xs" style="background:var(--panel);color:var(--muted)">
-            Aucun face-à-face enregistré
-          </div>
+
         </div>
       </div>
     </BaseModal>
@@ -922,28 +978,35 @@ async function runCompare() {
     const aggA = aggMap.value.get(cmpA.value) || {}
     const aggB = aggMap.value.get(cmpB.value) || {}
 
-    // H2H duels
-    let h2h = { wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, legs: 0 }
+    // H2H depuis les journées
+    let h2h = { total: 0, p1: { wins:0, draws:0, losses:0, gf:0, ga:0 }, p2: { wins:0, draws:0, losses:0, gf:0, ga:0 }, byDiv: {}, recent: [] }
     try {
-      const { data } = await api.get('/duels/compare', { params: { p1: cmpA.value, p2: cmpB.value } })
-      const t = data.totals || {}
-      h2h = { wins: Number(t.wins || 0), draws: Number(t.draws || 0), losses: Number(t.losses || 0), gf: Number(t.gf || 0), ga: Number(t.ga || 0), legs: Number(t.legs || 0) }
-    } catch (_) { /* H2H non disponible */ }
+      const { data } = await api.get('/players/h2h', {
+        params: { p1: cmpA.value, p2: cmpB.value, season: selectedSeason.value || '' }
+      })
+      h2h = {
+        total:   data.total_legs || 0,
+        p1:      data.p1 || {},
+        p2:      data.p2 || {},
+        byDiv:   data.by_division || {},
+        recent:  data.recent || [],
+      }
+    } catch (_) {}
 
     cmpResult.value = {
       nameA: pA?.name || cmpA.value,
       nameB: pB?.name || cmpB.value,
       rows: [
-        { label: 'Total de points',       a: sA.total ?? 0,                    b: sB.total ?? 0,                    desc: true },
-        { label: 'Moyenne / journée',     a: Number(sA.moyenne || 0).toFixed(2), b: Number(sB.moyenne || 0).toFixed(2), desc: true, numeric: true },
-        { label: 'Participations',        a: sA.participations ?? 0,           b: sB.participations ?? 0,           desc: true },
-        { label: 'Confrontations D1',     a: aggA.d1 ?? 0,                     b: aggB.d1 ?? 0,                     desc: true },
-        { label: 'Confrontations D2',     a: aggA.d2 ?? 0,                     b: aggB.d2 ?? 0,                     desc: true },
-        { label: 'Titres D1',             a: sA.won_d1 ?? 0,                   b: sB.won_d1 ?? 0,                   desc: true },
-        { label: 'Titres D2',             a: sA.won_d2 ?? 0,                   b: sB.won_d2 ?? 0,                   desc: true },
-        { label: 'Équipes différentes',   a: sA.teams_used ?? 0,               b: sB.teams_used ?? 0,               desc: true },
-        { label: 'Win %',                 a: winPct(sA) + '%',                 b: winPct(sB) + '%',                 desc: true, numeric: true },
-        { label: 'Forme (5 derniers)',     a: formChars(sA).join(' ') || '—',  b: formChars(sB).join(' ') || '—',  desc: null },
+        { label: 'Total de points',     a: sA.total ?? 0,                       b: sB.total ?? 0,                       desc: true },
+        { label: 'Moyenne / journée',   a: Number(sA.moyenne || 0).toFixed(2),  b: Number(sB.moyenne || 0).toFixed(2),  desc: true, numeric: true },
+        { label: 'Participations',      a: sA.participations ?? 0,              b: sB.participations ?? 0,              desc: true },
+        { label: 'Journées D1',         a: aggA.d1 ?? 0,                        b: aggB.d1 ?? 0,                        desc: true },
+        { label: 'Journées D2',         a: aggA.d2 ?? 0,                        b: aggB.d2 ?? 0,                        desc: true },
+        { label: 'Titres D1',           a: sA.won_d1 ?? 0,                      b: sB.won_d1 ?? 0,                      desc: true },
+        { label: 'Titres D2',           a: sA.won_d2 ?? 0,                      b: sB.won_d2 ?? 0,                      desc: true },
+        { label: 'Équipes différentes', a: sA.teams_used ?? 0,                  b: sB.teams_used ?? 0,                  desc: true },
+        { label: 'Win %',               a: winPct(sA) + '%',                    b: winPct(sB) + '%',                    desc: true, numeric: true },
+        { label: 'Forme (5 derniers)',  a: formChars(sA).join(' ') || '—',     b: formChars(sB).join(' ') || '—',     desc: null },
       ],
       h2h,
     }

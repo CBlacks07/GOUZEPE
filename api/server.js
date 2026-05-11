@@ -649,6 +649,26 @@ async function ensureSchema(){
   EXCEPTION WHEN duplicate_object THEN NULL;
   END$$`);
 
+  /* migration: contrainte status étendue (ajout cancelled) */
+  await q(`DO $$
+  DECLARE v_cname TEXT;
+  BEGIN
+    SELECT constraint_name INTO v_cname
+    FROM information_schema.table_constraints
+    WHERE table_name='tournaments' AND constraint_type='CHECK'
+      AND (constraint_name ILIKE '%status%' OR constraint_name ILIKE '%tournaments_status_chk%') LIMIT 1;
+    IF v_cname IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE tournaments DROP CONSTRAINT %I', v_cname);
+    END IF;
+  EXCEPTION WHEN OTHERS THEN NULL;
+  END$$`);
+  await q(`DO $$
+  BEGIN
+    ALTER TABLE tournaments ADD CONSTRAINT tournaments_status_chk
+      CHECK (status IN ('draft','live','completed','archived','cancelled'));
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END$$`);
+
   /* table stats invités */
   await q(`CREATE TABLE IF NOT EXISTS guest_season_stats (
     player_id  TEXT NOT NULL,
@@ -1794,7 +1814,7 @@ const updateTournamentHandler = async (req, res) => {
   }
   if (req.body?.status !== undefined) {
     const st = String(req.body.status || '').toLowerCase();
-    if (!['draft', 'live', 'completed', 'archived'].includes(st)) return bad(res, 400, 'Statut invalide');
+    if (!['draft', 'live', 'completed', 'archived', 'cancelled'].includes(st)) return bad(res, 400, 'Statut invalide');
     fields.push(`status=$${values.length + 1}`);
     values.push(st);
     // Réinitialiser le vainqueur et la date de fin si on repasse en live/draft
@@ -2212,15 +2232,8 @@ app.post('/admin/tournaments/:id/matches/:matchId/result', auth, adminOnly, asyn
       await client.query('ROLLBACK');
       return bad(res, 400, 'Tournoi archivé');
     }
-    
-    // 🔧 FIX: Prevent match editing on completed tournaments (except admin reverting)
-    if (t.rows[0].status === 'completed' && !req.body?.allow_revert) {
-      await client.query('ROLLBACK');
-      return bad(res, 400, 'Impossible de modifier un tournoi terminé. Remetrre en direct pour modifier.');
-    }
-    
-    const format = t.rows[0].format;
 
+    const format = t.rows[0].format;
     const m = await client.query(`
       SELECT id, tournament_id, status, p1_participant_id, p2_participant_id,
              winner_participant_id, next_match_id, next_match_slot,
@@ -2373,6 +2386,76 @@ app.get('/players/search', auth, async (req,res)=>{
   `, ['%'+qv+'%']);
   ok(res,{ players: markOnlineField(r.rows) });
 });
+/* Confrontations head-to-head entre deux joueurs (depuis les journées) */
+app.get('/players/h2h', auth, async (req, res) => {
+  const { p1: pid1, p2: pid2, season } = req.query
+  if (!pid1 || !pid2) return bad(res, 400, 'p1 et p2 requis')
+  if (pid1 === pid2) return bad(res, 400, 'joueurs identiques')
+
+  const sid = season ? +season : null
+  const whereClause = sid
+    ? `WHERE season_id = $1 ORDER BY day ASC`
+    : `ORDER BY day ASC`
+  const days = await q(
+    `SELECT day, payload FROM matchday ${whereClause}`,
+    sid ? [sid] : []
+  )
+
+  const sc = v => (v !== null && v !== undefined && v !== '') ? Number(v) : null
+
+  const stats1 = { wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, legs: 0 }
+  const stats2 = { wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, legs: 0 }
+  const byDiv  = { D1: { legs:0, gf1:0, ga1:0, wins1:0, draws:0, wins2:0 }, D2: { legs:0, gf1:0, ga1:0, wins1:0, draws:0, wins2:0 } }
+  const recent = []
+
+  for (const row of days.rows) {
+    const p = row.payload || {}
+    for (const divKey of ['d1', 'd2']) {
+      for (const m of (p[divKey] || [])) {
+        if (!m?.p1 || !m?.p2) continue
+        const ab = m.p1 === pid1 && m.p2 === pid2
+        const ba = m.p1 === pid2 && m.p2 === pid1
+        if (!ab && !ba) continue
+
+        const div = divKey.toUpperCase()
+        const addLeg = (gf1, ga1, leg) => {
+          if (gf1 === null || ga1 === null) return
+          stats1.legs++; stats1.gf += gf1; stats1.ga += ga1
+          stats2.legs++; stats2.gf += ga1; stats2.ga += gf1
+          byDiv[div].legs++; byDiv[div].gf1 += gf1; byDiv[div].ga1 += ga1
+          if (gf1 > ga1) { stats1.wins++; stats2.losses++; byDiv[div].wins1++ }
+          else if (ga1 > gf1) { stats2.wins++; stats1.losses++; byDiv[div].wins2++ }
+          else { stats1.draws++; stats2.draws++; byDiv[div].draws++ }
+          recent.push({ date: dayjs(row.day).format('YYYY-MM-DD'), div, leg, gf1, ga1 })
+        }
+
+        if (ab) {
+          addLeg(sc(m.a1), sc(m.a2), 'Aller')
+          addLeg(sc(m.r1), sc(m.r2), 'Retour')
+        } else {
+          addLeg(sc(m.a2), sc(m.a1), 'Aller')
+          addLeg(sc(m.r2), sc(m.r1), 'Retour')
+        }
+      }
+    }
+  }
+
+  const p1r = await q(`SELECT player_id, name FROM players WHERE player_id=$1`, [pid1])
+  const p2r = await q(`SELECT player_id, name FROM players WHERE player_id=$1`, [pid2])
+  const name1 = p1r.rows[0]?.name || pid1
+  const name2 = p2r.rows[0]?.name || pid2
+
+  recent.sort((a, b) => b.date.localeCompare(a.date))
+
+  ok(res, {
+    p1: { id: pid1, name: name1, ...stats1 },
+    p2: { id: pid2, name: name2, ...stats2 },
+    total_legs: stats1.legs,
+    by_division: byDiv,
+    recent: recent.slice(0, 20),
+  })
+})
+
 app.get('/players/:pid', auth, async (req,res)=>{
   const r=await q(`SELECT player_id,name,role,profile_pic_url FROM players WHERE player_id=$1`,[req.params.pid]);
   if(!r.rowCount) return bad(res,404,'not found');

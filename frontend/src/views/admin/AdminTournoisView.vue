@@ -134,6 +134,15 @@
                   </button>
 
                   <button
+                    v-if="selected.status !== 'live' && selected.status !== 'archived'"
+                    @click="changeStatus('live')"
+                    class="btn w-full sm:w-auto justify-center"
+                    title="Passer en direct"
+                  >
+                    En direct
+                  </button>
+
+                  <button
                     v-if="selected.status === 'live'"
                     @click="changeStatus('completed')"
                     class="btn w-full sm:w-auto justify-center"
@@ -143,7 +152,16 @@
                   </button>
 
                   <button
-                    v-if="selected.status === 'completed'"
+                    v-if="selected.status !== 'cancelled' && selected.status !== 'archived' && selected.status !== 'completed'"
+                    @click="changeStatus('cancelled')"
+                    class="btn btn-ghost w-full sm:w-auto justify-center text-gz-red"
+                    title="Annuler ce tournoi"
+                  >
+                    Annuler
+                  </button>
+
+                  <button
+                    v-if="selected.status === 'completed' || selected.status === 'cancelled'"
                     @click="changeStatus('archived')"
                     class="btn w-full sm:w-auto justify-center"
                     title="Archiver ce tournoi"
@@ -338,15 +356,24 @@
                   :persist-key="`tournois-admin-${selected?.id || 'none'}-de`"
                   @score-saved="onScoreSaved"
                 />
-                <BracketRR
-                  v-else-if="selected.format === 'round_robin'"
-                  :matches="matches"
-                  :standings="rrStandings"
-                  :standings-mode="selected.rr_standings_mode || 'goals'"
-                  :admin-mode="true"
-                  @score-saved="onScoreSaved"
-                  @batch-scores-saved="onBatchScoresSaved"
-                />
+                <template v-else-if="selected.format === 'round_robin'">
+                  <BracketRR
+                    :matches="matches"
+                    :standings="rrStandings"
+                    :standings-mode="selected.rr_standings_mode || 'goals'"
+                    :admin-mode="true"
+                    @score-saved="onScoreSaved"
+                    @show-saisie-rapide="showSaisieRapide = true"
+                  />
+                  <ScoreSaisieRapide
+                    v-if="showSaisieRapide"
+                    :pair-rows="rrPairRows"
+                    :has-retour="selected.rr_match_mode === 'home_away'"
+                    :cache-key="`t-${selected.id}`"
+                    @close="showSaisieRapide = false"
+                    @batch-save="onBatchScoresSaved"
+                  />
+                </template>
                 <div
                   v-else-if="selected.format === 'groups_knockout'"
                   class="space-y-4"
@@ -469,11 +496,12 @@ import BaseBadge from '@/components/ui/BaseBadge.vue'
 import BracketSE from '@/components/tournament/BracketSE.vue'
 import BracketDE from '@/components/tournament/BracketDE.vue'
 import BracketRR from '@/components/tournament/BracketRR.vue'
+import ScoreSaisieRapide from '@/components/tournament/ScoreSaisieRapide.vue'
 import { useAPI } from '@/composables/useAPI'
 import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
 import { onRealtimeEvent, joinRealtimeRoom, leaveRealtimeRoom } from '@/composables/useRealtimeSocket'
-import { PlusIcon, Trash2Icon, XIcon, Loader2Icon } from 'lucide-vue-next'
+import { PlusIcon, Trash2Icon, XIcon, Loader2Icon, ZapIcon } from 'lucide-vue-next'
 
 const api = useAPI()
 const { success, error: toastError } = useToast()
@@ -487,6 +515,7 @@ const allPlayers = ref([])
 const loadingList = ref(false)
 const loadingBracket = ref(false)
 const creating = ref(false)
+const showSaisieRapide = ref(false)
 const generating = ref(false)
 const generatingKnockout = ref(false)
 const savingMeta = ref(false)
@@ -1004,6 +1033,7 @@ async function onBatchScoresSaved({ edits, done, fail }) {
     }
     
     done()
+    showSaisieRapide.value = false
     success(`${edits.length} score(s) enregistrés`)
     await nextTick()
     restorePageScroll(scrollPos, 14)
@@ -1095,11 +1125,11 @@ async function saveTournamentMeta() {
 }
 
 function statusVariant(s) {
-  return { live: 'green', completed: 'blue', archived: 'muted', draft: 'amber' }[s] ?? 'muted'
+  return { live: 'green', completed: 'blue', archived: 'muted', draft: 'amber', cancelled: 'red' }[s] ?? 'muted'
 }
 
 function statusLabel(s) {
-  return { live: 'LIVE', completed: 'Termine', archived: 'Archive', draft: 'Brouillon' }[s] ?? s
+  return { live: 'LIVE', completed: 'Termine', archived: 'Archive', draft: 'Brouillon', cancelled: 'Annule' }[s] ?? s
 }
 
 function formatLabel(f) {
@@ -1118,6 +1148,32 @@ function rrMatchModeLabel(mode) {
 function rrStandingsModeLabel(mode) {
   return mode === 'wins' ? 'Classement: victoires' : 'Classement: points + buts'
 }
+
+const rrPairRows = computed(() => {
+  const pairs = new Map()
+  for (const m of matches.value) {
+    const p1 = String(m.p1_id ?? '')
+    const p2 = String(m.p2_id ?? '')
+    const key = p1 && p2 ? [p1, p2].sort().join('||') : `solo-${m.id}`
+    if (!pairs.has(key)) pairs.set(key, [])
+    pairs.get(key).push(m)
+  }
+  return [...pairs.values()]
+    .map(pair => pair.slice().sort((a, b) => (a.round_no ?? 0) - (b.round_no ?? 0)))
+    .sort((a, b) => (a[0]?.id ?? 0) - (b[0]?.id ?? 0))
+    .map(pair => {
+      const aller = pair[0] || null
+      const retour = pair[1] || null
+      return {
+        nameA: aller?.p1_name || aller?.p1_id || 'TBD',
+        nameB: aller?.p2_name || aller?.p2_id || 'TBD',
+        idA: aller?.p1_id,
+        idB: aller?.p2_id,
+        aller,
+        retour,
+      }
+    })
+})
 
 function normalizeMatches(rawMatches, format) {
   return (rawMatches || []).map((m) => {
@@ -1239,7 +1295,9 @@ function playedOf(s) {
 }
 
 .bracket-shell {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
 }
 
 .bracket-shell :deep(.bracket-lanes) {

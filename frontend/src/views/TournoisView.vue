@@ -682,7 +682,9 @@ function playedOf(s) {
 }
 
 .bracket-shell {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
 }
 
 .bracket-shell :deep(.bracket-lanes) {
