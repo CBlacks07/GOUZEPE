@@ -1,5 +1,4 @@
 ### Taches à faire:
--Corriger l'affichage mobile de l'application. (sur certaines pages les affichage sont limité pas de scroller pour consulter toute la largeur des tableaux)
--Probleme dans le module gestion des tournois, le format aller et retour e round robin n'arrive pas à renseigner les deux scores.
--Invite à la une très mal conçu, je veux qu'on ait une table qui va stocker les invité leur rang et performance lors des jourrnées pour faciliter les choses.
--
+-C'est pas mieux de supprimer le tableau Matchs et garde le saisir rapide sur le tableau confrontation qui nous permettra d'ouvrir directrement le modal. Au lieu d'avoir siasie rapide on dira Saisir les scores. comme ça on aura que Confrontations et Classement
+-on dirait que les scores ne sont pas bien lu dans le modal de saisie là. les match aller et retour doivent etre bien lue et les points et autres doivent etre bien renseigner automatquement.
+

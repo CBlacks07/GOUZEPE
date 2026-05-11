@@ -1,146 +1,16 @@
 <template>
   <div class="rr-layout bracket-lanes">
 
-    <!-- MATCHS — tableau résultats -->
-    <section class="rr-section">
-      <div class="rr-head">
-        <h3 class="rr-heading">Matchs</h3>
-        <div class="rr-head-right">
-          <span class="text-xs text-gz-muted">{{ matches.length }} confrontation(s)</span>
-          <!-- 🔧 FEATURE: Batch mode toggle -->
-          <div v-if="adminMode" class="batch-controls">
-            <button v-if="!batchMode" @click="startBatchMode" class="btn btn-sm" title="Mode édition rapide">
-              📋 Rapide
-            </button>
-            <template v-else>
-              <span class="text-xs text-gz-muted">{{ batchEdits.size }} en attente</span>
-              <button @click="validateAllBatch" :disabled="saving || batchEdits.size === 0" class="btn btn-primary btn-sm" title="Valider tous">
-                {{ saving ? '…' : '✓ Valider' }}
-              </button>
-              <button @click="cancelBatchMode" class="btn btn-sm" title="Annuler">✕</button>
-            </template>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="pairRows.length" class="rr-results-shell">
-        <table class="rr-results-table">
-          <thead>
-            <tr>
-              <th class="col-vs">Confrontation</th>
-              <th class="col-score text-center">Aller</th>
-              <th v-if="hasRetour" class="col-score text-center">Retour</th>
-              <th v-if="adminMode" class="col-act"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(p, i) in pairRows" :key="i" :class="editingIdx === i && 'row-editing'">
-              <!-- Confrontation -->
-              <td class="cell-vs">
-                <span class="vs-name">{{ p.nameA }}</span>
-                <span class="vs-sep">vs</span>
-                <span class="vs-name">{{ p.nameB }}</span>
-              </td>
-
-              <!-- Aller -->
-              <td class="cell-score text-center">
-                <template v-if="editingIdx === i && !batchMode">
-                  <div class="score-edit">
-                    <input v-model.number="editA.s1" type="number" min="0" class="score-inp"
-                           @keydown.enter="saveEditingPair(p)" />
-                    <span class="score-dash">–</span>
-                    <input v-model.number="editA.s2" type="number" min="0" class="score-inp"
-                           @keydown.enter="saveEditingPair(p)" />
-                  </div>
-                </template>
-                <template v-else-if="batchMode && p.aller">
-                  <div class="score-edit">
-                    <input
-                      :value="getBatch(p.aller.id, 's1')"
-                      @input="e => setBatch(p.aller.id, 's1', e.target.value)"
-                      type="number" min="0" class="score-inp batch-inp" />
-                    <span class="score-dash">–</span>
-                    <input
-                      :value="getBatch(p.aller.id, 's2')"
-                      @input="e => setBatch(p.aller.id, 's2', e.target.value)"
-                      type="number" min="0" class="score-inp batch-inp" />
-                  </div>
-                </template>
-                <template v-else>
-                  <span v-if="batchEdits.has(p.aller?.id)" class="score-pill score-pending-batch" title="En attente">
-                    {{ batchEdits.get(p.aller.id).s1 }} – {{ batchEdits.get(p.aller.id).s2 }} ⏳
-                  </span>
-                  <span v-else-if="isDone(p.aller)" class="score-pill" :class="pillClass(p.aller)">
-                    {{ p.aller.score1 }} – {{ p.aller.score2 }}
-                  </span>
-                  <span v-else class="score-pending">—</span>
-                </template>
-              </td>
-
-              <!-- Retour -->
-              <td v-if="hasRetour" class="cell-score text-center">
-                <template v-if="editingIdx === i && !batchMode && p.retour">
-                  <div class="score-edit">
-                    <input v-model.number="editR.s1" type="number" min="0" class="score-inp"
-                           @keydown.enter="saveEditingPair(p)" />
-                    <span class="score-dash">–</span>
-                    <input v-model.number="editR.s2" type="number" min="0" class="score-inp"
-                           @keydown.enter="saveEditingPair(p)" />
-                  </div>
-                </template>
-                <template v-else-if="batchMode && p.retour">
-                  <div class="score-edit">
-                    <input
-                      :value="getBatch(p.retour.id, 's1')"
-                      @input="e => setBatch(p.retour.id, 's1', e.target.value)"
-                      type="number" min="0" class="score-inp batch-inp" />
-                    <span class="score-dash">–</span>
-                    <input
-                      :value="getBatch(p.retour.id, 's2')"
-                      @input="e => setBatch(p.retour.id, 's2', e.target.value)"
-                      type="number" min="0" class="score-inp batch-inp" />
-                  </div>
-                </template>
-                <template v-else-if="p.retour">
-                  <span v-if="batchEdits.has(p.retour.id)" class="score-pill score-pending-batch" title="En attente">
-                    {{ batchEdits.get(p.retour.id).s1 }} – {{ batchEdits.get(p.retour.id).s2 }} ⏳
-                  </span>
-                  <span v-else-if="isDone(p.retour)" class="score-pill" :class="pillClass(p.retour)">
-                    {{ p.retour.score1 }} – {{ p.retour.score2 }}
-                  </span>
-                  <span v-else class="score-pending">—</span>
-                </template>
-                <span v-else class="score-pending">—</span>
-              </td>
-
-              <!-- Actions admin -->
-              <td v-if="adminMode" class="cell-act text-center">
-                <template v-if="editingIdx === i">
-                  <button @click="saveEditingPair(p)" :disabled="saving"
-                          class="btn-primary act-btn" title="Valider">
-                    {{ saving ? '…' : '✓' }}
-                  </button>
-                  <button @click="editingIdx = -1" class="btn act-btn ml-1" title="Annuler">✕</button>
-                </template>
-                <button v-else-if="p.aller?.p1_id && p.aller?.p2_id"
-                        @click="startEditPair(i, p)"
-                        class="btn act-btn" title="Saisir les scores">
-                  <PencilIcon class="w-3 h-3" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <p v-else-if="!matches.length" class="text-gz-muted text-sm py-4 text-center">Aucun match.</p>
-    </section>
-
     <!-- TABLEAU DES CONFRONTATIONS -->
     <section v-if="crossPlayers.length >= 2" class="rr-section">
       <div class="rr-head">
         <h3 class="rr-heading">Confrontations</h3>
-        <span class="text-xs text-gz-muted">ligne → colonne</span>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gz-muted">ligne → colonne</span>
+          <button v-if="adminMode" @click="$emit('show-saisie-rapide')" class="btn text-[11px] py-1 px-2 gap-1 h-7">
+            <PencilIcon class="w-3 h-3" /> Saisir les scores
+          </button>
+        </div>
       </div>
       <div class="cross-shell">
         <table class="cross-table">
@@ -237,31 +107,9 @@ const props = defineProps({
   adminMode: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['score-saved', 'batch-scores-saved'])
+const emit = defineEmits(['score-saved', 'batch-scores-saved', 'show-saisie-rapide'])
 
 const showGoalColumns = computed(() => String(props.standingsMode || 'goals') !== 'wins')
-
-/* ---- Editing state ---- */
-const editingIdx = ref(-1)
-const editA = ref({ s1: 0, s2: 0 })
-const editR = ref({ s1: 0, s2: 0 })
-const saving = ref(false)
-
-const batchMode = ref(false)
-const batchEdits = ref(new Map()) // matchId -> { s1, s2 }
-
-function getBatch(matchId, key) {
-  if (!matchId) return ''
-  const entry = batchEdits.value.get(matchId)
-  return entry ? entry[key] : ''
-}
-
-function setBatch(matchId, key, raw) {
-  if (!matchId) return
-  const val = raw === '' ? '' : Number(raw)
-  const existing = batchEdits.value.get(matchId) || { s1: '', s2: '' }
-  batchEdits.value.set(matchId, { ...existing, [key]: val })
-}
 
 /* ---- Pair grouping ---- */
 const matchPairs = computed(() => {
@@ -305,87 +153,6 @@ function pillClass(m) {
   if (s1 > s2) return 'pill-win'
   if (s1 < s2) return 'pill-loss'
   return 'pill-draw'
-}
-
-/* ---- Edit / Save ---- */
-function startEditPair(idx, pair) {
-  editingIdx.value = idx
-  editA.value = { s1: pair.aller?.score1 ?? 0, s2: pair.aller?.score2 ?? 0 }
-  editR.value = { s1: pair.retour?.score1 ?? 0, s2: pair.retour?.score2 ?? 0 }
-}
-
-function saveMatch(matchId, s1, s2) {
-  return new Promise((resolve, reject) => {
-    emit('score-saved', {
-      matchId,
-      score1: s1,
-      score2: s2,
-      done: resolve,
-      fail: () => reject(new Error('save failed')),
-    })
-  })
-}
-
-async function saveEditingPair(pair) {
-  saving.value = true
-  try {
-    if (pair.aller?.id) await saveMatch(pair.aller.id, editA.value.s1, editA.value.s2)
-    if (pair.retour?.id) await saveMatch(pair.retour.id, editR.value.s1, editR.value.s2)
-    editingIdx.value = -1
-  } catch (_) { /* toast is handled by parent */ }
-  saving.value = false
-}
-
-// 🔧 FEATURE: Batch mode functions
-async function validateAllBatch() {
-  if (batchEdits.value.size === 0) return
-  saving.value = true
-  const edits = Array.from(batchEdits.value.entries())
-    .filter(([, s]) => s.s1 !== '' && s.s2 !== '')
-    .map(([matchId, scores]) => ({
-      matchId,
-      score1: Number(scores.s1),
-      score2: Number(scores.s2),
-    }))
-  if (!edits.length) { saving.value = false; return }
-  emit('batch-scores-saved', { edits, done: onBatchValidated, fail: onBatchFailed })
-}
-
-function onBatchValidated() {
-  batchEdits.value.clear()
-  batchMode.value = false
-  saving.value = false
-  editingIdx.value = -1
-}
-
-function onBatchFailed() {
-  saving.value = false
-}
-
-function startBatchMode() {
-  batchEdits.value.clear()
-  // Pré-remplir depuis les scores existants
-  for (const p of pairRows.value) {
-    if (p.aller?.id) {
-      batchEdits.value.set(p.aller.id, {
-        s1: p.aller.score1 ?? '',
-        s2: p.aller.score2 ?? '',
-      })
-    }
-    if (p.retour?.id) {
-      batchEdits.value.set(p.retour.id, {
-        s1: p.retour.score1 ?? '',
-        s2: p.retour.score2 ?? '',
-      })
-    }
-  }
-  batchMode.value = true
-}
-
-function cancelBatchMode() {
-  batchEdits.value.clear()
-  batchMode.value = false
-  editingIdx.value = -1
 }
 
 /* ---- Cross-table ---- */
