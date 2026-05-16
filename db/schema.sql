@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
   member_tournament BOOLEAN NOT NULL DEFAULT FALSE,
   counts_for_title  BOOLEAN NOT NULL DEFAULT FALSE,
   day_comment      TEXT,
+  category         TEXT,
   rr_match_mode    TEXT NOT NULL DEFAULT 'single',
   rr_standings_mode TEXT NOT NULL DEFAULT 'goals',
   nb_groups        SMALLINT,
