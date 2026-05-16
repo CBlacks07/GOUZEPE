@@ -608,6 +608,7 @@ async function ensureSchema(){
   await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS member_tournament BOOLEAN NOT NULL DEFAULT true`);
   await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS day_comment TEXT`);
   await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS rr_match_mode TEXT NOT NULL DEFAULT 'single'`);
+  await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS category TEXT`);
   await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS rr_standings_mode TEXT NOT NULL DEFAULT 'goals'`);
   await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS season_id INTEGER REFERENCES seasons(id) ON DELETE SET NULL`);
   await q(`CREATE INDEX IF NOT EXISTS tournaments_season_idx ON tournaments(season_id)`);
