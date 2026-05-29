@@ -670,6 +670,22 @@ async function ensureSchema(){
   EXCEPTION WHEN duplicate_object THEN NULL;
   END$$`);
 
+  /* table demandes de membre */
+  await q(`CREATE TABLE IF NOT EXISTS membership_requests (
+    id          SERIAL PRIMARY KEY,
+    name        TEXT NOT NULL,
+    email       TEXT NOT NULL,
+    message     TEXT,
+    extra       JSONB,
+    status      TEXT NOT NULL DEFAULT 'pending',
+    created_at  TIMESTAMPTZ DEFAULT now(),
+    reviewed_at TIMESTAMPTZ,
+    reviewed_by INTEGER,
+    CONSTRAINT membership_requests_status_chk CHECK (status IN ('pending','approved','rejected'))
+  )`);
+  await q(`ALTER TABLE membership_requests ADD COLUMN IF NOT EXISTS extra JSONB`);
+  await q(`CREATE INDEX IF NOT EXISTS idx_membership_requests_status ON membership_requests(status)`);
+
   /* table stats invités */
   await q(`CREATE TABLE IF NOT EXISTS guest_season_stats (
     player_id  TEXT NOT NULL,
@@ -2388,6 +2404,99 @@ app.get('/players/search', auth, async (req,res)=>{
   ok(res,{ players: markOnlineField(r.rows) });
 });
 /* Confrontations head-to-head entre deux joueurs (depuis les journées) */
+/* ====== Routes publiques (sans authentification) ====== */
+
+// Tournois en cours / récents (public)
+app.get('/public/tournaments', async (_req, res) => {
+  const r = await q(`
+    SELECT id, slug, name, format, status, starts_at, winner_name,
+           rr_match_mode, member_tournament, counts_for_title
+    FROM tournaments
+    WHERE status IN ('live','completed')
+    ORDER BY COALESCE(starts_at, created_at) DESC
+    LIMIT 10
+  `)
+  ok(res, { tournaments: r.rows })
+})
+
+// Dernière journée confirmée (public) — classements D1 et D2 complets
+app.get('/public/latest-day', async (_req, res) => {
+  const s = await q(`SELECT id FROM seasons WHERE is_closed=false ORDER BY id DESC LIMIT 1`)
+  if (!s.rowCount) return ok(res, { day: null })
+  const sid = s.rows[0].id
+  const r = await q(`SELECT day, payload FROM matchday WHERE season_id=$1 ORDER BY day DESC LIMIT 1`, [sid])
+  if (!r.rowCount) return ok(res, { day: null })
+  const row = r.rows[0]
+  const p = row.payload || {}
+  const inviteIds = collectInviteIdsFromPayload(p)
+  const roles = await getPlayersRoles()
+
+  const buildStandings = (matches, invites) => {
+    const all = computeStandings(matches)
+    const members = all.filter(r => isEligibleMember(r.id, roles, invites))
+    const guests  = all.filter(r => !isEligibleMember(r.id, roles, invites))
+    const toRow = (r, i) => ({ rank: i+1, id: r.id, J: r.J, V: r.V, N: r.N, D: r.D, BP: r.BP, BC: r.BC, PTS: r.PTS, DIFF: r.DIFF })
+    return {
+      members: members.map(toRow),
+      guests:  guests.map(toRow),
+    }
+  }
+
+  const d1 = buildStandings(p.d1 || [], inviteIds)
+  const d2 = buildStandings(p.d2 || [], inviteIds)
+
+  ok(res, {
+    day:       dayjs(row.day).format('YYYY-MM-DD'),
+    champions: p.champions || {},
+    barrage:   p.barrage || {},
+    d1_count:  (p.d1 || []).length,
+    d2_count:  (p.d2 || []).length,
+    d1,
+    d2,
+  })
+})
+
+// Demande de membre (public)
+app.post('/public/inscription', async (req, res) => {
+  const { name, email, age, platform, frequency, message } = req.body || {}
+  if (!name || !name.trim()) return bad(res, 400, 'Nom requis')
+  if (!email || !email.trim()) return bad(res, 400, 'Email requis')
+  const existing = await q(`SELECT id FROM membership_requests WHERE email=$1 AND status='pending'`, [email.trim().toLowerCase()])
+  if (existing.rowCount) return bad(res, 409, 'Une demande est déjà en attente pour cet email')
+  const extra = JSON.stringify({ age: age||null, platform: platform||null, frequency: frequency||null })
+  const r = await q(`
+    INSERT INTO membership_requests(name, email, message, extra)
+    VALUES($1, $2, $3, $4) RETURNING id, created_at
+  `, [name.trim(), email.trim().toLowerCase(), (message || '').trim() || null, extra])
+  ok(res, { id: r.rows[0].id, message: 'Demande envoyée, un admin la traitera prochainement.' })
+})
+
+// Admin : liste des demandes
+app.get('/admin/membership-requests', auth, adminOnly, async (req, res) => {
+  const status = req.query.status || 'pending'
+  const r = await q(`
+    SELECT id, name, email, message, status, created_at, reviewed_at
+    FROM membership_requests
+    WHERE status=$1
+    ORDER BY created_at DESC
+  `, [status])
+  ok(res, { requests: r.rows })
+})
+
+// Admin : approuver/rejeter une demande
+app.patch('/admin/membership-requests/:id', auth, adminOnly, async (req, res) => {
+  const id = +req.params.id
+  const { status } = req.body || {}
+  if (!['approved', 'rejected'].includes(status)) return bad(res, 400, 'status invalide')
+  const r = await q(`
+    UPDATE membership_requests
+    SET status=$1, reviewed_at=now(), reviewed_by=$2
+    WHERE id=$3 RETURNING id, name, email, status
+  `, [status, req.user.uid, id])
+  if (!r.rowCount) return bad(res, 404, 'Demande introuvable')
+  ok(res, { request: r.rows[0] })
+})
+
 app.get('/players/h2h', auth, async (req, res) => {
   const { p1: pid1, p2: pid2, season } = req.query
   if (!pid1 || !pid2) return bad(res, 400, 'p1 et p2 requis')

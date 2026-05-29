@@ -42,14 +42,25 @@ function getScrollPosition(fullPath) {
 
 const routes = [
   {
+    path: '/',
+    name: 'PublicHome',
+    component: () => import('@/views/PublicHomeView.vue'),
+    meta: { requiresAuth: false, title: 'GOUZEPE eFOOTBALL', public: true },
+  },
+  {
+    path: '/inscription',
+    name: 'Inscription',
+    component: () => import('@/views/InscriptionView.vue'),
+    meta: { requiresAuth: false, title: 'Demande de membre', public: true },
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/LoginView.vue'),
     meta: { requiresAuth: false, title: 'Connexion', keepAlive: false },
   },
-
   {
-    path: '/',
+    path: '/accueil',
     name: 'Accueil',
     component: () => import('@/views/AccueilView.vue'),
     meta: { requiresAuth: true, title: 'Accueil' },
@@ -163,16 +174,22 @@ router.beforeEach(async (to, from) => {
     ? `${to.meta.title} - GOUZEPE eFOOTBALL`
     : 'GOUZEPE eFOOTBALL'
 
+  // Page protégée et non connecté → page publique
   if (to.meta.requiresAuth !== false && !auth.isValid) {
-    return '/login'
+    return '/'
   }
 
   if (auth.isValid && !auth.hydrated) {
     await auth.hydrateFromServer()
   }
 
+  // Connecté sur pages publiques → rediriger vers l'app
+  if (auth.isValid && to.meta.public) {
+    return auth.isAdmin ? '/accueil' : '/accueil'
+  }
+
   if (to.name === 'Login' && auth.isValid) {
-    return auth.isAdmin ? '/' : '/profil'
+    return '/accueil'
   }
 
   if (to.meta.requiresAdmin && !auth.isAdmin) {
