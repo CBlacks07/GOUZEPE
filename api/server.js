@@ -410,8 +410,15 @@ async function listBackups() {
     result.push(...entries);
   } catch (_) {}
 
-  result.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-  return result;
+  // Déduplique : si un backup existe en DB ET sur disque, garde seulement la version DB
+  const seen = new Set()
+  const deduped = result.filter(b => {
+    if (seen.has(b.name)) return false
+    seen.add(b.name)
+    return true
+  })
+  deduped.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+  return deduped
 }
 
 async function createDatabaseBackup(kind = 'manual') {
