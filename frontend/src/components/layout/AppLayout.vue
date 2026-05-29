@@ -12,13 +12,26 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import AppHeader from './AppHeader.vue'
 import AppDrawer from './AppDrawer.vue'
+import { useMembershipNotif } from '@/composables/useMembershipNotif'
 
 defineProps({
   seasonLabel: { type: String, default: 'Saison' }
 })
 
 const drawerOpen = ref(false)
+
+const { fetchCount, setupRealtime } = useMembershipNotif()
+let disposeRealtime = null
+
+onMounted(async () => {
+  await fetchCount()
+  disposeRealtime = setupRealtime()
+})
+
+onUnmounted(() => {
+  if (disposeRealtime) disposeRealtime()
+})
 </script>

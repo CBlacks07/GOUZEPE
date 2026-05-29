@@ -24,12 +24,17 @@
         <RouterLink v-for="link in visibleLinks" :key="link.to"
           :to="link.to"
           @click="$emit('close')"
-          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gz-muted
+          class="relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gz-muted
                  hover:text-gz-text hover:bg-gz-border/20 transition-colors mb-0.5"
           active-class="!text-gz-text bg-gz-border/20"
         >
           <component :is="link.icon" class="w-4 h-4 shrink-0" />
           {{ link.label }}
+          <span v-if="link.to === '/admin/utilisateurs' && pendingCount > 0"
+                class="ml-auto min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold
+                       flex items-center justify-center bg-gz-red text-white">
+            {{ pendingCount > 9 ? '9+' : pendingCount }}
+          </span>
         </RouterLink>
       </nav>
 
@@ -56,6 +61,7 @@ import { computed } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
+import { useMembershipNotif } from '@/composables/useMembershipNotif'
 import {
   HomeIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
   UsersIcon, ShieldIcon, DatabaseIcon, SunIcon, MoonIcon,
@@ -66,6 +72,7 @@ defineProps({ open: Boolean })
 defineEmits(['close'])
 
 const auth   = useAuthStore()
+const { pendingCount } = useMembershipNotif()
 const theme  = useThemeStore()
 const router = useRouter()
 
