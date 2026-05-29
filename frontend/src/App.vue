@@ -29,16 +29,39 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { RouterView } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 import AppToast from '@/components/ui/AppToast.vue'
+import { resolveBaseURL } from '@/composables/useAPI'
 
 const theme = useThemeStore()
 const themeClass = computed(() => theme.mode === 'light' ? 'light' : '')
 
+// ── Keep-alive Render : ping toutes les 9 min pour éviter le cold start ──
+// Render free endort l'API après 15 min sans requête.
+// Ce ping silencieux maintient l'API éveillée tant que quelqu'un est sur le site.
+const PING_INTERVAL = 9 * 60 * 1000 // 9 minutes
+let pingTimer = null
+
+function startKeepAlive() {
+  if (pingTimer) return
+  pingTimer = setInterval(() => {
+    fetch(`${resolveBaseURL()}/health`, { method: 'GET' }).catch(() => {})
+  }, PING_INTERVAL)
+}
+
+function stopKeepAlive() {
+  if (pingTimer) { clearInterval(pingTimer); pingTimer = null }
+}
+
 onMounted(() => {
   theme.apply()
+  startKeepAlive()
+})
+
+onUnmounted(() => {
+  stopKeepAlive()
 })
 </script>
 

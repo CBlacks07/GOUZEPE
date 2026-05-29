@@ -90,6 +90,72 @@
         </div>
         <p v-if="listStatus" class="text-xs text-gz-muted mt-2">{{ listStatus }}</p>
       </section>
+
+      <!-- Demandes d'inscription -->
+      <section class="card reveal delay-2">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="font-semibold text-gz-text">Demandes de membre</h2>
+            <p class="text-xs text-gz-muted mt-0.5">Formulaires envoyés depuis la page publique</p>
+          </div>
+          <div class="flex gap-2 items-center">
+            <select v-model="reqFilter" @change="loadRequests" class="input w-36 text-sm">
+              <option value="pending">En attente</option>
+              <option value="approved">Approuvées</option>
+              <option value="rejected">Rejetées</option>
+            </select>
+            <button @click="loadRequests" class="btn flex items-center gap-1">
+              <RefreshCwIcon class="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <div v-if="loadingReqs" class="text-gz-muted text-sm py-4 text-center">Chargement…</div>
+        <div v-else-if="!requests.length" class="text-gz-muted text-sm py-4 text-center">
+          Aucune demande {{ reqFilter === 'pending' ? 'en attente' : reqFilter === 'approved' ? 'approuvée' : 'rejetée' }}.
+        </div>
+        <div v-else class="space-y-2">
+          <div v-for="r in requests" :key="r.id"
+               class="rounded-xl border border-gz-border/40 p-3 bg-gz-panel/30">
+            <div class="flex flex-wrap items-start justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-semibold text-gz-text">{{ r.name }}</span>
+                  <span class="text-xs text-gz-muted font-mono">{{ r.email }}</span>
+                  <span class="text-xs text-gz-muted">{{ fmtDate(r.created_at) }}</span>
+                </div>
+                <!-- Infos supplémentaires (âge, plateforme, fréquence) -->
+                <div v-if="r.extra" class="flex flex-wrap gap-2 mt-1">
+                  <span v-if="r.extra.age" class="text-xs px-2 py-0.5 rounded-full bg-gz-border/20 text-gz-muted">
+                    {{ r.extra.age }} ans
+                  </span>
+                  <span v-if="r.extra.platform" class="text-xs px-2 py-0.5 rounded-full bg-gz-border/20 text-gz-muted">
+                    {{ r.extra.platform }}
+                  </span>
+                  <span v-if="r.extra.frequency" class="text-xs px-2 py-0.5 rounded-full bg-gz-border/20 text-gz-muted">
+                    {{ freqLabel(r.extra.frequency) }}
+                  </span>
+                </div>
+                <p v-if="r.message" class="text-xs text-gz-muted mt-1 italic">« {{ r.message }} »</p>
+              </div>
+              <div v-if="reqFilter === 'pending'" class="flex gap-1.5 shrink-0">
+                <button @click="reviewRequest(r.id, 'approved')"
+                        class="btn-primary text-xs py-1 px-3">
+                  Approuver
+                </button>
+                <button @click="reviewRequest(r.id, 'rejected')"
+                        class="btn text-xs py-1 px-3" style="border-color:rgba(212,60,73,.4);color:#d43c49">
+                  Rejeter
+                </button>
+              </div>
+              <span v-else class="text-xs px-2 py-1 rounded-full font-semibold"
+                    :class="r.status === 'approved' ? 'bg-gz-green/15 text-gz-green' : 'bg-gz-red/15 text-gz-red'">
+                {{ r.status === 'approved' ? 'Approuvée' : 'Rejetée' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <!-- Modal édition -->
@@ -157,6 +223,10 @@ const editingId  = ref(null)
 const newU = ref({ email: '', password: '', role: 'member' })
 const form = ref({ email: '', role: 'member', player_id: '', password: '' })
 
+const requests    = ref([])
+const reqFilter   = ref('pending')
+const loadingReqs = ref(false)
+
 useSessionState('efoot.ui.admin.utilisateurs.v1', {
   search,
   modal,
@@ -171,8 +241,31 @@ const filtered = computed(() => {
 })
 
 onMounted(async () => {
-  await Promise.all([loadUsers(), loadPlayers()])
+  await Promise.all([loadUsers(), loadPlayers(), loadRequests()])
 })
+
+async function loadRequests() {
+  loadingReqs.value = true
+  try {
+    const { data } = await api.get(`/admin/membership-requests?status=${reqFilter.value}`)
+    requests.value = (data.requests || []).map(r => ({
+      ...r,
+      extra: r.extra ? (typeof r.extra === 'string' ? JSON.parse(r.extra) : r.extra) : null
+    }))
+  } catch (_) {}
+  loadingReqs.value = false
+}
+
+async function reviewRequest(id, status) {
+  try {
+    await api.patch(`/admin/membership-requests/${id}`, { status })
+    await loadRequests()
+  } catch (_) {}
+}
+
+function freqLabel(f) {
+  return { daily: 'Tous les jours', several_week: 'Plusieurs fois/sem.', weekly: '1 fois/sem.', occasional: 'Occasionnellement' }[f] || f
+}
 
 async function loadUsers() {
   loading.value = true
