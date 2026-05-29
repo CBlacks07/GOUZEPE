@@ -2606,7 +2606,24 @@ app.post('/public/inscription', async (req, res) => {
     INSERT INTO membership_requests(name, email, message, extra)
     VALUES($1, $2, $3, $4) RETURNING id, created_at
   `, [name.trim(), email.trim().toLowerCase(), (message || '').trim() || null, extra])
+
+  // Notifier les admins connectés en temps réel
+  const count = await q(`SELECT COUNT(*) FROM membership_requests WHERE status='pending'`)
+  io.emit('membership:new', {
+    id: r.rows[0].id,
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    platform: platform || null,
+    pendingCount: Number(count.rows[0].count),
+  })
+
   ok(res, { id: r.rows[0].id, message: 'Demande envoyée, un admin la traitera prochainement.' })
+})
+
+// Comptage des demandes en attente (pour le badge nav)
+app.get('/admin/membership-requests/count', auth, adminOnly, async (_req, res) => {
+  const r = await q(`SELECT COUNT(*) FROM membership_requests WHERE status='pending'`)
+  ok(res, { count: Number(r.rows[0].count) })
 })
 
 // Admin : liste des demandes

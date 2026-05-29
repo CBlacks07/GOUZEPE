@@ -13,12 +13,18 @@
     <nav class="hidden lg:flex items-center gap-0.5 ml-4 flex-1 overflow-x-auto">
       <RouterLink v-for="link in visibleLinks" :key="link.to"
         :to="link.to"
-        class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[13px] whitespace-nowrap text-gz-muted
+        class="relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[13px] whitespace-nowrap text-gz-muted
                hover:text-gz-text hover:bg-gz-border/20 transition-colors duration-150"
         active-class="!text-gz-text bg-gz-border/20"
       >
         <component :is="link.icon" class="w-3.5 h-3.5" />
         {{ link.label }}
+        <!-- Badge demandes en attente -->
+        <span v-if="link.to === '/admin/utilisateurs' && pendingCount > 0"
+              class="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 rounded-full text-[10px] font-bold
+                     flex items-center justify-center bg-gz-red text-white leading-none">
+          {{ pendingCount > 9 ? '9+' : pendingCount }}
+        </span>
       </RouterLink>
     </nav>
 
@@ -47,6 +53,7 @@ import { computed } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
+import { useMembershipNotif } from '@/composables/useMembershipNotif'
 import {
   HomeIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
   UsersIcon, ShieldIcon, DatabaseIcon, SunIcon, MoonIcon,
@@ -61,6 +68,7 @@ defineEmits(['open-drawer'])
 const auth   = useAuthStore()
 const theme  = useThemeStore()
 const router = useRouter()
+const { pendingCount } = useMembershipNotif()
 
 const allLinks = [
   { to: '/accueil',            label: 'Accueil',          icon: HomeIcon,     adminOnly: false },
