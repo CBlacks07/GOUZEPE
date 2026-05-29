@@ -127,62 +127,76 @@
         </div>
       </div>
       <!-- ===== GESTION JOURNÉE ===== -->
-      <div class="card reveal delay-2">
-        <!-- Barre de contrôle -->
-        <div class="flex flex-wrap gap-2 items-center mb-4">
-          <h3 class="font-semibold text-lg mr-2">Gestion de journée</h3>
-          <input type="date" v-model="selectedDate" @change="onDateChange" class="input w-44" />
-          <select v-model="dayStatusDisplay" class="input w-36" disabled>
-            <option value="new">Nouvelle</option>
-            <option value="draft">Brouillon</option>
-            <option value="confirmed">Confirmée</option>
-          </select>
-          <span class="text-xs px-2 py-1 rounded-full text-sm"
-                :style="dayStatusDisplay === 'confirmed' ? 'background:color-mix(in srgb, var(--green) 16%, transparent);color:var(--green)' :
-                         dayStatusDisplay === 'draft'     ? 'background:color-mix(in srgb, var(--blue) 16%, transparent);color:var(--blue)' :
-                                                            'background:rgba(148,163,184,.1);color:var(--muted)'">
-            {{ dayInfo }}
-          </span>
-          <div class="flex-1"></div>
-          <button @click="printDaySheet" class="btn text-sm" title="Imprimer la feuille de la journée">
-            Imprimer (PDF)
-          </button>
-          <button @click="loadDay" class="btn text-sm" title="Recharger les données de la journée">
-            Rafraîchir
-          </button>
-          <template v-if="auth.isAdmin">
-            <button @click="openParticipantsModal" class="btn-primary text-sm" title="Ajouter, retirer et répartir les participants">Gérer participants</button>
-            <button @click="clearScores('d1')" class="btn text-sm"
-                    title="Effacer tous les scores de la Division 1"
-                    style="background:rgba(245,158,11,.14);border-color:#b45309">Effacer D1</button>
-            <button @click="clearScores('d2')" class="btn text-sm"
-                    title="Effacer tous les scores de la Division 2"
-                    style="background:rgba(245,158,11,.14);border-color:#b45309">Effacer D2</button>
-            <button @click="clearAllMatches" class="btn text-sm"
-                    title="Supprimer toutes les confrontations D1 et D2"
-                    style="background:#2a0c0c;border-color:#7f1d1d;color:#fecaca">Supprimer confrontations</button>
-            <button @click="saveDraft(false)" class="btn text-sm" :disabled="saving" title="Sauvegarder la journée en brouillon">
-              <Loader2Icon v-if="saving" class="w-3.5 h-3.5 animate-spin" /> Brouillon
-            </button>
-            <button @click="openConfirmModal" class="btn-primary text-sm" :disabled="publishing" title="Publier et confirmer définitivement la journée">
-              <Loader2Icon v-if="publishing" class="w-3.5 h-3.5 animate-spin" /> Publier
-            </button>
-          </template>
-        </div>
+      <div class="day-workspace reveal delay-2">
 
-        <!-- Recherche confrontation -->
-        <div class="flex flex-wrap gap-2 items-center mb-4">
-          <input v-model="matchSearch" type="text" class="input flex-1 min-w-48"
-                 placeholder="Rechercher confrontation (ID joueur)…"
-                 @keydown.enter="searchMatch" />
-          <select v-model="matchSearchDiv" class="input w-36">
-            <option value="all">D1 + D2</option>
-            <option value="d1">Division 1</option>
-            <option value="d2">Division 2</option>
-          </select>
-          <button @click="searchMatch" class="btn text-sm" title="Rechercher un joueur dans les confrontations">Chercher</button>
-          <span v-if="matchSearchInfo" class="text-xs" style="color:var(--muted)">{{ matchSearchInfo }}</span>
+        <!-- ── Toolbar compacte ── -->
+        <div class="day-toolbar">
+          <div class="day-toolbar-left">
+            <div class="day-date-wrap">
+              <input type="date" v-model="selectedDate" @change="onDateChange" class="input day-date-input" />
+            </div>
+            <span :class="['day-status-pill',
+              dayStatusDisplay === 'confirmed' ? 'status-confirmed' :
+              dayStatusDisplay === 'draft'     ? 'status-draft'     : 'status-new']">
+              {{ dayInfo }}
+            </span>
+          </div>
+
+          <div class="day-toolbar-right">
+            <!-- Recherche rapide -->
+            <div class="day-search-wrap">
+              <input v-model="matchSearch" type="text" class="input day-search-input"
+                     placeholder="Rechercher joueur…" @keydown.enter="searchMatch" />
+              <select v-model="matchSearchDiv" class="input day-search-div">
+                <option value="all">D1+D2</option>
+                <option value="d1">D1</option>
+                <option value="d2">D2</option>
+              </select>
+              <button @click="searchMatch" class="btn text-xs px-2" title="Chercher">
+                <SearchIcon class="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <!-- Actions courantes -->
+            <button @click="printDaySheet" class="btn text-xs gap-1" title="Imprimer">
+              <PrinterIcon class="w-3.5 h-3.5" />
+              <span class="hidden sm:inline">PDF</span>
+            </button>
+            <button @click="loadDay" class="btn text-xs p-2" title="Rafraîchir">
+              <RefreshCwIcon class="w-3.5 h-3.5" />
+            </button>
+
+            <!-- Actions admin -->
+            <template v-if="auth.isAdmin">
+              <button @click="openParticipantsModal" class="btn-primary text-xs gap-1">
+                <UsersIcon class="w-3.5 h-3.5" />
+                <span class="hidden md:inline">Participants</span>
+              </button>
+              <button @click="saveDraft(false)" class="btn text-xs gap-1" :disabled="saving">
+                <Loader2Icon v-if="saving" class="w-3.5 h-3.5 animate-spin" />
+                <SaveIcon v-else class="w-3.5 h-3.5" />
+                <span class="hidden md:inline">Brouillon</span>
+              </button>
+              <button @click="openConfirmModal" class="btn-primary text-xs gap-1" :disabled="publishing">
+                <Loader2Icon v-if="publishing" class="w-3.5 h-3.5 animate-spin" />
+                <span>Publier</span>
+              </button>
+
+              <!-- Actions destructives dans un details -->
+              <details class="day-danger-menu">
+                <summary class="btn text-xs p-2" title="Actions avancées">
+                  <MoreVerticalIcon class="w-3.5 h-3.5" />
+                </summary>
+                <div class="day-danger-dropdown">
+                  <button @click="clearScores('d1')" class="danger-item">Effacer scores D1</button>
+                  <button @click="clearScores('d2')" class="danger-item">Effacer scores D2</button>
+                  <button @click="clearAllMatches" class="danger-item danger-item--red">Supprimer confrontations</button>
+                </div>
+              </details>
+            </template>
+          </div>
         </div>
+        <p v-if="matchSearchInfo" class="text-xs px-1" style="color:var(--muted)">{{ matchSearchInfo }}</p>
 
         <div
           v-if="loadingDayTournaments || dayTournaments.length"
@@ -318,14 +332,19 @@
           </div>
         </div>
 
-        <div v-if="loadingDay" class="text-center py-10" style="color:var(--muted)">Chargement de la journée…</div>
-        <div v-else class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div v-if="loadingDay" class="day-loading">
+          <div class="day-spinner" />
+          <span>Chargement de la journée…</span>
+        </div>
+        <div v-else class="day-divisions-grid">
 
           <!-- D1 -->
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <h4 class="font-medium">Division 1 — Confrontations (Aller/Retour)</h4>
-              <button v-if="auth.isAdmin" @click="addMatch('d1')" class="btn text-xs" title="Ajouter une confrontation vide en D1">Ajouter ligne</button>
+          <div class="day-division-card">
+            <div class="day-division-header day-division-header--d1">
+              <div class="day-div-badge">D1</div>
+              <h4 class="day-div-title">Division 1</h4>
+              <span class="day-div-count">{{ d1Matches.length }} confrontation(s)</span>
+              <button v-if="auth.isAdmin" @click="addMatch('d1')" class="btn text-xs ml-auto" title="Ajouter une ligne">+ Ajouter</button>
             </div>
             <div class="overflow-x-auto table-shell" style="max-height:480px;overflow-y:auto;-webkit-overflow-scrolling:touch">
               <table class="w-full text-sm matches-table" style="border-collapse:separate;border-spacing:0 4px">
@@ -399,7 +418,7 @@
             </div>
 
             <!-- Classement D1 -->
-            <h5 class="font-medium mt-4 mb-2 text-sm">Classement D1</h5>
+            <h5 class="day-standings-title">Classement D1</h5>
             <div class="overflow-x-auto table-shell">
               <table class="w-full text-sm standings-table" style="border-collapse:collapse">
                 <thead>
@@ -443,11 +462,13 @@
             </div>
           </div>
 
-          <!-- D2 (same structure) -->
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <h4 class="font-medium">Division 2 — Confrontations (Aller/Retour)</h4>
-              <button v-if="auth.isAdmin" @click="addMatch('d2')" class="btn text-xs" title="Ajouter une confrontation vide en D2">Ajouter ligne</button>
+          <!-- D2 -->
+          <div class="day-division-card">
+            <div class="day-division-header day-division-header--d2">
+              <div class="day-div-badge day-div-badge--d2">D2</div>
+              <h4 class="day-div-title">Division 2</h4>
+              <span class="day-div-count">{{ d2Matches.length }} confrontation(s)</span>
+              <button v-if="auth.isAdmin" @click="addMatch('d2')" class="btn text-xs ml-auto" title="Ajouter une ligne">+ Ajouter</button>
             </div>
             <div class="overflow-x-auto table-shell" style="max-height:480px;overflow-y:auto;-webkit-overflow-scrolling:touch">
               <table class="w-full text-sm matches-table" style="border-collapse:separate;border-spacing:0 4px">
@@ -519,7 +540,7 @@
             </div>
 
             <!-- Classement D2 -->
-            <h5 class="font-medium mt-4 mb-2 text-sm">Classement D2</h5>
+            <h5 class="day-standings-title">Classement D2</h5>
             <div class="overflow-x-auto table-shell">
               <table class="w-full text-sm standings-table" style="border-collapse:collapse">
                 <thead>
@@ -564,9 +585,13 @@
           </div>
         </div>
 
-        <!-- Barrage (admin) -->
-        <div v-if="auth.isAdmin" class="mt-6 pt-5" style="border-top:1px solid var(--border)">
-          <h4 class="font-medium mb-3">Barrage D2 ↔ D1 — Les invités sont exclus</h4>
+        <!-- Barrage -->
+        <div v-if="auth.isAdmin" class="day-barrage-card">
+          <div class="day-division-header" style="border-bottom:1px solid rgba(59,130,246,.2);background:rgba(59,130,246,.06)">
+            <div class="day-div-badge" style="background:rgba(59,130,246,.15);color:#3b82f6">B</div>
+            <h4 class="day-div-title">Barrage D2 ↔ D1</h4>
+            <span class="day-div-count">Les invités sont exclus</span>
+          </div>
           <div class="flex flex-wrap gap-3 items-center mb-3">
             <label class="text-sm" style="color:var(--muted)">Affiche</label>
             <input v-model="barrage.ids" list="players-dl" class="input w-48"
@@ -594,8 +619,7 @@
                       @input="onMatchInput"></textarea>
           </div>
         </div>
-      </div>
-    </div>
+      </div><!-- /day-workspace -->
 
     <!-- Datalist for autocomplete -->
     <datalist id="players-dl">
@@ -731,7 +755,8 @@
       </template>
     </BaseModal>
 
-      </div>
+      </div><!-- /home-content -->
+    </div><!-- /home-page -->
   </AppLayout>
 </template>
 
@@ -745,7 +770,7 @@ import { useAPI } from '@/composables/useAPI'
 import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
 import { onRealtimeEvent, joinRealtimeRoom, leaveRealtimeRoom } from '@/composables/useRealtimeSocket'
-import { Loader2Icon, Trash2Icon, RefreshCcwIcon } from 'lucide-vue-next'
+import { Loader2Icon, Trash2Icon, RefreshCcwIcon, SearchIcon, PrinterIcon, SaveIcon, UsersIcon, MoreVerticalIcon, RefreshCwIcon } from 'lucide-vue-next'
 
 const auth   = useAuthStore()
 const api    = useAPI()
@@ -2737,6 +2762,77 @@ button[title] {
     max-width: 120px;
   }
 }
+
+/* ── Day workspace ── */
+.day-workspace { display: flex; flex-direction: column; gap: 1rem; }
+
+.day-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: .6rem;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  border: 1px solid rgba(148,163,184,.14); border-radius: 14px;
+  padding: .75rem 1rem;
+  position: sticky; top: 68px; z-index: 10;
+  backdrop-filter: blur(10px);
+}
+.day-toolbar-left { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.day-toolbar-right { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-left: auto; }
+.day-date-input { width: 140px !important; font-size: .82rem; }
+.day-status-pill { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
+.status-confirmed { background: rgba(34,197,94,.12); color: #22c55e; }
+.status-draft     { background: rgba(95,141,255,.12); color: #5f8dff; }
+.status-new       { background: rgba(148,163,184,.1); color: var(--muted); }
+.day-search-wrap { display: flex; align-items: center; gap: .3rem; }
+.day-search-input { width: 140px !important; font-size: .8rem; }
+.day-search-div { width: 72px !important; font-size: .78rem; }
+
+/* Dropdown danger menu */
+.day-danger-menu { position: relative; }
+.day-danger-menu summary { list-style: none; cursor: pointer; }
+.day-danger-menu summary::-webkit-details-marker { display: none; }
+.day-danger-dropdown {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 50;
+  background: var(--panel); border: 1px solid rgba(148,163,184,.2);
+  border-radius: 10px; padding: .35rem; min-width: 180px;
+  box-shadow: 0 8px 24px rgba(2,6,23,.4);
+  display: flex; flex-direction: column; gap: .25rem;
+}
+.danger-item { background: none; border: none; cursor: pointer; font-size: .82rem; font-family: inherit; padding: .45rem .7rem; border-radius: 7px; text-align: left; color: var(--muted); transition: background .12s, color .12s; }
+.danger-item:hover { background: rgba(245,158,11,.1); color: #fbbf24; }
+.danger-item--red:hover { background: rgba(212,60,73,.1); color: #ef4444; }
+
+.day-loading { display: flex; align-items: center; gap: .75rem; color: var(--muted); font-size: .88rem; padding: 2rem 1rem; }
+.day-spinner { width: 20px; height: 20px; border: 2px solid rgba(34,197,94,.2); border-top-color: #22c55e; border-radius: 50%; animation: spinDay .6s linear infinite; flex-shrink: 0; }
+@keyframes spinDay { to { transform: rotate(360deg); } }
+
+.day-divisions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+
+.day-division-card {
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+  border: 1px solid rgba(148,163,184,.12); border-radius: 16px;
+  overflow: hidden;
+}
+.day-division-header {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .7rem 1rem; border-bottom: 1px solid rgba(148,163,184,.1);
+  background: rgba(148,163,184,.03);
+}
+.day-division-header--d1 { border-bottom-color: rgba(34,197,94,.2); background: rgba(34,197,94,.04); }
+.day-division-header--d2 { border-bottom-color: rgba(95,141,255,.2); background: rgba(95,141,255,.04); }
+.day-div-badge { font-size: .65rem; font-weight: 900; letter-spacing: .08em; padding: 3px 8px; border-radius: 99px; background: rgba(34,197,94,.15); color: #22c55e; }
+.day-div-badge--d2 { background: rgba(95,141,255,.15); color: #5f8dff; }
+.day-div-title { font-size: .88rem; font-weight: 700; }
+.day-div-count { font-size: .72rem; color: var(--muted); }
+
+.day-standings-title { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 1rem 1rem .5rem; }
+
+.day-barrage-card {
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+  border: 1px solid rgba(59,130,246,.15); border-radius: 16px;
+  overflow: hidden;
+}
+.day-barrage-card > .flex,
+.day-barrage-card > div:not(.day-division-header) { padding: 0 1rem 1rem; }
 
 /* ── News card redesign ── */
 .news-card {
