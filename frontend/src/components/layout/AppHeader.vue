@@ -63,7 +63,7 @@ const theme  = useThemeStore()
 const router = useRouter()
 
 const allLinks = [
-  { to: '/',                   label: 'Accueil',          icon: HomeIcon,     adminOnly: false },
+  { to: '/accueil',            label: 'Accueil',          icon: HomeIcon,     adminOnly: false },
   { to: '/duel',               label: 'Duel',             icon: SwordsIcon,   adminOnly: false },
   { to: '/classement',         label: 'Classements',      icon: BarChart2Icon, adminOnly: false },
   { to: '/profil',             label: 'Mon espace',       icon: UserIcon,     adminOnly: false },
