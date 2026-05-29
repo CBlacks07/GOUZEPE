@@ -10,18 +10,12 @@
 
     <div class="app-shell">
       <RouterView v-slot="{ Component, route }">
-        <KeepAlive>
-          <component
-            :is="Component"
-            v-if="route.meta?.keepAlive !== false"
-            :key="route.name || route.path"
-          />
-        </KeepAlive>
-        <component
-          :is="Component"
-          v-if="route.meta?.keepAlive === false"
-          :key="route.fullPath"
-        />
+        <Transition name="page" mode="out-in">
+          <KeepAlive v-if="route.meta?.keepAlive !== false">
+            <component :is="Component" :key="route.name || route.path" />
+          </KeepAlive>
+          <component v-else :is="Component" :key="route.fullPath" />
+        </Transition>
       </RouterView>
       <AppToast />
     </div>
@@ -121,5 +115,17 @@ onUnmounted(() => {
 
 :root.light .app-bg-vignette {
   background: linear-gradient(180deg, rgba(238, 241, 246, 0.58), rgba(238, 241, 246, 0.74));
+}
+
+/* ── Transitions de page ── */
+.page-enter-active { animation: pageIn .22s ease both; }
+.page-leave-active { animation: pageOut .18s ease both; }
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pageOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-6px); }
 }
 </style>

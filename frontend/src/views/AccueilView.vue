@@ -59,25 +59,34 @@
         </div>
       </section>      <!-- News + Next fixture -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 reveal delay-1">
-        <div class="card card-news">
-          <div class="mini-head">
-            <h3 class="font-semibold">À la une</h3>
-            <span class="live-chip">LIVE</span>
-          </div>
-          <p class="mini-sub">Dernière journée publiée : {{ headlineLastPublishedLabel || '—' }}</p>
 
-          <div v-if="loadingNews" class="text-sm" style="color:var(--muted)">Chargement…</div>
-          <div v-else class="space-y-2">
-            <div v-if="!newsItems.length" class="text-sm" style="color:var(--muted)">Aucune journée publiée.</div>
-            <div v-for="(item, idx) in newsItems" :key="item.title" class="mini-row" :class="{ 'mini-row--champion': idx < 2 }">
-              <span class="text-sm" style="color:var(--muted)">{{ item.title }}</span>
-              <span class="text-sm font-medium">{{ item.meta }}</span>
+        <!-- À la une — card redesignée -->
+        <div class="news-card">
+          <div class="news-card-header">
+            <div class="news-card-title-wrap">
+              <span class="news-card-label">À la une</span>
+              <span class="live-badge"><span class="live-badge-dot" />LIVE</span>
+            </div>
+            <p v-if="headlineLastPublishedLabel" class="news-card-date">{{ headlineLastPublishedLabel }}</p>
+          </div>
+
+          <div v-if="loadingNews" class="news-loading"><div class="news-spinner" /></div>
+          <div v-else class="news-body">
+            <div v-if="!newsItems.length" class="news-empty">Aucune journée publiée.</div>
+            <div v-else class="news-champions">
+              <div v-for="(item, idx) in newsItems" :key="item.title" class="champion-row">
+                <span class="champion-crown">{{ idx === 0 ? '🏆' : '🥇' }}</span>
+                <div class="champion-info">
+                  <span class="champion-div">{{ item.title }}</span>
+                  <span class="champion-name">{{ item.meta }}</span>
+                </div>
+              </div>
             </div>
 
             <Transition name="insight-fade" mode="out-in">
-              <div v-if="currentHeadlineFlash" :key="'headline-' + headlineFlashIndex" class="insight-box">
-                <span class="insight-tag">{{ currentHeadlineFlash.tag }}</span>
-                <p class="insight-text">{{ currentHeadlineFlash.text }}</p>
+              <div v-if="currentHeadlineFlash" :key="'headline-' + headlineFlashIndex" class="insight-pill">
+                <span class="insight-pill-tag">{{ currentHeadlineFlash.tag }}</span>
+                <p class="insight-pill-text">{{ currentHeadlineFlash.text }}</p>
               </div>
             </Transition>
           </div>
@@ -2728,6 +2737,57 @@ button[title] {
     max-width: 120px;
   }
 }
+
+/* ── News card redesign ── */
+.news-card {
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+  border: 1px solid rgba(148,163,184,.15);
+  border-radius: 18px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.news-card-header {
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid rgba(148,163,184,.1);
+  background: rgba(148,163,184,.03);
+}
+.news-card-title-wrap { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.news-card-label { font-size: .75rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.news-card-date { font-size: .72rem; color: var(--muted); }
+.live-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .62rem; font-weight: 800; letter-spacing: .1em;
+  color: #22c55e; background: rgba(34,197,94,.1); padding: 2px 7px; border-radius: 99px;
+}
+.live-badge-dot { width: 5px; height: 5px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.news-loading { display: flex; align-items: center; justify-content: center; padding: 2rem; }
+.news-spinner { width: 20px; height: 20px; border: 2px solid rgba(34,197,94,.2); border-top-color: #22c55e; border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.news-body { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: .75rem; flex: 1; }
+.news-empty { font-size: .85rem; color: var(--muted); }
+
+.news-champions { display: flex; flex-direction: column; gap: .5rem; }
+.champion-row { display: flex; align-items: center; gap: .65rem; }
+.champion-crown { font-size: 1.1rem; }
+.champion-info { display: flex; flex-direction: column; gap: 1px; }
+.champion-div { font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.champion-name { font-size: .92rem; font-weight: 700; }
+
+.insight-pill {
+  margin-top: .25rem;
+  background: rgba(148,163,184,.06);
+  border: 1px solid rgba(148,163,184,.12);
+  border-radius: 10px; padding: .6rem .85rem;
+  display: flex; align-items: flex-start; gap: .5rem;
+}
+.insight-pill-tag {
+  font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
+  color: #22c55e; white-space: nowrap; padding-top: 1px;
+}
+.insight-pill-text { font-size: .8rem; color: var(--muted); line-height: 1.5; }
 
 .mini-head {
   display: flex;

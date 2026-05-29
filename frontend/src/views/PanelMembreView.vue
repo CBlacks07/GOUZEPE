@@ -1,86 +1,110 @@
 ﻿<template>
   <AppLayout season-label="Mon espace">
-    <div class="page-wrap panel-membre-wrap space-y-4">
-      <section class="card reveal">
-        <div class="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h1 class="text-xl font-bold text-gz-text">Mon espace</h1>
-            <p class="text-sm text-gz-muted">Suivi personnel de votre saison.</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="label mb-0">Saison</label>
-            <select v-model="selectedSeason" @change="load" class="input w-52" title="Choisir une saison">
-              <option v-for="s in seasons" :key="s.id" :value="s.id">{{ s.name }}</option>
-            </select>
-          </div>
+    <div class="page-wrap panel-membre-wrap">
+
+      <!-- ── Hero profil ── -->
+      <div class="profil-hero reveal">
+        <div class="profil-avatar">
+          <span class="profil-avatar-letter">{{ (linkedPlayerId[0] || '?').toUpperCase() }}</span>
+          <div class="profil-avatar-ring" />
         </div>
-      </section>
+        <div class="profil-hero-info">
+          <h1 class="profil-name">{{ linkedPlayerId || 'Mon espace' }}</h1>
+          <p class="profil-sub">Membre GOUZEPE Gaming Club</p>
+        </div>
+        <div class="profil-hero-right">
+          <select v-model="selectedSeason" @change="load" class="input w-44 text-sm">
+            <option v-for="s in seasons" :key="s.id" :value="s.id">{{ s.name }}</option>
+          </select>
+        </div>
+      </div>
 
-      <section v-if="loading" class="card reveal delay-1 text-gz-muted text-sm py-10 text-center">
-        Chargement...
-      </section>
+      <!-- ── Loading ── -->
+      <div v-if="loading" class="profil-loading reveal delay-1">
+        <div class="profil-spinner" />
+        <span>Chargement…</span>
+      </div>
 
-      <section v-else-if="!stats" class="card reveal delay-1 text-gz-muted text-sm py-10 text-center">
-        Votre compte n'est lie a aucun joueur. Contactez un administrateur.
-      </section>
+      <!-- ── Pas de joueur lié ── -->
+      <div v-else-if="!stats" class="profil-unlinked reveal delay-1">
+        <p class="text-gz-muted text-sm">Votre compte n'est lié à aucun joueur. Contactez un administrateur.</p>
+      </div>
 
       <template v-else>
-        <section v-if="myRank" class="card reveal delay-1 rank-card">
-          <h3 class="font-semibold text-gz-text mb-3">Position au classement</h3>
-          <div class="rank-main">
-            <div class="rank-value">#{{ myRank.rank }}</div>
-            <div class="rank-meta">
-              <div class="text-sm text-gz-muted">{{ myRank.division }}</div>
-              <div class="text-sm text-gz-text">{{ myRank.points }} pts • {{ myRank.played }} matchs</div>
+
+        <!-- ── Rang + KPIs ── -->
+        <div class="profil-top-grid reveal delay-1">
+
+          <!-- Rang saison -->
+          <div v-if="myRank" class="rank-showcase">
+            <div class="rank-showcase-bg" />
+            <span class="rank-label">Rang saison</span>
+            <div class="rank-num">#{{ myRank.rank }}</div>
+            <div class="rank-detail">
+              <span class="rank-pts">{{ myRank.points }} pts</span>
+              <span class="rank-sep">·</span>
+              <span class="rank-played">{{ myRank.played }} participations</span>
             </div>
           </div>
-        </section>
 
-        <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 reveal delay-1">
-          <div v-for="kpi in kpis" :key="kpi.label" class="card text-center kpi-card">
-            <div :class="['text-2xl font-bold mb-0.5', kpi.color]">{{ kpi.value }}</div>
-            <div class="text-xs text-gz-muted uppercase tracking-wide">{{ kpi.label }}</div>
+          <!-- KPIs -->
+          <div class="kpi-grid">
+            <div v-for="kpi in kpis" :key="kpi.label" class="kpi-tile">
+              <div class="kpi-icon-wrap" :style="`background:${kpi.bg}`">
+                <component :is="kpi.icon" class="w-5 h-5" :style="`color:${kpi.accent}`" />
+              </div>
+              <div :class="['kpi-val', kpi.valClass]">{{ kpi.value }}</div>
+              <div class="kpi-label">{{ kpi.label }}</div>
+            </div>
           </div>
-        </section>
+        </div>
 
-        <section class="grid grid-cols-1 xl:grid-cols-2 gap-4 reveal delay-2">
-          <div class="card">
-            <h3 class="font-semibold text-gz-text mb-4">Statistiques</h3>
-            <div class="space-y-1">
-              <div
-                v-for="row in statRows"
-                :key="row.label"
-                class="flex justify-between items-center py-2 border-b border-gz-border/35 last:border-0"
-              >
-                <span class="text-sm text-gz-muted">{{ row.label }}</span>
-                <span :class="['text-sm font-semibold', row.color || 'text-gz-text']">{{ row.value }}</span>
+        <!-- ── Stats + Forme ── -->
+        <div class="profil-bottom-grid reveal delay-2">
+
+          <!-- Stats détaillées -->
+          <div class="profil-card">
+            <h3 class="profil-card-title">Statistiques</h3>
+            <div class="stat-list">
+              <div v-for="row in statRows" :key="row.label" class="stat-row">
+                <span class="stat-label">{{ row.label }}</span>
+                <div class="stat-bar-wrap">
+                  <div v-if="row.pct != null" class="stat-bar">
+                    <div class="stat-bar-fill" :style="`width:${row.pct}%;background:${row.accent || 'var(--green)'}`" />
+                  </div>
+                </div>
+                <span :class="['stat-val', row.valClass]">{{ row.value }}</span>
               </div>
             </div>
           </div>
 
-          <div class="card">
-            <h3 class="font-semibold text-gz-text mb-4">Forme recente</h3>
-            <div v-if="!recentMatches.length" class="text-gz-muted text-sm">Aucun match recent.</div>
-            <div v-else class="space-y-2">
-              <div
-                v-for="m in recentMatches"
-                :key="m.id"
-                class="recent-match border border-gz-border/40 rounded-lg bg-gz-panel"
-              >
-                <div class="recent-top">
-                  <div class="text-xs text-gz-muted">{{ fmtDate(m.match_date) }}</div>
-                  <div class="text-[11px] text-gz-muted">{{ m.division }} - {{ m.leg }}</div>
-                </div>
-                <div class="recent-main">
-                  <span class="text-sm font-semibold truncate">Moi</span>
-                  <span class="recent-score">{{ m.gf }} - {{ m.ga }}</span>
-                  <span class="text-sm font-semibold truncate text-right">{{ m.opponent_name }}</span>
-                  <BaseBadge :variant="matchResultVariant(m)">{{ matchResultLabel(m) }}</BaseBadge>
-                </div>
+          <!-- Forme récente -->
+          <div class="profil-card">
+            <h3 class="profil-card-title">Forme récente</h3>
+            <!-- Mini sparkline W/D/L -->
+            <div v-if="recentMatches.length" class="form-strip">
+              <span v-for="m in recentMatches.slice(0,10)" :key="m.id"
+                    :class="['form-dot', m.gf > m.ga ? 'dot-w' : m.gf < m.ga ? 'dot-l' : 'dot-d']"
+                    :title="`${m.gf}-${m.ga} vs ${m.opponent_name}`">
+                {{ m.gf > m.ga ? 'V' : m.gf < m.ga ? 'D' : 'N' }}
+              </span>
+            </div>
+            <div v-if="!recentMatches.length" class="text-gz-muted text-sm py-4">Aucun match récent.</div>
+            <div v-else class="match-list">
+              <div v-for="m in recentMatches.slice(0,8)" :key="m.id" class="match-row">
+                <span class="match-date">{{ fmtDate(m.match_date) }}</span>
+                <span :class="['match-badge', m.gf > m.ga ? 'badge-w' : m.gf < m.ga ? 'badge-l' : 'badge-d']">
+                  {{ m.gf > m.ga ? 'V' : m.gf < m.ga ? 'D' : 'N' }}
+                </span>
+                <span class="match-vs">vs {{ m.opponent_name }}</span>
+                <span class="match-score">{{ m.gf }} – {{ m.ga }}</span>
+                <span class="match-div">{{ m.division }}</span>
               </div>
             </div>
           </div>
-        </section>
+
+        </div><!-- /profil-bottom-grid -->
+
       </template>
     </div>
   </AppLayout>
@@ -89,8 +113,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import BaseBadge from '@/components/ui/BaseBadge.vue'
 import { useAPI } from '@/composables/useAPI'
+import { SwordsIcon, TrophyIcon, MinusIcon, XIcon, TargetIcon, ShieldIcon } from 'lucide-vue-next'
 
 const api = useAPI()
 
@@ -236,24 +260,28 @@ const kpis = computed(() => {
   if (!stats.value) return []
   const s = stats.value
   return [
-    { label: 'Matchs joues', value: s.played ?? 0, color: 'text-gz-text' },
-    { label: 'Victoires', value: s.wins ?? 0, color: 'text-gz-green' },
-    { label: 'Nuls', value: s.draws ?? 0, color: 'text-gz-muted' },
-    { label: 'Defaites', value: s.losses ?? 0, color: 'text-[var(--blue-l)]' },
+    { label: 'Matchs joués', value: s.played ?? 0, icon: SwordsIcon, bg: 'rgba(95,141,255,.12)', accent: '#5f8dff', valClass: 'text-gz-text' },
+    { label: 'Victoires',    value: s.wins ?? 0,   icon: TrophyIcon,  bg: 'rgba(34,197,94,.12)', accent: '#22c55e', valClass: 'kpi-green' },
+    { label: 'Nuls',         value: s.draws ?? 0,  icon: MinusIcon,   bg: 'rgba(148,163,184,.1)', accent: 'var(--muted)', valClass: 'text-gz-muted' },
+    { label: 'Défaites',     value: s.losses ?? 0, icon: XIcon,       bg: 'rgba(212,60,73,.1)',   accent: '#d43c49', valClass: 'kpi-red' },
+    { label: 'Buts marqués', value: s.goals_for ?? 0, icon: TargetIcon, bg: 'rgba(251,191,36,.1)', accent: '#fbbf24', valClass: 'kpi-amber' },
+    { label: 'Buts encaissés', value: s.goals_against ?? 0, icon: ShieldIcon, bg: 'rgba(148,163,184,.08)', accent: 'var(--muted)', valClass: 'text-gz-muted' },
   ]
 })
 
 const statRows = computed(() => {
   if (!stats.value) return []
   const s = stats.value
-  const avgFor = s.played ? ((s.goals_for || 0) / s.played).toFixed(2) : '-'
-  const avgAga = s.played ? ((s.goals_against || 0) / s.played).toFixed(2) : '-'
+  const total = (s.wins ?? 0) + (s.draws ?? 0) + (s.losses ?? 0) || 1
+  const avgFor = s.played ? ((s.goals_for || 0) / s.played).toFixed(2) : '0'
+  const avgAga = s.played ? ((s.goals_against || 0) / s.played).toFixed(2) : '0'
+  const winRate = Math.round(((s.wins ?? 0) / total) * 100)
   return [
-    { label: 'Buts marques', value: s.goals_for ?? '-' },
-    { label: 'Buts encaisses', value: s.goals_against ?? '-' },
-    { label: 'Moy. buts +', value: avgFor },
-    { label: 'Moy. buts -', value: avgAga },
-    { label: 'Points saison', value: s.points ?? '-', color: 'text-gz-green' },
+    { label: 'Win rate',        value: winRate + '%',    pct: winRate,                               accent: '#22c55e', valClass: 'stat-green' },
+    { label: 'Points saison',   value: s.points ?? 0,   pct: Math.min(100, (s.points ?? 0) / 2),   accent: '#22c55e', valClass: 'stat-green' },
+    { label: 'Moy. buts +',     value: avgFor,           pct: Math.min(100, parseFloat(avgFor)*14),  accent: '#fbbf24' },
+    { label: 'Moy. buts -',     value: avgAga,           pct: Math.min(100, parseFloat(avgAga)*14),  accent: '#d43c49' },
+    { label: 'Diff. de buts',   value: (s.goals_for ?? 0) - (s.goals_against ?? 0), pct: null, valClass: (s.goals_for ?? 0) >= (s.goals_against ?? 0) ? 'stat-green' : 'stat-red' },
   ]
 })
 
@@ -278,58 +306,128 @@ function matchResultLabel(m) {
 </script>
 
 <style scoped>
-.panel-membre-wrap :deep(.card) {
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+/* ── Hero profil ── */
+.panel-membre-wrap { display: flex; flex-direction: column; gap: 1.25rem; }
+.profil-hero {
+  display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  border: 1px solid rgba(148,163,184,.14); border-radius: 20px; padding: 1.5rem 1.75rem;
 }
-
-.panel-membre-wrap :deep(.card:hover) {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(2, 6, 23, 0.2);
-  border-color: color-mix(in srgb, var(--border) 68%, var(--blue) 32%);
+.profil-avatar {
+  position: relative; flex-shrink: 0;
+  width: 64px; height: 64px; border-radius: 18px;
+  background: linear-gradient(135deg, rgba(34,197,94,.25), rgba(95,141,255,.2));
+  display: flex; align-items: center; justify-content: center;
 }
-
-.kpi-card {
-  min-height: 94px;
-  display: grid;
-  place-content: center;
+.profil-avatar-letter { font-size: 1.6rem; font-weight: 900; color: #22c55e; }
+.profil-avatar-ring {
+  position: absolute; inset: -3px; border-radius: 21px;
+  border: 2px solid rgba(34,197,94,.35);
+  animation: ringPulse 3s ease-in-out infinite;
 }
+@keyframes ringPulse { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.03)} }
+.profil-hero-info { flex: 1; }
+.profil-name { font-size: 1.3rem; font-weight: 800; font-family: var(--font-title); line-height: 1.1; }
+.profil-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+.profil-hero-right { margin-left: auto; }
 
-.rank-card {
-  margin-bottom: 0.25rem;
+.profil-loading { display: flex; align-items: center; gap: .75rem; color: var(--muted); font-size: .88rem; padding: 2rem; }
+.profil-spinner { width: 24px; height: 24px; border: 2px solid rgba(34,197,94,.2); border-top-color: #22c55e; border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.profil-unlinked { padding: 2.5rem; text-align: center; }
+
+/* ── Rank + KPIs ── */
+.profil-top-grid { display: grid; grid-template-columns: 200px 1fr; gap: 1.25rem; align-items: start; }
+@media(max-width:768px) { .profil-top-grid { grid-template-columns: 1fr; } }
+
+.rank-showcase {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, rgba(34,197,94,.12), rgba(34,197,94,.04));
+  border: 1px solid rgba(34,197,94,.25); border-radius: 18px;
+  padding: 1.5rem; text-align: center; min-height: 160px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem;
 }
-
-.rank-main {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
+.rank-showcase-bg {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle, rgba(34,197,94,.08) 0%, transparent 70%);
+  pointer-events: none;
 }
+.rank-label { font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: rgba(34,197,94,.7); }
+.rank-num { font-size: 3rem; font-weight: 900; color: #22c55e; line-height: 1; font-family: var(--font-title); }
+.rank-detail { display: flex; gap: .4rem; align-items: center; font-size: .78rem; color: var(--muted); }
+.rank-pts { font-weight: 700; color: var(--text); }
+.rank-sep { color: var(--muted); }
+.rank-played { }
 
-.rank-value {
-  font-size: 2.1rem;
-  line-height: 1;
-  font-weight: 800;
-  color: var(--green);
+.kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+@media(max-width:480px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+.kpi-tile {
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+  border: 1px solid rgba(148,163,184,.12); border-radius: 14px;
+  padding: .9rem; display: flex; flex-direction: column; gap: .3rem;
+  transition: border-color .2s, transform .2s;
 }
+.kpi-tile:hover { border-color: rgba(148,163,184,.25); transform: translateY(-1px); }
+.kpi-icon-wrap { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-bottom: .1rem; }
+.kpi-val { font-size: 1.5rem; font-weight: 900; line-height: 1; }
+.kpi-label { font-size: .65rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
+.kpi-green { color: #22c55e; }
+.kpi-red { color: #d43c49; }
+.kpi-amber { color: #fbbf24; }
 
-.recent-match {
-  padding: 0.58rem 0.75rem;
+/* ── Bottom grid ── */
+.profil-bottom-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; }
+.profil-card {
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+  border: 1px solid rgba(148,163,184,.12); border-radius: 18px; padding: 1.25rem 1.5rem;
 }
+.profil-card-title { font-size: .8rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 1rem; }
 
-.recent-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.35rem;
+/* Stats avec barres */
+.stat-list { display: flex; flex-direction: column; gap: .7rem; }
+.stat-row { display: grid; grid-template-columns: 110px 1fr 60px; align-items: center; gap: .6rem; }
+.stat-label { font-size: .78rem; color: var(--muted); }
+.stat-bar-wrap { flex: 1; }
+.stat-bar { height: 5px; background: rgba(148,163,184,.12); border-radius: 99px; overflow: hidden; }
+.stat-bar-fill { height: 100%; border-radius: 99px; transition: width .6s ease; }
+.stat-val { font-size: .88rem; font-weight: 700; text-align: right; }
+.stat-green { color: #22c55e; }
+.stat-red { color: #d43c49; }
+
+/* Forme récente */
+.form-strip { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .85rem; }
+.form-dot {
+  width: 26px; height: 26px; border-radius: 7px;
+  font-size: .68rem; font-weight: 800; display: flex; align-items: center; justify-content: center; cursor: default;
 }
+.dot-w { background: rgba(34,197,94,.15); color: #22c55e; }
+.dot-d { background: rgba(148,163,184,.12); color: var(--muted); }
+.dot-l { background: rgba(212,60,73,.12); color: #d43c49; }
 
-.recent-main {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.5rem;
+.match-list { display: flex; flex-direction: column; gap: .35rem; }
+.match-row {
+  display: grid; grid-template-columns: 70px 22px 1fr 60px 28px;
+  align-items: center; gap: .5rem;
+  padding: .4rem .5rem; border-radius: 8px;
+  background: rgba(148,163,184,.04);
+  font-size: .78rem; transition: background .12s;
 }
+.match-row:hover { background: rgba(148,163,184,.08); }
+.match-date { color: var(--muted); font-size: .72rem; }
+.match-badge { width: 20px; height: 20px; border-radius: 5px; font-size: .65rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.badge-w { background: rgba(34,197,94,.15); color: #22c55e; }
+.badge-d { background: rgba(148,163,184,.12); color: var(--muted); }
+.badge-l { background: rgba(212,60,73,.12); color: #d43c49; }
+.match-vs { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.match-score { font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
+.match-div { font-size: .65rem; color: var(--muted); text-align: right; }
 
+.reveal { animation: riseIn .4s ease both; }
+.delay-1 { animation-delay: 80ms; }
+.delay-2 { animation-delay: 160ms; }
+@keyframes riseIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+/* ancien compat */
 .recent-score {
   font-size: 0.96rem;
   font-weight: 800;

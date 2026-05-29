@@ -10,25 +10,33 @@
               <TrophyIcon class="w-8 h-8 text-gz-muted/40 mx-auto mb-2" />
               <p class="text-gz-muted text-xs text-center">Aucun tournoi actif pour le moment.</p>
             </div>
-            <div v-else class="space-y-1 sidebar-scroll pr-1">
+            <div v-else class="space-y-1.5 sidebar-scroll pr-1">
               <button
                 v-for="t in tournaments"
                 :key="t.id"
                 @click="selectTournament(t)"
                 :class="[
-                  'w-full text-left px-3 py-2.5 rounded-lg border transition-all text-sm',
+                  'w-full text-left px-3 py-2.5 rounded-xl border transition-all duration-200 relative overflow-hidden',
                   selected?.id === t.id
-                    ? 'border-gz-green/50 bg-gz-green/8 text-gz-text shadow-sm'
-                    : 'border-transparent hover:border-gz-border hover:bg-gz-card text-gz-muted hover:text-gz-text'
+                    ? 'border-gz-green/40 bg-gz-green/8 text-gz-text shadow-sm'
+                    : 'border-gz-border/30 hover:border-gz-green/25 hover:bg-gz-card text-gz-muted hover:text-gz-text'
                 ]"
-                :title="`Ouvrir ${t.name}`"
               >
-                <div class="font-medium truncate">{{ t.name }}</div>
-                <div class="flex items-center gap-2 mt-0.5">
-                  <BaseBadge :variant="statusVariant(t.status)" class="text-[10px]">
-                    {{ statusLabel(t.status) }}
-                  </BaseBadge>
-                  <span class="text-xs text-gz-muted">{{ formatLabel(t.format) }}</span>
+                <!-- Indicateur live -->
+                <span v-if="t.status === 'live'"
+                  class="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-gz-green animate-pulse" />
+                <div class="font-semibold truncate text-sm pr-4">{{ t.name }}</div>
+                <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span :class="[
+                    'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                    t.status === 'live' ? 'bg-gz-green/15 text-gz-green' :
+                    t.status === 'completed' ? 'bg-gz-muted/10 text-gz-muted' :
+                    'bg-gz-blue/15 text-gz-blue'
+                  ]">{{ statusLabel(t.status) }}</span>
+                  <span class="text-[10px] text-gz-muted">{{ formatLabel(t.format) }}</span>
+                  <span v-if="t.winner_name && t.status === 'completed'" class="text-[10px] text-gz-amber font-semibold ml-auto">
+                    🏆 {{ t.winner_name }}
+                  </span>
                 </div>
               </button>
             </div>
@@ -69,53 +77,64 @@
         </aside>
 
         <main class="min-w-0 space-y-4">
-          <section v-if="!selected" class="card reveal delay-1 empty-main">
+          <section v-if="!selected" class="empty-main reveal delay-1">
             <div class="empty-main-inner">
               <div class="empty-trophy-wrap">
-                <TrophyIcon class="w-14 h-14 text-gz-muted/20" />
+                <TrophyIcon class="w-16 h-16" style="color:rgba(34,197,94,.25)" />
                 <div class="empty-trophy-glow" />
               </div>
-              <h2 class="text-lg font-bold text-gz-text mt-4 mb-1">Tournois GOUZEPE</h2>
-              <p class="text-sm text-gz-muted max-w-xs text-center">
-                Sélectionne un tournoi dans la liste pour voir le bracket, les scores et le classement final.
+              <h2 class="text-xl font-bold mt-5 mb-2">Tournois GOUZEPE</h2>
+              <p class="text-sm text-gz-muted max-w-sm text-center leading-relaxed">
+                Sélectionne un tournoi dans la liste pour afficher le bracket, les scores et le classement final.
               </p>
-              <div v-if="!tournaments.length" class="mt-6 flex flex-wrap gap-2 justify-center">
+              <!-- Chips de tournois récents -->
+              <div v-if="tournaments.length" class="mt-6 flex flex-wrap gap-2 justify-center">
+                <button
+                  v-for="t in tournaments.slice(0, 5)"
+                  :key="t.id"
+                  @click="selectTournament(t)"
+                  class="quick-pick-btn"
+                >
+                  <span v-if="t.status === 'live'" class="w-1.5 h-1.5 rounded-full bg-gz-green animate-pulse inline-block mr-1" />
+                  {{ t.name }}
+                </button>
+              </div>
+              <div v-else class="mt-6 flex flex-wrap gap-2 justify-center">
                 <span class="format-chip">Élimination simple</span>
                 <span class="format-chip">Double élimination</span>
                 <span class="format-chip">Round Robin</span>
                 <span class="format-chip">Groupes + Finales</span>
               </div>
-              <div v-else class="mt-4 flex flex-wrap gap-2 justify-center">
-                <button
-                  v-for="t in tournaments.slice(0, 4)"
-                  :key="t.id"
-                  @click="selectTournament(t)"
-                  class="format-chip format-chip-btn"
-                >
-                  {{ t.name }}
-                </button>
-              </div>
             </div>
           </section>
 
           <template v-else>
-            <section class="card reveal delay-1">
-              <div class="flex items-start justify-between flex-wrap gap-3">
-                <div>
-                  <h1 class="text-xl font-bold text-gz-text">{{ selected.name }}</h1>
-                  <div class="flex items-center gap-2 mt-1 flex-wrap">
-                    <BaseBadge :variant="statusVariant(selected.status)">
-                      {{ statusLabel(selected.status) }}
-                    </BaseBadge>
-                    <span class="text-sm text-gz-muted">{{ formatLabel(selected.format) }}</span>
-                    <span v-if="selected.format === 'round_robin'" class="text-sm text-gz-muted">
-                      • {{ rrMatchModeLabel(selected.rr_match_mode) }} • {{ rrStandingsModeLabel(selected.rr_standings_mode) }}
-                    </span>
-                    <span v-if="selected.participants?.length" class="text-sm text-gz-muted">
-                      • {{ selected.participants.length }} participants
-                    </span>
-                  </div>
-                </div>
+            <section class="tournament-header-card reveal delay-1">
+              <div class="th-top">
+                <!-- Statut badge -->
+                <span :class="[
+                  'th-status-badge',
+                  selected.status === 'live' ? 'th-live' :
+                  selected.status === 'completed' ? 'th-done' : 'th-draft'
+                ]">
+                  <span v-if="selected.status === 'live'" class="th-live-dot" />
+                  {{ statusLabel(selected.status) }}
+                </span>
+                <span class="th-format">{{ formatLabel(selected.format) }}
+                  <template v-if="selected.format === 'round_robin'">
+                    &nbsp;·&nbsp;{{ rrMatchModeLabel(selected.rr_match_mode) }}
+                  </template>
+                </span>
+                <span v-if="selected.participants?.length" class="th-participants">
+                  {{ selected.participants.length }} participants
+                </span>
+              </div>
+              <h1 class="th-title">{{ selected.name }}</h1>
+              <!-- Vainqueur si terminé -->
+              <div v-if="selected.winner_name && selected.status === 'completed'" class="th-winner">
+                <span class="th-winner-crown">🏆</span>
+                <span class="th-winner-label">Vainqueur</span>
+                <span class="th-winner-name">{{ selected.winner_name }}</span>
               </div>
             </section>
 
@@ -753,11 +772,56 @@ function playedOf(s) {
   padding: 1.5rem 0.5rem;
 }
 
+/* ── Quick pick buttons ── */
+.quick-pick-btn {
+  font-size: 0.78rem; font-weight: 600;
+  padding: 0.35rem 0.85rem; border-radius: 99px;
+  border: 1px solid rgba(148,163,184,.25);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  color: var(--muted); cursor: pointer;
+  transition: border-color .2s, color .2s, background .2s;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+}
+.quick-pick-btn:hover { border-color: rgba(34,197,94,.4); color: var(--text); background: rgba(34,197,94,.07); }
+
+/* ── Tournament header card ── */
+.tournament-header-card {
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  border: 1px solid rgba(148,163,184,.15);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+}
+.th-top { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.th-status-badge {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 3px 10px; border-radius: 99px;
+}
+.th-live { background: rgba(34,197,94,.12); color: #22c55e; }
+.th-done { background: rgba(148,163,184,.1); color: var(--muted); }
+.th-draft { background: rgba(95,141,255,.12); color: #5f8dff; }
+.th-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.th-format { font-size: 0.78rem; color: var(--muted); }
+.th-participants { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+.th-title { font-size: 1.35rem; font-weight: 800; font-family: var(--font-title); margin-bottom: 0.5rem; }
+.th-winner {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.2);
+  border-radius: 10px; padding: 0.4rem 0.85rem; font-size: 0.85rem;
+}
+.th-winner-crown { font-size: 1rem; }
+.th-winner-label { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+.th-winner-name { font-weight: 800; color: #fbbf24; }
+
 .empty-main {
-  min-height: 380px;
+  min-height: 420px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: color-mix(in srgb, var(--panel) 60%, transparent);
+  border: 1px dashed rgba(148,163,184,.15);
+  border-radius: 20px;
 }
 
 .empty-main-inner {
