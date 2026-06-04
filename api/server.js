@@ -2544,17 +2544,36 @@ app.get('/players/search', auth, async (req,res)=>{
 /* Confrontations head-to-head entre deux joueurs (depuis les journées) */
 /* ====== Routes publiques (sans authentification) ====== */
 
-// Tournois en cours / récents (public)
+// Tournois en cours / récents (public) — avec podium et nb participants
 app.get('/public/tournaments', async (_req, res) => {
   const r = await q(`
-    SELECT id, slug, name, format, status, starts_at, winner_name,
-           rr_match_mode, member_tournament, counts_for_title
-    FROM tournaments
-    WHERE status IN ('live','completed')
-    ORDER BY COALESCE(starts_at, created_at) DESC
-    LIMIT 10
+    SELECT t.id, t.slug, t.name, t.format, t.status,
+           t.starts_at, t.ended_at, t.winner_name,
+           t.rr_match_mode, t.member_tournament, t.counts_for_title,
+           (SELECT COUNT(*) FROM tournament_participants tp WHERE tp.tournament_id = t.id) AS participants_count
+    FROM tournaments t
+    WHERE t.status IN ('live','completed')
+    ORDER BY COALESCE(t.starts_at, t.created_at) DESC
+    LIMIT 12
   `)
-  ok(res, { tournaments: r.rows })
+
+  // Pour chaque tournoi, récupérer le top 3 du classement
+  const tournaments = []
+  for (const t of r.rows) {
+    const entry = { ...t, participants_count: Number(t.participants_count || 0), podium: [] }
+
+    if (t.status === 'completed' || t.status === 'live') {
+      try {
+        const parts = await q(`SELECT id, display_name, player_id, seed FROM tournament_participants WHERE tournament_id=$1 ORDER BY seed ASC NULLS LAST, id ASC`, [t.id])
+        const matches = await q(`SELECT id, round_no, slot_no, p1_participant_id, p2_participant_id, score_p1, score_p2, winner_participant_id, status, bracket_side FROM tournament_matches WHERE tournament_id=$1 ORDER BY round_no ASC, slot_no ASC`, [t.id])
+        const ranking = rankTournamentParticipants(t, parts.rows, matches.rows)
+        entry.podium = ranking.slice(0, 3).map(r => ({ rank: r.rank, name: r.display_name, player_id: r.player_id }))
+      } catch (_) {}
+    }
+    tournaments.push(entry)
+  }
+
+  ok(res, { tournaments })
 })
 
 // Dernière journée confirmée (public) — classements D1 et D2 complets
