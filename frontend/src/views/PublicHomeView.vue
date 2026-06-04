@@ -85,29 +85,29 @@
       </div>
     </section>
 
-    <!-- ═══ JOURNÉE EN COURS ═══ -->
+    <!-- ═══ JOURNÉE ═══ -->
     <section id="journee" class="pub-section">
       <div class="pub-section-inner">
         <div class="section-label">
           <div class="section-label-line" />
-          <span>Résultats</span>
+          <span>Dernière journée</span>
           <div class="section-label-line" />
         </div>
-        <h2 class="section-title">Journée en cours</h2>
 
-        <div v-if="loadingDay" class="pub-loading-spinner">
-          <div class="spinner" />
-        </div>
+        <div v-if="loadingDay" class="pub-loading-spinner"><div class="spinner" /></div>
 
         <template v-else-if="latestDay">
-          <!-- Date + Champions -->
-          <div class="day-meta">
-            <div class="day-date-tag">{{ fmtDate(latestDay.day) }}</div>
-            <div class="day-champions">
+          <!-- En-tête : date + statut terminé + champions -->
+          <div class="day-header-row">
+            <div class="day-header-left">
+              <div class="day-terminated-badge">Journée terminée</div>
+              <h2 class="section-title mb-0">{{ fmtDate(latestDay.day) }}</h2>
+            </div>
+            <div class="day-champions-row">
               <div v-if="latestDay.champions?.d1?.id" class="champ-card">
                 <span class="champ-crown">👑</span>
                 <div class="champ-info">
-                  <span class="champ-div">Champion D1</span>
+                  <span class="champ-div">D1</span>
                   <span class="champ-name">{{ latestDay.champions.d1.id }}</span>
                   <span v-if="latestDay.champions.d1.team" class="champ-team">{{ latestDay.champions.d1.team }}</span>
                 </div>
@@ -115,7 +115,7 @@
               <div v-if="latestDay.champions?.d2?.id" class="champ-card champ-d2">
                 <span class="champ-crown">🥇</span>
                 <div class="champ-info">
-                  <span class="champ-div">Champion D2</span>
+                  <span class="champ-div">D2</span>
                   <span class="champ-name">{{ latestDay.champions.d2.id }}</span>
                   <span v-if="latestDay.champions.d2.team" class="champ-team">{{ latestDay.champions.d2.team }}</span>
                 </div>
@@ -123,59 +123,99 @@
             </div>
           </div>
 
-          <!-- Tables D1 / D2 -->
-          <div class="standings-grid">
-            <div v-for="(div, key) in { D1: latestDay.d1, D2: latestDay.d2 }" :key="key" class="standings-card">
-              <div class="standings-card-header">
-                <span class="standings-div-badge" :class="key === 'D1' ? 'badge-d1' : 'badge-d2'">{{ key }}</span>
-                <span class="standings-title">Division {{ key === 'D1' ? '1' : '2' }}</span>
+          <!-- Résultats + Classements par division -->
+          <div class="day-divisions-pub">
+            <div v-for="(cfg, i) in [
+              { key:'D1', standings: latestDay.d1, results: latestDay.results_d1 },
+              { key:'D2', standings: latestDay.d2, results: latestDay.results_d2 }
+            ]" :key="cfg.key" class="day-div-block">
+
+              <div class="day-div-title-bar" :class="i===0 ? 'bar-d1' : 'bar-d2'">
+                <span class="day-div-tag">{{ cfg.key }}</span>
+                <span>Division {{ i+1 }}</span>
+                <span class="day-div-count">{{ cfg.results?.length || 0 }} résultat(s)</span>
               </div>
-              <template v-if="div?.members?.length">
-                <div class="standings-scroll">
-                  <table class="st-table">
-                    <thead>
-                      <tr>
-                        <th class="th-rank">#</th>
-                        <th class="th-name">Joueur</th>
-                        <th>J</th><th class="th-v">V</th><th>N</th><th class="th-d">D</th>
-                        <th>Diff</th><th class="th-pts">Pts</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="r in div.members" :key="r.id" class="st-row" :class="r.rank === 1 ? 'row-champ' : ''">
-                        <td class="td-rank">
-                          <span v-if="r.rank === 1" class="rank-gold">1</span>
-                          <span v-else-if="r.rank === 2" class="rank-silver">2</span>
-                          <span v-else-if="r.rank === 3" class="rank-bronze">3</span>
-                          <span v-else class="rank-num">{{ r.rank }}</span>
-                        </td>
-                        <td class="td-name">{{ r.id }}</td>
-                        <td>{{ r.J }}</td>
-                        <td class="td-v">{{ r.V }}</td>
-                        <td>{{ r.N }}</td>
-                        <td class="td-d">{{ r.D }}</td>
-                        <td :class="r.DIFF > 0 ? 'td-pos' : r.DIFF < 0 ? 'td-neg' : ''">{{ r.DIFF > 0 ? '+' : '' }}{{ r.DIFF }}</td>
-                        <td class="td-pts">{{ r.PTS }}</td>
-                      </tr>
-                      <tr v-if="div.guests?.length" class="invite-sep-row">
-                        <td colspan="8">Invités</td>
-                      </tr>
-                      <tr v-for="r in div.guests" :key="'g'+r.id" class="st-row invite-row">
-                        <td class="td-rank">—</td>
-                        <td class="td-name">{{ r.id }}</td>
-                        <td>{{ r.J }}</td>
-                        <td class="td-v">{{ r.V }}</td>
-                        <td>{{ r.N }}</td>
-                        <td class="td-d">{{ r.D }}</td>
-                        <td>{{ r.DIFF > 0 ? '+' : '' }}{{ r.DIFF }}</td>
-                        <td class="td-pts">{{ r.PTS }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+
+              <!-- Onglets Classement / Scores -->
+              <div class="day-div-tabs">
+                <button :class="['day-tab', activeTab[cfg.key] !== 'scores' ? 'day-tab-active' : '']"
+                        @click="activeTab[cfg.key] = 'classement'">Classement</button>
+                <button :class="['day-tab', activeTab[cfg.key] === 'scores' ? 'day-tab-active' : '']"
+                        @click="activeTab[cfg.key] = 'scores'">Scores</button>
+              </div>
+
+              <!-- Classement -->
+              <template v-if="activeTab[cfg.key] !== 'scores'">
+                <template v-if="cfg.standings?.members?.length">
+                  <div class="standings-scroll">
+                    <table class="st-table">
+                      <thead>
+                        <tr><th class="th-rank">#</th><th class="th-name">Joueur</th><th>J</th><th class="th-v">V</th><th>N</th><th class="th-d">D</th><th>Diff</th><th class="th-pts">Pts</th></tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="r in cfg.standings.members" :key="r.id" class="st-row" :class="r.rank===1?'row-champ':''">
+                          <td class="td-rank">
+                            <span v-if="r.rank===1" class="rank-gold">1</span>
+                            <span v-else-if="r.rank===2" class="rank-silver">2</span>
+                            <span v-else-if="r.rank===3" class="rank-bronze">3</span>
+                            <span v-else class="rank-num">{{ r.rank }}</span>
+                          </td>
+                          <td class="td-name">{{ r.id }}</td>
+                          <td>{{ r.J }}</td><td class="td-v">{{ r.V }}</td><td>{{ r.N }}</td><td class="td-d">{{ r.D }}</td>
+                          <td :class="r.DIFF>0?'td-pos':r.DIFF<0?'td-neg':''">{{ r.DIFF>0?'+':'' }}{{ r.DIFF }}</td>
+                          <td class="td-pts">{{ r.PTS }}</td>
+                        </tr>
+                        <tr v-if="cfg.standings.guests?.length"><td colspan="8" class="invite-sep-row">Invités</td></tr>
+                        <tr v-for="r in cfg.standings.guests" :key="'g'+r.id" class="st-row invite-row">
+                          <td class="td-rank">—</td><td class="td-name">{{ r.id }}</td>
+                          <td>{{ r.J }}</td><td class="td-v">{{ r.V }}</td><td>{{ r.N }}</td><td class="td-d">{{ r.D }}</td>
+                          <td>{{ r.DIFF>0?'+':'' }}{{ r.DIFF }}</td><td class="td-pts">{{ r.PTS }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </template>
+                <div v-else class="standings-empty">Aucun résultat {{ cfg.key }}.</div>
               </template>
-              <div v-else class="standings-empty">Aucun résultat {{ key }}.</div>
+
+              <!-- Scores des matchs -->
+              <template v-else>
+                <div v-if="cfg.results?.length" class="results-list">
+                  <div v-for="(m, mi) in cfg.results" :key="mi" class="result-row">
+                    <span class="res-player" :class="scoreClass(m.a1,m.a2,'left')">{{ m.p1 }}</span>
+                    <div class="res-scores">
+                      <span v-if="m.a1!=null" class="res-score-pair">
+                        <span :class="['res-s',scoreClass(m.a1,m.a2,'left')]">{{ m.a1 }}</span>
+                        <span class="res-dash">–</span>
+                        <span :class="['res-s',scoreClass(m.a1,m.a2,'right')]">{{ m.a2 }}</span>
+                      </span>
+                      <span v-if="m.r1!=null" class="res-score-pair res-retour">
+                        <span :class="['res-s',scoreClass(m.r2,m.r1,'left')]">{{ m.r2 }}</span>
+                        <span class="res-dash">–</span>
+                        <span :class="['res-s',scoreClass(m.r2,m.r1,'right')]">{{ m.r1 }}</span>
+                      </span>
+                    </div>
+                    <span class="res-player res-right" :class="scoreClass(m.a1,m.a2,'right')">{{ m.p2 }}</span>
+                  </div>
+                </div>
+                <div v-else class="standings-empty">Aucun score enregistré.</div>
+              </template>
             </div>
+          </div>
+
+          <!-- Barrage -->
+          <div v-if="latestDay.barrage?.ids && latestDay.barrage.ids !== ''" class="barrage-section">
+            <div class="barrage-header">
+              <span class="barrage-label">Barrage D2 ↔ D1</span>
+              <span class="barrage-ids">{{ latestDay.barrage.ids }}</span>
+            </div>
+            <div v-if="latestDay.barrage.winner" class="barrage-winner">
+              <span class="barrage-winner-icon">🏆</span>
+              <span class="barrage-winner-text">
+                <strong>{{ latestDay.barrage.winner }}</strong> remporte le barrage
+              </span>
+            </div>
+            <p v-if="latestDay.barrage.notes" class="barrage-notes">{{ latestDay.barrage.notes }}</p>
           </div>
 
           <div class="day-cta">
@@ -271,6 +311,15 @@ const loadingDay = ref(true)
 const loadingTournaments = ref(true)
 const playerCount = ref(null)
 const tournamentCount = ref(null)
+const activeTab = ref({ D1: 'classement', D2: 'classement' })
+
+function scoreClass(s1, s2, side) {
+  if (s1 == null || s2 == null) return ''
+  const n1 = Number(s1), n2 = Number(s2)
+  if (side === 'left')  return n1 > n2 ? 'score-win' : n1 < n2 ? 'score-loss' : ''
+  if (side === 'right') return n2 > n1 ? 'score-win' : n2 < n1 ? 'score-loss' : ''
+  return ''
+}
 
 function fmtDate(d) {
   if (!d) return ''
@@ -438,7 +487,45 @@ onMounted(async () => {
 .spinner { width: 36px; height: 36px; border: 3px solid rgba(34,197,94,.2); border-top-color: #22c55e; border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Journée ── */
+/* ── Journée header ── */
+.day-header-row { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+.day-header-left { display: flex; flex-direction: column; gap: .5rem; }
+.day-terminated-badge { display: inline-flex; align-items: center; gap: .4rem; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #22c55e; background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.25); padding: 3px 10px; border-radius: 99px; width: fit-content; }
+.day-terminated-badge::before { content:''; width:6px; height:6px; border-radius:50%; background:#22c55e; display:inline-block; }
+.day-champions-row { display: flex; flex-wrap: wrap; gap: .6rem; }
+/* ── Divisions ── */
+.day-divisions-pub { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem; }
+.day-div-block { background: rgba(13,27,54,.6); border: 1px solid rgba(255,255,255,.07); border-radius: 14px; overflow: hidden; }
+.day-div-title-bar { display: flex; align-items: center; gap: .5rem; padding: .6rem 1rem; border-bottom: 1px solid rgba(255,255,255,.06); }
+.bar-d1 { background: rgba(34,197,94,.06); border-bottom-color: rgba(34,197,94,.15); }
+.bar-d2 { background: rgba(95,141,255,.06); border-bottom-color: rgba(95,141,255,.15); }
+.day-div-tag { font-size: .65rem; font-weight: 900; letter-spacing: .08em; padding: 2px 7px; border-radius: 99px; background: rgba(34,197,94,.15); color: #22c55e; }
+.bar-d2 .day-div-tag { background: rgba(95,141,255,.15); color: #5f8dff; }
+.day-div-count { font-size: .7rem; color: rgba(238,244,255,.3); margin-left: auto; }
+.day-div-tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,.06); }
+.day-tab { flex: 1; background: none; border: none; color: rgba(238,244,255,.4); font-size: .78rem; font-weight: 600; padding: .55rem; cursor: pointer; transition: color .15s, background .15s; font-family: inherit; }
+.day-tab:hover { color: rgba(238,244,255,.7); background: rgba(255,255,255,.03); }
+.day-tab-active { color: #22c55e !important; border-bottom: 2px solid #22c55e; background: rgba(34,197,94,.04) !important; }
+.results-list { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.result-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: .5rem; padding: .42rem 1rem; border-bottom: 1px solid rgba(255,255,255,.04); font-size: .8rem; }
+.result-row:hover { background: rgba(255,255,255,.03); }
+.res-player { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.res-right { text-align: right; }
+.res-scores { display: flex; gap: .4rem; align-items: center; justify-content: center; flex-shrink: 0; }
+.res-score-pair { display: flex; align-items: center; gap: 2px; background: rgba(255,255,255,.05); padding: 2px 6px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+.res-retour { opacity: .7; font-size: .72rem; }
+.res-s { font-weight: 700; min-width: 14px; text-align: center; }
+.res-dash { color: rgba(238,244,255,.3); font-size: .7rem; }
+.score-win { color: #22c55e; }
+.score-loss { color: #d43c49; }
+.barrage-section { background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.2); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+.barrage-header { display: flex; align-items: center; gap: .75rem; margin-bottom: .6rem; flex-wrap: wrap; }
+.barrage-label { font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #3b82f6; background: rgba(59,130,246,.12); padding: 2px 8px; border-radius: 99px; }
+.barrage-ids { font-size: .88rem; font-weight: 600; }
+.barrage-winner { display: inline-flex; align-items: center; gap: .5rem; background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.2); border-radius: 10px; padding: .4rem .85rem; font-size: .85rem; margin-bottom: .4rem; }
+.barrage-winner-text strong { color: #22c55e; }
+.barrage-notes { font-size: .78rem; color: rgba(238,244,255,.45); font-style: italic; margin-top: .35rem; }
+/* ── Journée (ancien) ── */
 .day-meta { margin-bottom: 1.5rem; }
 .day-date-tag {
   display: inline-block; background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.25);
