@@ -105,17 +105,17 @@
             </div>
             <div class="day-champions-row">
               <div v-if="latestDay.champions?.d1?.id" class="champ-card">
-                <span class="champ-crown">👑</span>
+                <div class="champ-icon champ-icon--d1">1</div>
                 <div class="champ-info">
-                  <span class="champ-div">D1</span>
+                  <span class="champ-div">Champion D1</span>
                   <span class="champ-name">{{ latestDay.champions.d1.id }}</span>
                   <span v-if="latestDay.champions.d1.team" class="champ-team">{{ latestDay.champions.d1.team }}</span>
                 </div>
               </div>
               <div v-if="latestDay.champions?.d2?.id" class="champ-card champ-d2">
-                <span class="champ-crown">🥇</span>
+                <div class="champ-icon champ-icon--d2">1</div>
                 <div class="champ-info">
-                  <span class="champ-div">D2</span>
+                  <span class="champ-div">Champion D2</span>
                   <span class="champ-name">{{ latestDay.champions.d2.id }}</span>
                   <span v-if="latestDay.champions.d2.team" class="champ-team">{{ latestDay.champions.d2.team }}</span>
                 </div>
@@ -210,7 +210,6 @@
               <span class="barrage-ids">{{ latestDay.barrage.ids }}</span>
             </div>
             <div v-if="latestDay.barrage.winner" class="barrage-winner">
-              <span class="barrage-winner-icon">🏆</span>
               <span class="barrage-winner-text">
                 <strong>{{ latestDay.barrage.winner }}</strong> remporte le barrage
               </span>
@@ -245,25 +244,45 @@
 
         <template v-else-if="tournaments.length">
           <div class="tournaments-grid">
-            <div v-for="t in tournaments" :key="t.id" class="tournament-card" :class="t.status === 'live' ? 'card-live' : ''">
+            <div v-for="t in tournaments" :key="t.id"
+                 class="tournament-card"
+                 :class="t.status === 'live' ? 'card-live' : ''">
               <div class="tc-glow" />
+
+              <!-- Header statut + format -->
               <div class="tc-top">
                 <span class="tc-status" :class="t.status === 'live' ? 'st-live' : 'st-done'">
                   <span v-if="t.status === 'live'" class="st-pulse" />
                   {{ t.status === 'live' ? 'En cours' : 'Terminé' }}
                 </span>
                 <span class="tc-format">{{ fmtFormat(t) }}</span>
+                <span class="tc-participants">{{ t.participants_count }} joueurs</span>
               </div>
+
+              <!-- Nom -->
               <h3 class="tc-name">{{ t.name }}</h3>
-              <p v-if="t.winner_name && t.status === 'completed'" class="tc-winner">
-                Vainqueur — <strong>{{ t.winner_name }}</strong>
+
+              <!-- Date -->
+              <p v-if="t.starts_at" class="tc-date">
+                {{ fmtDateShort(t.starts_at) }}
               </p>
-              <RouterLink to="/login" class="tc-link">Voir le bracket →</RouterLink>
+
+              <!-- Podium -->
+              <div v-if="t.podium?.length" class="tc-podium">
+                <div v-for="p in t.podium" :key="p.rank" class="tc-podium-row">
+                  <span :class="['tc-podium-rank', p.rank===1?'rank-1':p.rank===2?'rank-2':'rank-3']">
+                    {{ p.rank }}
+                  </span>
+                  <span class="tc-podium-name">{{ p.name }}</span>
+                </div>
+              </div>
+
+              <RouterLink to="/login" class="tc-link">Voir le bracket</RouterLink>
             </div>
           </div>
         </template>
 
-        <div v-else class="empty-state"><p>Aucun tournoi en cours pour le moment.</p></div>
+        <div v-else class="empty-state"><p>Aucun tournoi disponible pour le moment.</p></div>
       </div>
     </section>
 
@@ -324,6 +343,11 @@ function scoreClass(s1, s2, side) {
 function fmtDate(d) {
   if (!d) return ''
   return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+}
+
+function fmtDateShort(d) {
+  if (!d) return ''
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 function fmtFormat(t) {
@@ -539,7 +563,13 @@ onMounted(async () => {
   backdrop-filter: blur(8px);
 }
 .champ-d2 { border-color: rgba(95,141,255,.2); }
-.champ-crown { font-size: 1.3rem; }
+.champ-icon {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 900;
+}
+.champ-icon--d1 { background: rgba(251,191,36,.15); color: #fbbf24; }
+.champ-icon--d2 { background: rgba(95,141,255,.15); color: #5f8dff; }
 .champ-info { display: flex; flex-direction: column; gap: 1px; }
 .champ-div { font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #22c55e; }
 .champ-d2 .champ-div { color: #5f8dff; }
@@ -610,7 +640,6 @@ onMounted(async () => {
   background: radial-gradient(circle, rgba(34,197,94,.08) 0%, transparent 70%);
   pointer-events: none;
 }
-.tc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: .6rem; }
 .tc-status { display: inline-flex; align-items: center; gap: .4rem; font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
 .st-live { background: rgba(34,197,94,.15); color: #22c55e; }
 .st-done { background: rgba(255,255,255,.06); color: rgba(238,244,255,.4); }
@@ -618,8 +647,22 @@ onMounted(async () => {
 .tc-format { font-size: .68rem; color: rgba(238,244,255,.3); }
 .tc-name { font-size: .95rem; font-weight: 800; margin-bottom: .35rem; font-family: var(--font-title, sans-serif); }
 .tc-winner { font-size: .78rem; color: rgba(238,244,255,.45); margin-bottom: .5rem; }
-.tc-link { font-size: .78rem; color: #22c55e; font-weight: 700; text-decoration: none; }
+.tc-link { font-size: .78rem; color: #22c55e; font-weight: 700; text-decoration: none; margin-top: auto; padding-top: .5rem; display: block; }
 .tc-link:hover { text-decoration: underline; }
+.tc-top { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-bottom: .5rem; }
+.tc-participants { font-size: .65rem; color: rgba(238,244,255,.3); margin-left: auto; }
+.tc-date { font-size: .72rem; color: rgba(238,244,255,.35); margin-bottom: .5rem; }
+.tc-podium { display: flex; flex-direction: column; gap: .22rem; margin-bottom: .6rem; }
+.tc-podium-row { display: flex; align-items: center; gap: .5rem; font-size: .78rem; }
+.tc-podium-rank {
+  width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .65rem; font-weight: 900;
+}
+.rank-1 { background: rgba(251,191,36,.2); color: #fbbf24; }
+.rank-2 { background: rgba(156,163,175,.15); color: #9ca3af; }
+.rank-3 { background: rgba(180,83,9,.15); color: #b45309; }
+.tc-podium-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── Rejoindre ── */
 .pub-join {
