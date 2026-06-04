@@ -2580,17 +2580,29 @@ app.get('/public/latest-day', async (_req, res) => {
     }
   }
 
+  // Résultats des matchs (seulement ceux avec scores)
+  const buildResults = (matches) => (matches || [])
+    .filter(m => m.p1 && m.p2 && (m.a1 != null || m.r1 != null))
+    .map(m => ({
+      p1: m.p1, p2: m.p2,
+      a1: m.a1 ?? null, a2: m.a2 ?? null,
+      r1: m.r1 ?? null, r2: m.r2 ?? null,
+    }))
+
   const d1 = buildStandings(p.d1 || [], inviteIds)
   const d2 = buildStandings(p.d2 || [], inviteIds)
 
   ok(res, {
     day:       dayjs(row.day).format('YYYY-MM-DD'),
+    status:    'confirmed',
     champions: p.champions || {},
-    barrage:   p.barrage || {},
+    barrage:   p.barrage   || {},
     d1_count:  (p.d1 || []).length,
     d2_count:  (p.d2 || []).length,
     d1,
     d2,
+    results_d1: buildResults(p.d1),
+    results_d2: buildResults(p.d2),
   })
 })
 
