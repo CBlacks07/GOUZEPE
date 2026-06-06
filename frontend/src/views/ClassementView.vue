@@ -469,6 +469,7 @@ const cmpB         = ref('')
 const cmpResult    = ref(null)
 const cmpLoading   = ref(false)
 const allPlayers   = ref([])
+const playersAll   = ref([])   // liste complète /players (inclut les invités)
 const roleById     = ref(new Map())
 const rolesLoaded  = ref(false)
 
@@ -604,8 +605,9 @@ onMounted(async () => {
 async function loadPlayerRoles() {
   try {
     const { data } = await api.get('/players')
+    playersAll.value = data.players || []
     roleById.value = new Map(
-      (data.players || []).map(p => [String(p.player_id), String(p.role || 'MEMBRE').toUpperCase()])
+      playersAll.value.map(p => [String(p.player_id), String(p.role || 'MEMBRE').toUpperCase()])
     )
     rolesLoaded.value = true
   } catch (_) {
@@ -659,8 +661,22 @@ async function load() {
     const days = daysRes.data.days || []
     daysCount.value = days.length
     confirmedDays.value = [...days].reverse()
-    allPlayers.value = standingsData.value
-      .map(r => ({ id: r.id, name: r.name || r.id, invite: isInviteRow(r) }))
+    // Membres classés (depuis le classement de la saison)
+    const list = standingsData.value
+      .filter(r => !isInviteRow(r))
+      .map(r => ({ id: r.id, name: r.name || r.id, invite: false }))
+    // + Invités (absents des standings car non classés) depuis /players
+    const seen = new Set(list.map(p => p.id))
+    for (const p of playersAll.value) {
+      const id = String(p.player_id)
+      const isInv = String(p.role || '').toUpperCase() === 'INVITE' || isInviteId(id)
+      if (isInv && !seen.has(id)) {
+        list.push({ id, name: p.name || id, invite: true })
+        seen.add(id)
+      }
+    }
+    list.sort((a, b) => String(a.name).localeCompare(String(b.name), 'fr', { sensitivity: 'base' }))
+    allPlayers.value = list
     // Build agg in background (non-blocking)
     aggPromise = buildSeasonAgg(days)
   } catch (_) {}
