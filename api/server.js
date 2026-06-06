@@ -2702,38 +2702,100 @@ app.get('/players/h2h', auth, async (req, res) => {
   const stats1 = { wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, legs: 0 }
   const stats2 = { wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, legs: 0 }
   const byDiv  = { D1: { legs:0, gf1:0, ga1:0, wins1:0, draws:0, wins2:0 }, D2: { legs:0, gf1:0, ga1:0, wins1:0, draws:0, wins2:0 } }
-  const recent = []
+  const bySource = {
+    journee: { legs:0, wins1:0, draws:0, wins2:0, gf1:0, ga1:0 },
+    tournoi: { legs:0, wins1:0, draws:0, wins2:0, gf1:0, ga1:0 },
+    duel:    { legs:0, wins1:0, draws:0, wins2:0, gf1:0, ga1:0 },
+  }
+  const matches = []
 
+  // Ajoute un match du point de vue du joueur 1 (gf1 = buts marqués par p1)
+  const addLeg = (gf1, ga1, { date, source, context, div = null }) => {
+    if (gf1 === null || ga1 === null || Number.isNaN(gf1) || Number.isNaN(ga1)) return
+    stats1.legs++; stats1.gf += gf1; stats1.ga += ga1
+    stats2.legs++; stats2.gf += ga1; stats2.ga += gf1
+    const bs = bySource[source]
+    if (bs) { bs.legs++; bs.gf1 += gf1; bs.ga1 += ga1 }
+    if (gf1 > ga1)      { stats1.wins++; stats2.losses++; if (bs) bs.wins1++ }
+    else if (ga1 > gf1) { stats2.wins++; stats1.losses++; if (bs) bs.wins2++ }
+    else                { stats1.draws++; stats2.draws++; if (bs) bs.draws++ }
+    if (div && byDiv[div]) {
+      byDiv[div].legs++; byDiv[div].gf1 += gf1; byDiv[div].ga1 += ga1
+      if (gf1 > ga1) byDiv[div].wins1++
+      else if (ga1 > gf1) byDiv[div].wins2++
+      else byDiv[div].draws++
+    }
+    matches.push({ date, source, context, gf1, ga1 })
+  }
+
+  // ── Journées (matchday) ───────────────────────────────────────
   for (const row of days.rows) {
     const p = row.payload || {}
+    const dateStr = dayjs(row.day).format('YYYY-MM-DD')
     for (const divKey of ['d1', 'd2']) {
+      const div = divKey.toUpperCase()
       for (const m of (p[divKey] || [])) {
         if (!m?.p1 || !m?.p2) continue
         const ab = m.p1 === pid1 && m.p2 === pid2
         const ba = m.p1 === pid2 && m.p2 === pid1
         if (!ab && !ba) continue
-
-        const div = divKey.toUpperCase()
-        const addLeg = (gf1, ga1, leg) => {
-          if (gf1 === null || ga1 === null) return
-          stats1.legs++; stats1.gf += gf1; stats1.ga += ga1
-          stats2.legs++; stats2.gf += ga1; stats2.ga += gf1
-          byDiv[div].legs++; byDiv[div].gf1 += gf1; byDiv[div].ga1 += ga1
-          if (gf1 > ga1) { stats1.wins++; stats2.losses++; byDiv[div].wins1++ }
-          else if (ga1 > gf1) { stats2.wins++; stats1.losses++; byDiv[div].wins2++ }
-          else { stats1.draws++; stats2.draws++; byDiv[div].draws++ }
-          recent.push({ date: dayjs(row.day).format('YYYY-MM-DD'), div, leg, gf1, ga1 })
-        }
-
         if (ab) {
-          addLeg(sc(m.a1), sc(m.a2), 'Aller')
-          addLeg(sc(m.r1), sc(m.r2), 'Retour')
+          addLeg(sc(m.a1), sc(m.a2), { date: dateStr, source: 'journee', context: `${div} · Aller`, div })
+          addLeg(sc(m.r1), sc(m.r2), { date: dateStr, source: 'journee', context: `${div} · Retour`, div })
         } else {
-          addLeg(sc(m.a2), sc(m.a1), 'Aller')
-          addLeg(sc(m.r2), sc(m.r1), 'Retour')
+          addLeg(sc(m.a2), sc(m.a1), { date: dateStr, source: 'journee', context: `${div} · Aller`, div })
+          addLeg(sc(m.r2), sc(m.r1), { date: dateStr, source: 'journee', context: `${div} · Retour`, div })
         }
       }
     }
+  }
+
+  // Période de la saison (pour borner les duels qui n'ont pas de season_id)
+  let seasonRange = null
+  if (sid) {
+    const sr = await q(`SELECT started_at, ended_at FROM seasons WHERE id=$1`, [sid])
+    seasonRange = sr.rows[0] || null
+  }
+
+  // ── Duels exhibition ──────────────────────────────────────────
+  const dcond = ['((p1_id=$1 AND p2_id=$2) OR (p1_id=$2 AND p2_id=$1))']
+  const dvals = [pid1, pid2]
+  if (seasonRange?.started_at) { dcond.push(`played_at >= $${dvals.length + 1}`); dvals.push(seasonRange.started_at) }
+  if (seasonRange?.ended_at)   { dcond.push(`played_at <= $${dvals.length + 1}`); dvals.push(seasonRange.ended_at) }
+  const duelRows = await q(
+    `SELECT p1_id, p2_id, score_a, score_b, played_at FROM duels WHERE ${dcond.join(' AND ')}`,
+    dvals
+  )
+  for (const d of duelRows.rows) {
+    const ab = d.p1_id === pid1
+    const gf1 = Number(ab ? d.score_a : d.score_b)
+    const ga1 = Number(ab ? d.score_b : d.score_a)
+    addLeg(gf1, ga1, { date: d.played_at ? dayjs(d.played_at).format('YYYY-MM-DD') : null, source: 'duel', context: 'Duel exhibition' })
+  }
+
+  // ── Matchs de tournoi ─────────────────────────────────────────
+  const tcond = [
+    `tm.status='completed'`,
+    `tm.score_p1 IS NOT NULL AND tm.score_p2 IS NOT NULL`,
+    `((tp1.player_id=$1 AND tp2.player_id=$2) OR (tp1.player_id=$2 AND tp2.player_id=$1))`,
+  ]
+  const tvals = [pid1, pid2]
+  if (sid) { tcond.push(`t.season_id = $${tvals.length + 1}`); tvals.push(sid) }
+  const tRows = await q(
+    `SELECT tm.score_p1, tm.score_p2, COALESCE(tm.finished_at, tm.updated_at) AS played_at,
+            tp1.player_id AS pl1, tp2.player_id AS pl2, t.name AS tname
+     FROM tournament_matches tm
+     JOIN tournament_participants tp1 ON tp1.id = tm.p1_participant_id
+     JOIN tournament_participants tp2 ON tp2.id = tm.p2_participant_id
+     JOIN tournaments t ON t.id = tm.tournament_id
+     WHERE ${tcond.join(' AND ')}`,
+    tvals
+  )
+  for (const r of tRows.rows) {
+    const ab = r.pl1 === pid1
+    const gf1 = Number(ab ? r.score_p1 : r.score_p2)
+    const ga1 = Number(ab ? r.score_p2 : r.score_p1)
+    addLeg(gf1, ga1, { date: r.played_at ? dayjs(r.played_at).format('YYYY-MM-DD') : null, source: 'tournoi', context: r.tname || 'Tournoi' })
   }
 
   const p1r = await q(`SELECT player_id, name FROM players WHERE player_id=$1`, [pid1])
@@ -2741,14 +2803,15 @@ app.get('/players/h2h', auth, async (req, res) => {
   const name1 = p1r.rows[0]?.name || pid1
   const name2 = p2r.rows[0]?.name || pid2
 
-  recent.sort((a, b) => b.date.localeCompare(a.date))
+  matches.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
 
   ok(res, {
     p1: { id: pid1, name: name1, ...stats1 },
     p2: { id: pid2, name: name2, ...stats2 },
     total_legs: stats1.legs,
     by_division: byDiv,
-    recent: recent.slice(0, 20),
+    by_source: bySource,
+    recent: matches.slice(0, 50),
   })
 })
 
