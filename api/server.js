@@ -4067,43 +4067,116 @@ app.get('/duels/compare', auth, async (req,res)=>{
     const p1 = req.query.p1 || req.query.A || req.query.a || req.query.player_a;
     const p2 = req.query.p2 || req.query.B || req.query.b || req.query.player_b;
     if(!p1 || !p2) return bad(res,400,'p1 and p2 required');
+    const a = String(p1), b = String(p2);
+
+    // Sources demandées : 'all' (défaut), 'duels' ou 'tournaments'
+    const source = String(req.query.source || 'all').toLowerCase();
+    const wantDuels = source === 'all' || source === 'duels';
+    const wantTournaments = source === 'all' || source === 'tournaments' || source === 'tournois';
 
     const names = await q(
-      `SELECT 
+      `SELECT
          (SELECT name FROM players WHERE player_id=$1) AS p1_name,
          (SELECT name FROM players WHERE player_id=$2) AS p2_name`,
-      [String(p1), String(p2)]
+      [a, b]
     );
     const n = names.rows[0] || {};
 
-    const cond = ['((p1_id=$1 AND p2_id=$2) OR (p1_id=$2 AND p2_id=$1))'];
-    const vals = [String(p1), String(p2)];
-    appendDuelDateFilters(req.query, cond, vals);
+    const matches = [];
 
-    const stats = await q(
-      `SELECT
-         SUM(CASE WHEN p1_id=$1 AND score_a>score_b THEN 1 WHEN p2_id=$1 AND score_b>score_a THEN 1 ELSE 0 END) AS wins_p1,
-         SUM(CASE WHEN score_a=score_b THEN 1 ELSE 0 END) AS draws,
-         SUM(CASE WHEN p1_id=$2 AND score_a>score_b THEN 1 WHEN p2_id=$2 AND score_b>score_a THEN 1 ELSE 0 END) AS wins_p2,
-         SUM(score_a) FILTER (WHERE p1_id=$1) + SUM(score_b) FILTER (WHERE p2_id=$1) AS gf_p1,
-         SUM(score_b) FILTER (WHERE p1_id=$1) + SUM(score_a) FILTER (WHERE p2_id=$1) AS ga_p1,
-         COUNT(*) AS legs
-       FROM duels
-       WHERE ${cond.join(' AND ')}`,
-      vals
-    );
-    const s = stats.rows[0] || {};
-    const wins = Number(s.wins_p1||0);
-    const draws = Number(s.draws||0);
-    const losses = Number(s.wins_p2||0);
-    const gf = Number(s.gf_p1||0);
-    const ga = Number(s.ga_p1||0);
-    const legs = Number(s.legs||0);
+    // ── Duels exhibition ──────────────────────────────────────────
+    if (wantDuels) {
+      const cond = ['((p1_id=$1 AND p2_id=$2) OR (p1_id=$2 AND p2_id=$1))'];
+      const vals = [a, b];
+      appendDuelDateFilters(req.query, cond, vals);
+      const rows = await q(
+        `SELECT id, p1_id, p2_id, score_a, score_b, played_at
+         FROM duels WHERE ${cond.join(' AND ')}`,
+        vals
+      );
+      for (const r of rows.rows) {
+        // Normalise du point de vue du joueur A
+        const aIsP1 = r.p1_id === a;
+        const sa = aIsP1 ? Number(r.score_a) : Number(r.score_b);
+        const sb = aIsP1 ? Number(r.score_b) : Number(r.score_a);
+        matches.push({
+          source: 'duel',
+          id: `duel-${r.id}`,
+          played_at: r.played_at,
+          a_score: sa, b_score: sb,
+          outcome: sa > sb ? 'A' : sa < sb ? 'B' : 'draw',
+          context: 'Duel exhibition',
+          tournament_id: null,
+        });
+      }
+    }
+
+    // ── Matchs de tournoi ─────────────────────────────────────────
+    if (wantTournaments) {
+      const cond = [
+        `tm.status='completed'`,
+        `tm.score_p1 IS NOT NULL AND tm.score_p2 IS NOT NULL`,
+        `((tp1.player_id=$1 AND tp2.player_id=$2) OR (tp1.player_id=$2 AND tp2.player_id=$1))`,
+      ];
+      const vals = [a, b];
+      // Filtre de dates sur la date de fin du match
+      const fromRaw = req.query?.from ? String(req.query.from).trim() : '';
+      const toRaw = req.query?.to ? String(req.query.to).trim() : '';
+      const dateOnlyRe = /^\d{4}-\d{2}-\d{2}$/;
+      const playedCol = 'COALESCE(tm.finished_at, tm.updated_at)';
+      if (fromRaw && dateOnlyRe.test(fromRaw)) { cond.push(`${playedCol} >= $${vals.length+1}::date`); vals.push(fromRaw); }
+      if (toRaw && dateOnlyRe.test(toRaw)) { cond.push(`${playedCol} < ($${vals.length+1}::date + INTERVAL '1 day')`); vals.push(toRaw); }
+
+      const rows = await q(
+        `SELECT tm.id, tm.score_p1, tm.score_p2,
+                ${playedCol} AS played_at,
+                tp1.player_id AS pl1, tp2.player_id AS pl2,
+                t.id AS tournament_id, t.name AS tournament_name
+         FROM tournament_matches tm
+         JOIN tournament_participants tp1 ON tp1.id = tm.p1_participant_id
+         JOIN tournament_participants tp2 ON tp2.id = tm.p2_participant_id
+         JOIN tournaments t ON t.id = tm.tournament_id
+         WHERE ${cond.join(' AND ')}`,
+        vals
+      );
+      for (const r of rows.rows) {
+        const aIsP1 = r.pl1 === a;
+        const sa = aIsP1 ? Number(r.score_p1) : Number(r.score_p2);
+        const sb = aIsP1 ? Number(r.score_p2) : Number(r.score_p1);
+        matches.push({
+          source: 'tournoi',
+          id: `tm-${r.id}`,
+          played_at: r.played_at,
+          a_score: sa, b_score: sb,
+          outcome: sa > sb ? 'A' : sa < sb ? 'B' : 'draw',
+          context: r.tournament_name || 'Tournoi',
+          tournament_id: r.tournament_id,
+        });
+      }
+    }
+
+    // Tri par date décroissante (les sans-date à la fin)
+    matches.sort((x, y) => {
+      const tx = x.played_at ? new Date(x.played_at).getTime() : 0;
+      const ty = y.played_at ? new Date(y.played_at).getTime() : 0;
+      return ty - tx;
+    });
+
+    // Agrégats du point de vue du joueur A
+    let wins = 0, draws = 0, losses = 0, gf = 0, ga = 0;
+    for (const m of matches) {
+      if (m.outcome === 'A') wins++;
+      else if (m.outcome === 'B') losses++;
+      else draws++;
+      gf += m.a_score; ga += m.b_score;
+    }
+    const legs = matches.length;
 
     ok(res,{
-      p1: { id:String(p1), name: n.p1_name || null },
-      p2: { id:String(p2), name: n.p2_name || null },
-      totals: { wins, draws, losses, gf, ga, legs }
+      p1: { id:a, name: n.p1_name || null },
+      p2: { id:b, name: n.p2_name || null },
+      totals: { wins, draws, losses, gf, ga, legs },
+      matches,
     });
   }catch(e){
     console.error('GET /duels/compare error', e);

@@ -14,18 +14,24 @@
               <label class="label">Joueur A</label>
               <select v-model="form.p1" class="input">
                 <option value="">Choisir…</option>
-                <option v-for="p in players" :key="p.player_id" :value="p.player_id">
-                  {{ p.name || p.player_id }}
-                </option>
+                <optgroup label="Membres">
+                  <option v-for="p in memberPlayers" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                </optgroup>
+                <optgroup v-if="guestPlayers.length" label="Invités">
+                  <option v-for="p in guestPlayers" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                </optgroup>
               </select>
             </div>
             <div>
               <label class="label">Joueur B</label>
               <select v-model="form.p2" class="input">
                 <option value="">Choisir…</option>
-                <option v-for="p in players" :key="p.player_id" :value="p.player_id">
-                  {{ p.name || p.player_id }}
-                </option>
+                <optgroup label="Membres">
+                  <option v-for="p in memberPlayers" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                </optgroup>
+                <optgroup v-if="guestPlayers.length" label="Invités">
+                  <option v-for="p in guestPlayers" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                </optgroup>
               </select>
             </div>
           </div>
@@ -72,18 +78,28 @@
               <label class="label">Joueur A</label>
               <select v-model="cmp.a" class="input">
                 <option value="">Choisir…</option>
-                <option v-for="p in players" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                <optgroup label="Membres">
+                  <option v-for="p in memberPlayers" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                </optgroup>
+                <optgroup v-if="guestPlayers.length" label="Invités">
+                  <option v-for="p in guestPlayers" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                </optgroup>
               </select>
             </div>
             <div>
               <label class="label">Joueur B</label>
               <select v-model="cmp.b" class="input">
                 <option value="">Choisir…</option>
-                <option v-for="p in players" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                <optgroup label="Membres">
+                  <option v-for="p in memberPlayers" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                </optgroup>
+                <optgroup v-if="guestPlayers.length" label="Invités">
+                  <option v-for="p in guestPlayers" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                </optgroup>
               </select>
             </div>
           </div>
-          <div class="cmp-filters mb-4">
+          <div class="cmp-filters mb-3">
             <div class="flex-1 min-w-[110px]">
               <label class="label">Depuis</label>
               <input v-model="cmp.from" type="date" class="input" />
@@ -92,21 +108,78 @@
               <label class="label">Jusqu'au</label>
               <input v-model="cmp.to" type="date" class="input" />
             </div>
-            <button @click="compare" class="btn w-full sm:w-auto justify-center">Comparer</button>
+            <button @click="compare" :disabled="comparing" class="btn w-full sm:w-auto justify-center">
+              <Loader2Icon v-if="comparing" class="w-3.5 h-3.5 animate-spin" /> Comparer
+            </button>
           </div>
 
-          <div v-if="cmpResult" class="flex items-center justify-between gap-3 flex-wrap
-                                        px-4 py-3 bg-gz-panel border border-gz-border rounded-xl">
-            <div class="text-sm">
-              <strong>{{ cmpResult.nameA }}</strong>
-              <span class="text-gz-muted mx-2 text-xs">vs</span>
-              <strong>{{ cmpResult.nameB }}</strong>
-              <span class="text-gz-muted text-xs ml-2">{{ cmpResult.legs }} match(s)</span>
-            </div>
-            <span :class="['badge text-sm font-bold', leaderClass(cmpResult)]">
-              {{ leaderLabel(cmpResult) }} &bull; {{ cmpResult.wins }}V-{{ cmpResult.draws }}N-{{ cmpResult.losses }}D
-            </span>
+          <!-- Filtre source -->
+          <div class="flex gap-1.5 mb-4">
+            <button v-for="opt in sourceOptions" :key="opt.v"
+              @click="cmp.source = opt.v; if (cmpResult) compare()"
+              :class="['px-3 py-1 rounded-full border text-xs font-semibold transition-all',
+                       cmp.source === opt.v ? 'border-gz-blue/60 bg-gz-blue/15 text-[var(--blue-l)]'
+                                            : 'border-gz-border bg-gz-card text-gz-muted hover:text-gz-text']">
+              {{ opt.label }}
+            </button>
           </div>
+
+          <template v-if="cmpResult && cmpResult.legs">
+            <!-- En-tête joueurs -->
+            <div class="flex items-center justify-between text-sm mb-2">
+              <strong class="text-[var(--green-l)] truncate">{{ cmpResult.nameA }}</strong>
+              <span class="text-gz-muted text-xs px-2">{{ cmpResult.legs }} match(s)</span>
+              <strong class="text-[var(--blue-l)] truncate text-right">{{ cmpResult.nameB }}</strong>
+            </div>
+
+            <!-- Barre comparative V-N-D -->
+            <div class="flex h-7 rounded-lg overflow-hidden border border-gz-border mb-1 text-[11px] font-bold">
+              <div v-if="cmpResult.wins" class="bg-gz-green/80 text-black grid place-items-center"
+                   :style="{ width: pct(cmpResult.wins) + '%' }">{{ cmpResult.wins }}</div>
+              <div v-if="cmpResult.draws" class="bg-gz-border/60 text-gz-text grid place-items-center"
+                   :style="{ width: pct(cmpResult.draws) + '%' }">{{ cmpResult.draws }}</div>
+              <div v-if="cmpResult.losses" class="bg-gz-blue/80 text-white grid place-items-center"
+                   :style="{ width: pct(cmpResult.losses) + '%' }">{{ cmpResult.losses }}</div>
+            </div>
+            <div class="flex justify-between text-[11px] text-gz-muted mb-4">
+              <span>Victoires</span><span>Nuls</span><span>Défaites</span>
+            </div>
+
+            <!-- Stats clés -->
+            <div class="grid grid-cols-3 gap-2 mb-4 text-center">
+              <div class="bg-gz-panel border border-gz-border rounded-xl py-2">
+                <div class="text-base font-bold text-gz-text">{{ winRate }}%</div>
+                <div class="text-[11px] text-gz-muted">% victoire A</div>
+              </div>
+              <div class="bg-gz-panel border border-gz-border rounded-xl py-2">
+                <div class="text-base font-bold text-gz-text">{{ cmpResult.gf }}–{{ cmpResult.ga }}</div>
+                <div class="text-[11px] text-gz-muted">Buts (A–B)</div>
+              </div>
+              <div class="bg-gz-panel border border-gz-border rounded-xl py-2">
+                <div class="text-base font-bold" :class="goalDiff > 0 ? 'text-gz-green' : goalDiff < 0 ? 'text-gz-blue' : 'text-gz-text'">
+                  {{ goalDiff > 0 ? '+' : '' }}{{ goalDiff }}
+                </div>
+                <div class="text-[11px] text-gz-muted">Diff. buts</div>
+              </div>
+            </div>
+
+            <!-- Liste des confrontations -->
+            <div class="text-xs font-semibold text-gz-muted mb-2">Confrontations</div>
+            <ul class="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+              <li v-for="m in cmpResult.matches" :key="m.id"
+                  class="flex items-center gap-2 px-3 py-2 bg-gz-panel border border-gz-border rounded-lg text-sm">
+                <span :class="['badge text-[10px] shrink-0', m.source === 'tournoi' ? 'badge-blue' : 'badge-muted']">
+                  {{ m.source === 'tournoi' ? 'Tournoi' : 'Duel' }}
+                </span>
+                <span class="text-gz-muted text-[11px] shrink-0 w-14">{{ m.played_at ? fmtDateShort(m.played_at) : '—' }}</span>
+                <span class="flex-1 truncate text-[11px] text-gz-muted">{{ m.context }}</span>
+                <span :class="['font-bold tabular-nums', m.outcome === 'A' ? 'text-gz-green' : m.outcome === 'B' ? 'text-gz-blue' : 'text-gz-text']">
+                  {{ m.a_score }}–{{ m.b_score }}
+                </span>
+              </li>
+            </ul>
+          </template>
+          <p v-else-if="cmpResult && !cmpResult.legs" class="text-gz-muted text-sm">Aucune confrontation entre ces deux joueurs.</p>
           <p v-else-if="cmpResult === null" class="text-gz-muted text-sm">Choisis deux joueurs.</p>
         </section>
 
@@ -127,7 +200,12 @@
               <input v-model="hist.to" type="date" class="input duel-filter-control py-1.5 text-xs" />
               <select v-model="hist.player" class="input duel-filter-control py-1.5 text-xs">
                 <option value="">Tous les joueurs</option>
-                <option v-for="p in players" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                <optgroup label="Membres">
+                  <option v-for="p in memberPlayers" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                </optgroup>
+                <optgroup v-if="guestPlayers.length" label="Invités">
+                  <option v-for="p in guestPlayers" :key="p.player_id" :value="p.player_id">{{ p.name || p.player_id }}</option>
+                </optgroup>
               </select>
               <select v-model="hist.limit" class="input duel-limit-control py-1.5 text-xs">
                 <option value="5">5</option>
@@ -211,8 +289,19 @@ const saving   = ref(false)
 const saveMsg  = ref('')
 const saveMsgOk = ref(true)
 
-const cmp       = ref({ a: '', b: '', from: '', to: '' })
+const cmp       = ref({ a: '', b: '', from: '', to: '', source: 'all' })
 const cmpResult = ref(undefined)
+const comparing = ref(false)
+
+const sourceOptions = [
+  { v: 'all',         label: 'Tous' },
+  { v: 'duels',       label: 'Duels' },
+  { v: 'tournaments', label: 'Tournois' },
+]
+
+// Joueurs scindés membres / invités (role INVITE)
+const memberPlayers = computed(() => players.value.filter(p => (p.role || '').toUpperCase() !== 'INVITE'))
+const guestPlayers  = computed(() => players.value.filter(p => (p.role || '').toUpperCase() === 'INVITE'))
 
 const hist = ref({ period: 'all', from: '', to: '', player: '', limit: '10' })
 const duels       = ref([])
@@ -294,11 +383,13 @@ async function saveDuel() {
 
 // ── Compare ────────────────────────────────────────────────────
 async function compare() {
-  const { a, b, from, to } = cmp.value
+  const { a, b, from, to, source } = cmp.value
   if (!a || !b) { cmpResult.value = null; return }
+  comparing.value = true
   const qs = new URLSearchParams({ p1: a, p2: b })
-  if (from) qs.set('from', from)
-  if (to)   qs.set('to', to)
+  if (from)   qs.set('from', from)
+  if (to)     qs.set('to', to)
+  if (source && source !== 'all') qs.set('source', source)
   try {
     const { data } = await api.get('/duels/compare?' + qs.toString())
     const t = data.totals || {}
@@ -306,9 +397,19 @@ async function compare() {
     cmpResult.value = {
       nameA: data.p1?.name || nameMap[a] || a,
       nameB: data.p2?.name || nameMap[b] || b,
-      wins: t.wins || 0, draws: t.draws || 0, losses: t.losses || 0, legs: t.legs || 0
+      wins: t.wins || 0, draws: t.draws || 0, losses: t.losses || 0, legs: t.legs || 0,
+      gf: t.gf || 0, ga: t.ga || 0,
+      matches: data.matches || [],
     }
   } catch (_) { cmpResult.value = null }
+  finally { comparing.value = false }
+}
+
+const winRate  = computed(() => cmpResult.value?.legs ? Math.round((cmpResult.value.wins / cmpResult.value.legs) * 100) : 0)
+const goalDiff = computed(() => (cmpResult.value?.gf || 0) - (cmpResult.value?.ga || 0))
+function pct(n) {
+  const total = (cmpResult.value?.wins || 0) + (cmpResult.value?.draws || 0) + (cmpResult.value?.losses || 0)
+  return total ? (n / total) * 100 : 0
 }
 
 // ── History ────────────────────────────────────────────────────
@@ -364,6 +465,9 @@ function nowLocal() {
 function fmtDate(s) {
   return new Date(s).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
 }
+function fmtDateShort(s) {
+  return new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
 function resultLabel(d) {
   const a = +d.score_a, b = +d.score_b
   return a > b ? 'A gagne' : a < b ? 'B gagne' : 'Nul'
@@ -375,12 +479,6 @@ function resultClass(d) {
 function leaderName(d) {
   const a = +d.score_a, b = +d.score_b
   return a > b ? (d.p1_name || d.p1_id) : a < b ? (d.p2_name || d.p2_id) : 'Égalité'
-}
-function leaderClass(r) {
-  return r.wins > r.losses ? 'badge-green' : r.losses > r.wins ? 'badge-blue' : 'badge-muted'
-}
-function leaderLabel(r) {
-  return r.wins > r.losses ? 'Leader A' : r.losses > r.wins ? 'Leader B' : 'Égalité'
 }
 </script>
 
