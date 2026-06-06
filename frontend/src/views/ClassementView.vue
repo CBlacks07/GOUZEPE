@@ -241,14 +241,24 @@
             <label class="label">Joueur A</label>
             <select v-model="cmpA" class="input">
               <option value="">—</option>
-              <option v-for="p in allPlayers" :key="p.id" :value="p.id">{{ p.name }} ({{ p.id }})</option>
+              <optgroup label="Membres">
+                <option v-for="p in memberPlayers" :key="p.id" :value="p.id" :disabled="p.id === cmpB">{{ p.name }} ({{ p.id }})</option>
+              </optgroup>
+              <optgroup v-if="guestPlayers.length" label="Invités">
+                <option v-for="p in guestPlayers" :key="p.id" :value="p.id" :disabled="p.id === cmpB">{{ p.name }} ({{ p.id }})</option>
+              </optgroup>
             </select>
           </div>
           <div>
             <label class="label">Joueur B</label>
             <select v-model="cmpB" class="input">
               <option value="">—</option>
-              <option v-for="p in allPlayers" :key="p.id" :value="p.id" :disabled="p.id === cmpA">{{ p.name }} ({{ p.id }})</option>
+              <optgroup label="Membres">
+                <option v-for="p in memberPlayers" :key="p.id" :value="p.id" :disabled="p.id === cmpA">{{ p.name }} ({{ p.id }})</option>
+              </optgroup>
+              <optgroup v-if="guestPlayers.length" label="Invités">
+                <option v-for="p in guestPlayers" :key="p.id" :value="p.id" :disabled="p.id === cmpA">{{ p.name }} ({{ p.id }})</option>
+              </optgroup>
             </select>
           </div>
         </div>
@@ -283,7 +293,7 @@
           <!-- Face-à-face journées -->
           <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border)">
             <div class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide" style="background:var(--panel);color:var(--muted);border-bottom:1px solid var(--border)">
-              Confrontations journées — {{ cmpResult.h2h.total }} match(s) au total
+              Face-à-face — {{ cmpResult.h2h.total }} match(s) · journées · tournois · duels
             </div>
 
             <template v-if="cmpResult.h2h.total > 0">
@@ -322,7 +332,7 @@
                 </div>
               </template>
 
-              <!-- Par division -->
+              <!-- Par division (journées) -->
               <template v-for="(dv, divName) in cmpResult.h2h.byDiv" :key="divName">
                 <div v-if="dv.legs > 0" class="grid grid-cols-3 text-center py-1.5 px-3"
                      style="border-bottom:1px solid color-mix(in srgb,var(--border) 40%,transparent)">
@@ -332,16 +342,35 @@
                 </div>
               </template>
 
-              <!-- 5 dernières confrontations -->
+              <!-- Par source -->
+              <template v-for="src in sourceBreakdown" :key="src.key">
+                <div v-if="src.legs > 0" class="grid grid-cols-3 text-center py-1.5 px-3"
+                     style="border-bottom:1px solid color-mix(in srgb,var(--border) 40%,transparent)">
+                  <span :class="src.wins1 > src.wins2 ? 'font-bold text-gz-green' : src.wins1 < src.wins2 ? 'text-gz-red' : ''">{{ src.wins1 }}V {{ src.draws }}N {{ src.wins2 }}D</span>
+                  <span class="text-xs" style="color:var(--muted)">{{ src.label }} ({{ src.legs }} matchs)</span>
+                  <span :class="src.wins2 > src.wins1 ? 'font-bold text-gz-green' : src.wins2 < src.wins1 ? 'text-gz-red' : ''">{{ src.wins2 }}V {{ src.draws }}N {{ src.wins1 }}D</span>
+                </div>
+              </template>
+
+              <!-- Toutes les confrontations -->
               <div v-if="cmpResult.h2h.recent.length" class="px-3 py-2">
-                <div class="text-xs font-semibold uppercase tracking-wide mb-2" style="color:var(--muted)">5 dernières confrontations</div>
-                <div v-for="leg in cmpResult.h2h.recent.slice(0,5)" :key="leg.date+leg.leg+leg.div"
-                     class="flex items-center justify-between py-1 text-xs"
-                     style="border-bottom:1px solid color-mix(in srgb,var(--border) 30%,transparent)">
-                  <span style="color:var(--muted)">{{ leg.date }} · {{ leg.div }} · {{ leg.leg }}</span>
-                  <span :class="leg.gf1 > leg.ga1 ? 'text-gz-green font-bold' : leg.gf1 < leg.ga1 ? 'text-gz-red' : ''">
-                    {{ leg.gf1 }} – {{ leg.ga1 }}
-                  </span>
+                <div class="text-xs font-semibold uppercase tracking-wide mb-2" style="color:var(--muted)">
+                  Confrontations ({{ cmpResult.h2h.recent.length }})
+                </div>
+                <div class="space-y-1 max-h-64 overflow-y-auto pr-1">
+                  <div v-for="(leg, li) in cmpResult.h2h.recent" :key="li"
+                       class="flex items-center gap-2 py-1 text-xs"
+                       style="border-bottom:1px solid color-mix(in srgb,var(--border) 30%,transparent)">
+                    <span class="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold" :style="sourceBadge(leg.source)">
+                      {{ sourceShort(leg.source) }}
+                    </span>
+                    <span class="shrink-0 w-16" style="color:var(--muted)">{{ leg.date || '—' }}</span>
+                    <span class="flex-1 truncate" style="color:var(--muted)">{{ leg.context }}</span>
+                    <span class="shrink-0 font-bold tabular-nums"
+                          :class="leg.gf1 > leg.ga1 ? 'text-gz-green' : leg.gf1 < leg.ga1 ? 'text-gz-red' : ''">
+                      {{ leg.gf1 }} – {{ leg.ga1 }}
+                    </span>
+                  </div>
                 </div>
               </div>
             </template>
@@ -537,6 +566,10 @@ const filteredTitles = computed(() => {
   return titlesFilter.value === 'all' ? list : list.filter(t => t.div === titlesFilter.value)
 })
 
+// Joueurs scindés membres / invités pour les sélecteurs du comparateur
+const memberPlayers = computed(() => allPlayers.value.filter(p => !p.invite))
+const guestPlayers  = computed(() => allPlayers.value.filter(p => p.invite))
+
 /* ====== Helpers ====== */
 function partPct(row) {
   return daysCount.value ? Math.round((row.participations || 0) * 100 / daysCount.value) : 0
@@ -627,8 +660,7 @@ async function load() {
     daysCount.value = days.length
     confirmedDays.value = [...days].reverse()
     allPlayers.value = standingsData.value
-      .filter(r => !isInviteRow(r))
-      .map(r => ({ id: r.id, name: r.name || r.id }))
+      .map(r => ({ id: r.id, name: r.name || r.id, invite: isInviteRow(r) }))
     // Build agg in background (non-blocking)
     aggPromise = buildSeasonAgg(days)
   } catch (_) {}
@@ -961,6 +993,30 @@ async function deleteDay() {
 }
 
 /* ====== Compare ====== */
+const SOURCE_META = {
+  journee: { label: 'Journées', short: 'Journée', bg: 'rgba(37,99,235,.15)',  fg: '#60a5fa' },
+  tournoi: { label: 'Tournois', short: 'Tournoi', bg: 'rgba(168,85,247,.18)', fg: '#c084fc' },
+  duel:    { label: 'Duels',    short: 'Duel',    bg: 'rgba(148,163,184,.18)', fg: 'var(--muted)' },
+}
+
+const sourceBreakdown = computed(() => {
+  const bs = cmpResult.value?.h2h?.bySource || {}
+  return ['journee', 'tournoi', 'duel'].map(key => ({
+    key,
+    label: SOURCE_META[key].label,
+    legs:  bs[key]?.legs || 0,
+    wins1: bs[key]?.wins1 || 0,
+    draws: bs[key]?.draws || 0,
+    wins2: bs[key]?.wins2 || 0,
+  }))
+})
+
+function sourceShort(s) { return SOURCE_META[s]?.short || s || '—' }
+function sourceBadge(s) {
+  const m = SOURCE_META[s] || SOURCE_META.duel
+  return `background:${m.bg};color:${m.fg}`
+}
+
 function openCompareModal() {
   cmpResult.value = null
   compareModal.value = true
@@ -978,18 +1034,19 @@ async function runCompare() {
     const aggA = aggMap.value.get(cmpA.value) || {}
     const aggB = aggMap.value.get(cmpB.value) || {}
 
-    // H2H depuis les journées
-    let h2h = { total: 0, p1: { wins:0, draws:0, losses:0, gf:0, ga:0 }, p2: { wins:0, draws:0, losses:0, gf:0, ga:0 }, byDiv: {}, recent: [] }
+    // H2H : journées + tournois + duels
+    let h2h = { total: 0, p1: { wins:0, draws:0, losses:0, gf:0, ga:0 }, p2: { wins:0, draws:0, losses:0, gf:0, ga:0 }, byDiv: {}, bySource: {}, recent: [] }
     try {
       const { data } = await api.get('/players/h2h', {
         params: { p1: cmpA.value, p2: cmpB.value, season: selectedSeason.value || '' }
       })
       h2h = {
-        total:   data.total_legs || 0,
-        p1:      data.p1 || {},
-        p2:      data.p2 || {},
-        byDiv:   data.by_division || {},
-        recent:  data.recent || [],
+        total:    data.total_legs || 0,
+        p1:       data.p1 || {},
+        p2:       data.p2 || {},
+        byDiv:    data.by_division || {},
+        bySource: data.by_source || {},
+        recent:   data.recent || [],
       }
     } catch (_) {}
 
