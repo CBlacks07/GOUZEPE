@@ -3666,6 +3666,85 @@ app.get('/seasons/:id/standings', auth, async (req,res)=>{
   ok(res,{ season_id:sid, standings:list });
 });
 
+/* Détail des tournois comptant pour le titre : participants, points saison & moyenne */
+app.get('/seasons/:id/tournaments-breakdown', auth, async (req, res) => {
+  try {
+    const sid = +req.params.id;
+    const chk = await q(`SELECT 1 FROM seasons WHERE id=$1`, [sid]);
+    if (!chk.rowCount) return bad(res, 404, 'saison inconnue');
+    const roles = await getPlayersRoles();
+
+    const tournaments = await q(`
+      SELECT id, name, slug, format, status, winner_name, rr_standings_mode,
+             starts_at, COALESCE(ended_at, updated_at, created_at) AS played_at
+      FROM tournaments
+      WHERE season_id=$1 AND status='completed'
+        AND member_tournament=true AND counts_for_title=true
+      ORDER BY COALESCE(ended_at, updated_at, created_at) ASC, id ASC
+    `, [sid]);
+
+    const out = [];
+    for (const t of tournaments.rows) {
+      const parts = await q(`
+        SELECT id, player_id, display_name, seed
+        FROM tournament_participants
+        WHERE tournament_id=$1
+        ORDER BY seed ASC NULLS LAST, id ASC
+      `, [t.id]);
+      if (!parts.rowCount) continue;
+
+      const matches = await q(`
+        SELECT id, round_no, bracket_side, group_no, status, next_match_id,
+               p1_participant_id, p2_participant_id, winner_participant_id,
+               score_p1, score_p2
+        FROM tournament_matches
+        WHERE tournament_id=$1
+        ORDER BY round_no ASC, slot_no ASC
+      `, [t.id]);
+
+      let ranking = rankTournamentParticipants(t, parts.rows, matches.rows);
+      ranking = await attachPlayerIdsByDisplayName(ranking);
+
+      // Points saison : barème D1 sur le sous-classement des membres éligibles
+      const eligible = ranking.filter(r => isEligibleTournamentMember(r.player_id, roles));
+      const nElig = eligible.length;
+      const ptsByPid = new Map();
+      eligible.forEach((row, idx) => ptsByPid.set(row.participant_id, pointsD1(nElig, idx + 1)));
+
+      const rows = ranking.map(r => {
+        const elig = ptsByPid.has(r.participant_id);
+        const pts = elig ? ptsByPid.get(r.participant_id) : null;
+        const played = r.played || 0;
+        return {
+          rank: r.rank,
+          player_id: r.player_id || null,
+          name: r.display_name,
+          eligible: elig,
+          played,
+          wins: r.wins, draws: r.draws, losses: r.losses,
+          gf: r.gf, ga: r.ga,
+          season_points: pts,
+          moyenne: (elig && played > 0) ? +(pts / played).toFixed(2) : null,
+        };
+      });
+
+      out.push({
+        id: t.id, name: t.name, slug: t.slug, format: t.format,
+        winner_name: t.winner_name || null,
+        starts_at: t.starts_at, played_at: t.played_at,
+        participants_count: parts.rowCount,
+        eligible_count: nElig,
+        rows,
+      });
+    }
+
+    ok(res, { season_id: sid, tournaments: out });
+  } catch (e) {
+    console.error('GET /seasons/:id/tournaments-breakdown error', e);
+    bad(res, 500, 'Server error');
+  }
+});
+
 /* ====== Saisons (CRUD & helpers) ====== */
 app.get('/seasons', auth, async (_req,res)=>{
   const r=await q(`SELECT id,name,is_closed,started_at,ended_at FROM seasons ORDER BY id DESC`);

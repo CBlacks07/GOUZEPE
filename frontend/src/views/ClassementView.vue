@@ -31,6 +31,9 @@
         <button @click="openCompareModal" class="btn">
           <ArrowLeftRightIcon class="w-4 h-4" /> Comparer
         </button>
+        <button @click="openTournamentsModal" class="btn">
+          <TrophyIcon class="w-4 h-4" /> Tournois
+        </button>
         <button @click="load" class="btn" :disabled="loading">
           <RefreshCwIcon class="w-4 h-4" :class="{ 'animate-spin': loading }" />
         </button>
@@ -383,6 +386,71 @@
       </div>
     </BaseModal>
 
+    <!-- Modal: Tournois de la saison -->
+    <BaseModal :open="tournamentsModal" title="Tournois de la saison" @close="tournamentsModal = false" size="lg">
+      <div v-if="tournamentsLoading" class="text-center py-8" style="color:var(--muted)">
+        <Loader2Icon class="w-5 h-5 animate-spin inline" /> Chargement…
+      </div>
+      <div v-else-if="!tournamentsList.length" class="text-center py-8 text-sm" style="color:var(--muted)">
+        Aucun tournoi comptant pour le titre dans cette saison.
+      </div>
+      <div v-else class="space-y-5">
+        <p class="text-xs" style="color:var(--muted)">
+          Seuls les tournois <strong>membres comptant pour le titre</strong> sont listés.
+          Points = points gagnés pour le Classement Général · Moyenne = points ÷ matchs joués.
+        </p>
+
+        <div v-for="t in tournamentsList" :key="t.id"
+             class="rounded-xl overflow-hidden" style="border:1px solid var(--border)">
+          <!-- En-tête tournoi -->
+          <div class="px-3 py-2 flex flex-wrap items-center justify-between gap-2"
+               style="background:var(--panel);border-bottom:1px solid var(--border)">
+            <div class="font-bold text-sm flex items-center gap-2">
+              <TrophyIcon class="w-4 h-4" style="color:#eab308" />
+              {{ t.name }}
+              <span class="text-xs font-normal" style="color:var(--muted)">{{ formatTitleLabel(t.format) }}</span>
+            </div>
+            <div class="text-xs" style="color:var(--muted)">
+              {{ t.played_at ? fmtDate(String(t.played_at).slice(0,10)) : '—' }}
+              · {{ t.eligible_count }}/{{ t.participants_count }} classé(s)
+              <span v-if="t.rows && t.rows.length"> · 🏆 {{ t.rows[0].name }}</span>
+            </div>
+          </div>
+
+          <!-- Table participants -->
+          <div class="overflow-x-auto">
+            <table class="data-table text-sm w-full">
+              <thead>
+                <tr>
+                  <th class="text-center w-10">Rang</th>
+                  <th>Participant</th>
+                  <th class="text-center">Matchs</th>
+                  <th class="text-center">V-N-D</th>
+                  <th class="text-center">Pts saison</th>
+                  <th class="text-center">Moyenne</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="r in t.rows" :key="r.rank + '-' + (r.player_id || r.name)"
+                    :style="!r.eligible ? 'opacity:.55' : ''">
+                  <td class="text-center" style="color:var(--muted)">{{ r.rank }}</td>
+                  <td>
+                    {{ r.name }}
+                    <span v-if="!r.eligible" class="text-[10px] px-1.5 py-0.5 rounded ml-1"
+                          style="background:rgba(148,163,184,.18);color:var(--muted)">non classé</span>
+                  </td>
+                  <td class="text-center">{{ r.played }}</td>
+                  <td class="text-center" style="color:var(--muted)">{{ r.wins }}-{{ r.draws }}-{{ r.losses }}</td>
+                  <td class="text-center font-bold">{{ r.season_points != null ? r.season_points : '—' }}</td>
+                  <td class="text-center">{{ r.moyenne != null ? r.moyenne.toFixed(2) : '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </BaseModal>
+
     <!-- Modal: Titres joueur -->
     <BaseModal :open="!!playerTitles" :title="'Titres — ' + (playerTitles?.name || playerTitles?.id || '')"
                @close="playerTitles = null" size="md">
@@ -436,7 +504,7 @@ import { useAPI } from '@/composables/useAPI'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
-import { ArrowLeftRightIcon, RefreshCwIcon, PlusIcon, Loader2Icon, PrinterIcon } from 'lucide-vue-next'
+import { ArrowLeftRightIcon, RefreshCwIcon, PlusIcon, Loader2Icon, PrinterIcon, TrophyIcon } from 'lucide-vue-next'
 
 const api    = useAPI()
 const auth   = useAuthStore()
@@ -472,6 +540,10 @@ const allPlayers   = ref([])
 const playersAll   = ref([])   // liste complète /players (inclut les invités)
 const roleById     = ref(new Map())
 const rolesLoaded  = ref(false)
+
+const tournamentsModal   = ref(false)
+const tournamentsLoading = ref(false)
+const tournamentsList    = ref([])
 
 const playerTitles  = ref(null)
 const titlesFilter  = ref('all')
@@ -1036,6 +1108,30 @@ function sourceBadge(s) {
 function openCompareModal() {
   cmpResult.value = null
   compareModal.value = true
+}
+
+/* ====== Tournois de la saison ====== */
+const FORMAT_LABELS = {
+  single_elimination: 'Élimination directe',
+  double_elimination: 'Double élimination',
+  round_robin: 'Round Robin',
+  groups_knockout: 'Groupes + phase finale',
+}
+function formatTitleLabel(f) { return FORMAT_LABELS[f] || f || '' }
+
+async function openTournamentsModal() {
+  tournamentsModal.value = true
+  if (!selectedSeason.value) { tournamentsList.value = []; return }
+  tournamentsLoading.value = true
+  try {
+    const { data } = await api.get(`/seasons/${selectedSeason.value}/tournaments-breakdown`)
+    tournamentsList.value = data.tournaments || []
+  } catch (_) {
+    tournamentsList.value = []
+    toastError('Erreur lors du chargement des tournois')
+  } finally {
+    tournamentsLoading.value = false
+  }
 }
 
 async function runCompare() {
