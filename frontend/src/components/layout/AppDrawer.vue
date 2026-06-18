@@ -13,7 +13,7 @@
     >
       <!-- Header drawer -->
       <div class="flex items-center justify-between px-4 h-14 border-b border-gz-border">
-        <span class="text-sm font-bold text-gz-text">GOUZEPE eFOOTBALL</span>
+        <span class="text-sm font-bold text-gz-text" style="font-family:var(--font-title);letter-spacing:.06em">GOUZEPE <span style="color:var(--muted);font-weight:600">GAMING CLUB</span></span>
         <button @click="$emit('close')" class="btn-ghost p-2">
           <XIcon class="w-5 h-5" />
         </button>
@@ -26,7 +26,7 @@
           @click="$emit('close')"
           class="relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gz-muted
                  hover:text-gz-text hover:bg-gz-border/20 transition-colors mb-0.5"
-          active-class="!text-gz-text bg-gz-border/20"
+          active-class="nav-on"
         >
           <component :is="link.icon" class="w-4 h-4 shrink-0" />
           {{ link.label }}
@@ -65,7 +65,7 @@ import { useMembershipNotif } from '@/composables/useMembershipNotif'
 import {
   HomeIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
   UsersIcon, ShieldIcon, DatabaseIcon, SunIcon, MoonIcon,
-  LogOutIcon, XIcon
+  LogOutIcon, XIcon, PaletteIcon
 } from 'lucide-vue-next'
 
 defineProps({ open: Boolean })
@@ -86,6 +86,7 @@ const allLinks = [
   { to: '/admin/utilisateurs', label: 'Utilisateurs',   icon: ShieldIcon,  adminOnly: true },
   { to: '/admin/tournois',     label: 'Admin Tournois', icon: TrophyIcon,  adminOnly: true },
   { to: '/admin/sauvegardes',  label: 'Sauvegardes',    icon: DatabaseIcon, adminOnly: true },
+  { to: '/admin/site',         label: 'Site',           icon: PaletteIcon,  adminOnly: true },
 ]
 
 const visibleLinks = computed(() =>
@@ -105,4 +106,9 @@ async function handleLogout() {
 
 .slide-right-enter-active, .slide-right-leave-active { transition: transform 0.25s ease; }
 .slide-right-enter-from, .slide-right-leave-to { transform: translateX(100%); }
+
+.nav-on {
+  color: var(--accent-l) !important;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
 </style>

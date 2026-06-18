@@ -16,17 +16,20 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import AppHeader from './AppHeader.vue'
 import AppDrawer from './AppDrawer.vue'
 import { useMembershipNotif } from '@/composables/useMembershipNotif'
+import { useGameStore } from '@/stores/game'
 
 defineProps({
   seasonLabel: { type: String, default: 'Saison' }
 })
 
 const drawerOpen = ref(false)
+const game = useGameStore()
 
 const { fetchCount, setupRealtime } = useMembershipNotif()
 let disposeRealtime = null
 
 onMounted(async () => {
+  game.set('efoot') // espace membre actuellement 100% eFootball → thème bleu
   await fetchCount()
   disposeRealtime = setupRealtime()
 })

@@ -1,9 +1,7 @@
 <template>
   <div :class="['min-h-screen text-gz-text app-root', themeClass]">
     <div class="app-bg-wrap" aria-hidden="true">
-      <video class="app-bg-video" autoplay muted loop playsinline preload="metadata" poster="/assets/fond.png">
-        <source src="/fonds/bg.mp4" type="video/mp4" />
-      </video>
+      <div class="app-bg-logo"></div>
       <div class="app-bg-overlay"></div>
       <div class="app-bg-vignette"></div>
     </div>
@@ -26,10 +24,14 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { RouterView } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
+import { useGameStore } from '@/stores/game'
+import { useSiteSettings } from '@/stores/siteSettings'
 import AppToast from '@/components/ui/AppToast.vue'
 import { resolveBaseURL } from '@/composables/useAPI'
 
 const theme = useThemeStore()
+const game  = useGameStore()
+const site  = useSiteSettings()
 const themeClass = computed(() => theme.mode === 'light' ? 'light' : '')
 
 // ── Keep-alive Render : ping toutes les 9 min pour éviter le cold start ──
@@ -51,6 +53,8 @@ function stopKeepAlive() {
 
 onMounted(() => {
   theme.apply()
+  game.apply()
+  site.load()
   startKeepAlive()
 })
 
@@ -79,14 +83,14 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.app-bg-video {
+.app-bg-logo {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.22;
-  filter: saturate(0.95) contrast(1.03);
+  background-image: var(--app-bg-logo, url('/assets/fond1.png'));
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: min(46vmin, 520px);   /* largeur fixe, hauteur auto → aspect préservé */
+  opacity: var(--app-bg-logo-opacity, 0.16);
 }
 
 .app-bg-overlay {
@@ -103,8 +107,8 @@ onUnmounted(() => {
   background: linear-gradient(180deg, rgba(2, 6, 23, 0.45), rgba(2, 6, 23, 0.62));
 }
 
-:root.light .app-bg-video {
-  opacity: 0.12;
+:root.light .app-bg-logo {
+  opacity: 0.10;
 }
 
 :root.light .app-bg-overlay {
