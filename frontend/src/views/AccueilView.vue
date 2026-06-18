@@ -766,7 +766,8 @@ import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useAPI } from '@/composables/useAPI'
+import { useAPI, mediaUrl } from '@/composables/useAPI'
+import { useSiteSettings } from '@/stores/siteSettings'
 import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
 import { onRealtimeEvent, joinRealtimeRoom, leaveRealtimeRoom } from '@/composables/useRealtimeSocket'
@@ -774,6 +775,7 @@ import { Loader2Icon, Trash2Icon, RefreshCcwIcon, SearchIcon, PrinterIcon, SaveI
 
 const auth   = useAuthStore()
 const api    = useAPI()
+const site   = useSiteSettings()
 const route  = useRoute()
 const router = useRouter()
 const { success, error: toastError, info: toastInfo } = useToast()
@@ -1333,11 +1335,17 @@ onMounted(async () => {
   syncTimer = setInterval(syncCycle, 15000)
   runTypingLoop()
 
-  // Découverte dynamique des images et photos
+  // Carrousel : URLs définies dans le CMS (Cloudinary, etc.) sinon découverte auto des assets
   const anims = ['slide-float', 'slide-zoom', 'slide-spin', 'slide-drift']
-  const [imgs, photos] = await Promise.all([probeAssets('image'), probeAssets('Photo')])
-  heroSlides.value = imgs.map((src, i) => ({ src, alt: `GOUZEPE ${i + 1}`, anim: anims[i % anims.length] }))
-  shuffledPhotos.value = shuffle(photos)
+  const cmsSlides = (site.settings.efootHome?.slides || []).filter(Boolean)
+  const photosP = probeAssets('Photo')
+  if (cmsSlides.length) {
+    heroSlides.value = cmsSlides.map((src, i) => ({ src: mediaUrl(src), alt: `GOUZEPE ${i + 1}`, anim: anims[i % anims.length] }))
+  } else {
+    const imgs = await probeAssets('image')
+    heroSlides.value = imgs.map((src, i) => ({ src, alt: `GOUZEPE ${i + 1}`, anim: anims[i % anims.length] }))
+  }
+  shuffledPhotos.value = shuffle(await photosP)
 
   if (heroSlides.value.length) {
     heroSlideTimer = setInterval(() => {

@@ -146,6 +146,20 @@ const upload = multer({
   limits:{ fileSize: 2*1024*1024 }
 });
 
+const UP_SITE = path.join(UP, 'site');
+fs.mkdirSync(UP_SITE, { recursive: true });
+const siteUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, UP_SITE),
+    filename: (_req, file, cb) => {
+      const ext = (file.originalname || 'bin').toLowerCase().split('.').pop().replace(/[^a-z0-9]/g, '') || 'bin';
+      cb(null, `site_${Date.now().toString(36)}.${ext}`);
+    }
+  }),
+  fileFilter: (_req, file, cb) => cb(/^(image\/(png|jpe?g|webp|gif|svg\+xml)|video\/(mp4|webm))$/i.test(file.mimetype || '') ? null : new Error('image ou vidéo requise'), true),
+  limits: { fileSize: 60 * 1024 * 1024 } // 60 MB (vidéos de fond)
+});
+
 const restoreUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, BACKUP_UPLOADS_DIR),
@@ -801,6 +815,15 @@ async function ensureSchema(){
   )`);
   await q(`ALTER TABLE membership_requests ADD COLUMN IF NOT EXISTS extra JSONB`);
   await q(`CREATE INDEX IF NOT EXISTS idx_membership_requests_status ON membership_requests(status)`);
+
+  /* table réglages du site (mini-CMS apparence/contenu) — un seul document */
+  await q(`CREATE TABLE IF NOT EXISTS site_settings (
+    id         INTEGER PRIMARY KEY DEFAULT 1,
+    data       JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT site_settings_single CHECK (id = 1)
+  )`);
+  await q(`INSERT INTO site_settings (id, data) VALUES (1, '{}'::jsonb) ON CONFLICT (id) DO NOTHING`);
 
   /* table stats invités */
   await q(`CREATE TABLE IF NOT EXISTS guest_season_stats (
@@ -2626,13 +2649,58 @@ app.get('/public/latest-day', async (_req, res) => {
 })
 
 // Demande de membre (public)
+// ── Réglages du site (mini-CMS) ──────────────────────────────
+app.get('/public/site-settings', async (_req, res) => {
+  try {
+    const r = await q(`SELECT data FROM site_settings WHERE id=1`)
+    ok(res, { settings: r.rows[0]?.data || {} })
+  } catch (e) {
+    console.error('GET /public/site-settings', e)
+    ok(res, { settings: {} })
+  }
+})
+
+app.put('/admin/site-settings', auth, adminOnly, async (req, res) => {
+  try {
+    const data = (req.body && typeof req.body === 'object' && req.body.settings && typeof req.body.settings === 'object')
+      ? req.body.settings
+      : (req.body || {})
+    await q(
+      `INSERT INTO site_settings (id, data, updated_at) VALUES (1, $1::jsonb, now())
+       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+      [JSON.stringify(data)]
+    )
+    ok(res, { ok: true, settings: data })
+  } catch (e) {
+    console.error('PUT /admin/site-settings', e)
+    bad(res, 500, 'Enregistrement impossible')
+  }
+})
+
+app.post('/admin/site-media', auth, adminOnly, siteUpload.single('file'), async (req, res) => {
+  if (!req.file) return bad(res, 400, 'Aucun fichier')
+  ok(res, { url: `/uploads/site/${req.file.filename}` })
+})
+
+// Annuaire public des membres (hors invités)
+app.get('/public/members', async (_req, res) => {
+  const r = await q(`
+    SELECT player_id, name, role, profile_pic_url, created_at
+    FROM players
+    WHERE UPPER(COALESCE(role,'MEMBRE')) <> 'INVITE'
+    ORDER BY name ASC
+  `)
+  ok(res, { members: r.rows })
+})
+
 app.post('/public/inscription', async (req, res) => {
-  const { name, email, age, platform, frequency, message } = req.body || {}
+  const { name, email, age, platform, frequency, message, games } = req.body || {}
   if (!name || !name.trim()) return bad(res, 400, 'Nom requis')
   if (!email || !email.trim()) return bad(res, 400, 'Email requis')
   const existing = await q(`SELECT id FROM membership_requests WHERE email=$1 AND status='pending'`, [email.trim().toLowerCase()])
   if (existing.rowCount) return bad(res, 409, 'Une demande est déjà en attente pour cet email')
-  const extra = JSON.stringify({ age: age||null, platform: platform||null, frequency: frequency||null })
+  const gamesArr = Array.isArray(games) ? games.filter(Boolean) : (games ? [games] : [])
+  const extra = JSON.stringify({ age: age||null, platform: platform||null, frequency: frequency||null, games: gamesArr })
   const r = await q(`
     INSERT INTO membership_requests(name, email, message, extra)
     VALUES($1, $2, $3, $4) RETURNING id, created_at

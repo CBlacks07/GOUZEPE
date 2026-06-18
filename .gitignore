@@ -39,3 +39,12 @@ Desktop.ini
 # Temporary files
 *.tmp
 *.temp
+
+# Médias lourds (gérés via Cloudinary / hors git)
+frontend/public/fonds/bg-tekk.mp4
+
+# Dumps de base & données/captures locales (non versionnés — peuvent contenir des données sensibles)
+dump_*.sql
+/image.png
+/create_tournaments.py
+/insert_scores.py

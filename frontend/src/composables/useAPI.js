@@ -10,6 +10,15 @@ export function resolveBaseURL() {
   return 'http://' + host + ':3005'
 }
 
+// Résout une URL de média : /uploads → servi par l'API ; /assets, /fonds → origine web (relatif)
+export function mediaUrl(u) {
+  if (!u) return ''
+  if (/^https?:\/\//.test(u)) return u
+  const path = u.startsWith('/') ? u : '/' + u
+  if (path.startsWith('/uploads')) return resolveBaseURL() + path
+  return path
+}
+
 // Instance axios partagée (lazy — créée une seule fois)
 let _instance = null
 

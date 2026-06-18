@@ -2,10 +2,10 @@
   <header class="topbar">
     <!-- Logo -->
     <RouterLink to="/" class="flex items-center gap-2.5 shrink-0 no-underline">
-      <img src="/assets/icons/apple-touch-icon.png" alt="Logo" class="w-8 h-8 rounded-lg object-cover" />
-      <div class="hidden sm:block leading-tight">
-        <div class="text-sm font-bold text-gz-text">GOUZEPE eFOOTBALL</div>
-        <div class="text-xs text-gz-green font-semibold">{{ seasonLabel }}</div>
+      <img src="/assets/icons/apple-touch-icon.png" alt="Logo" class="w-9 h-9 rounded-lg object-cover" />
+      <div class="hidden sm:block leading-tight" style="font-family:var(--font-title)">
+        <div class="text-sm font-bold text-gz-text" style="letter-spacing:.06em">GOUZEPE <span style="color:var(--muted);font-weight:600">GAMING CLUB</span></div>
+        <div class="text-xs font-semibold" style="color:var(--accent-l)">{{ seasonLabel }}</div>
       </div>
     </RouterLink>
 
@@ -13,9 +13,9 @@
     <nav class="hidden lg:flex items-center gap-0.5 ml-4 flex-1 overflow-x-auto">
       <RouterLink v-for="link in visibleLinks" :key="link.to"
         :to="link.to"
-        class="relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[13px] whitespace-nowrap text-gz-muted
+        class="navlink relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[13px] whitespace-nowrap text-gz-muted
                hover:text-gz-text hover:bg-gz-border/20 transition-colors duration-150"
-        active-class="!text-gz-text bg-gz-border/20"
+        active-class="nav-on"
       >
         <component :is="link.icon" class="w-3.5 h-3.5" />
         {{ link.label }}
@@ -57,7 +57,7 @@ import { useMembershipNotif } from '@/composables/useMembershipNotif'
 import {
   HomeIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
   UsersIcon, ShieldIcon, DatabaseIcon, SunIcon, MoonIcon,
-  LogOutIcon, MenuIcon
+  LogOutIcon, MenuIcon, PaletteIcon
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -80,6 +80,7 @@ const allLinks = [
   { to: '/admin/utilisateurs', label: 'Utilisateurs',     icon: ShieldIcon,   adminOnly: true },
   { to: '/admin/tournois',     label: 'Admin Tournois',   icon: TrophyIcon,   adminOnly: true },
   { to: '/admin/sauvegardes',  label: 'Sauvegardes',      icon: DatabaseIcon, adminOnly: true },
+  { to: '/admin/site',         label: 'Site',             icon: PaletteIcon,  adminOnly: true },
 ]
 
 const visibleLinks = computed(() =>
@@ -92,3 +93,10 @@ async function handleLogout() {
   router.push('/login')
 }
 </script>
+
+<style scoped>
+.nav-on {
+  color: var(--accent-l) !important;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+</style>

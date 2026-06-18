@@ -44,8 +44,26 @@ const routes = [
   {
     path: '/',
     name: 'PublicHome',
-    component: () => import('@/views/PublicHomeView.vue'),
-    meta: { requiresAuth: false, title: 'GOUZEPE eFOOTBALL', public: true },
+    component: () => import('@/views/public/LandingView.vue'),
+    meta: { requiresAuth: false, title: 'GOUZEPE Gaming Club', public: true },
+  },
+  {
+    path: '/efootball',
+    name: 'EfootballHub',
+    component: () => import('@/views/public/EfootballHubView.vue'),
+    meta: { requiresAuth: false, title: 'eFootball' },
+  },
+  {
+    path: '/tekken',
+    name: 'TekkenHub',
+    component: () => import('@/views/public/TekkenHubView.vue'),
+    meta: { requiresAuth: false, title: 'Tekken' },
+  },
+  {
+    path: '/membres',
+    name: 'Membres',
+    component: () => import('@/views/public/MembresView.vue'),
+    meta: { requiresAuth: false, title: 'Membres' },
   },
   {
     path: '/inscription',
@@ -113,6 +131,12 @@ const routes = [
     name: 'AdminSauvegardes',
     component: () => import('@/views/admin/AdminSauvegardesView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin - Sauvegardes' },
+  },
+  {
+    path: '/admin/site',
+    name: 'AdminSite',
+    component: () => import('@/views/admin/AdminSiteView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin - Apparence du site' },
   },
 
   { path: '/:pathMatch(.*)*', redirect: '/' },
