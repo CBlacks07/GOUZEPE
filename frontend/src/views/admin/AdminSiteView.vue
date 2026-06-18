@@ -100,23 +100,44 @@
           </div>
         </section>
 
-        <!-- Carrousel accueil eFootball -->
+        <!-- Bande photos de l'accueil eFootball -->
         <section class="card">
-          <h2 class="sec-title">Carrousel accueil eFootball</h2>
+          <h2 class="sec-title">Bande photos — accueil eFootball</h2>
           <p class="text-xs mb-3" style="color:var(--muted)">
-            Images qui défilent sur l'accueil membre. Laisse vide pour la découverte automatique.
+            La bande de photos qui défile en haut de l'accueil membre. Laisse vide pour la découverte automatique.
             Tu peux coller des <strong>URLs</strong> (ex. Cloudinary) ou uploader.
           </p>
           <div v-for="(slide, i) in form.efootHome.slides" :key="i" class="media-row mt-2">
             <img :src="resolveUrl(form.efootHome.slides[i])" alt="" class="media-prev" />
             <input v-model="form.efootHome.slides[i]" class="input" placeholder="https://res.cloudinary.com/..." />
-            <button class="btn" @click="removeSlide(i)" title="Retirer"><XIcon class="w-4 h-4" /></button>
+            <button class="btn" @click="removeAt(form.efootHome.slides, i)" title="Retirer"><XIcon class="w-4 h-4" /></button>
           </div>
           <div class="flex gap-2 mt-3 flex-wrap">
-            <button class="btn" @click="addSlide"><PlusIcon class="w-4 h-4" /> Ajouter une URL</button>
+            <button class="btn" @click="addUrl(form.efootHome.slides)"><PlusIcon class="w-4 h-4" /> Ajouter une URL</button>
             <label class="btn upload-btn">
               <UploadIcon class="w-4 h-4" /> Uploader une image
               <input type="file" accept="image/*" hidden @change="onUpload($event, v => form.efootHome.slides.push(v))" />
+            </label>
+          </div>
+        </section>
+
+        <!-- Images du hero de l'accueil eFootball -->
+        <section class="card">
+          <h2 class="sec-title">Images du hero — accueil eFootball</h2>
+          <p class="text-xs mb-3" style="color:var(--muted)">
+            Le visuel rotatif du hero (à droite du titre « Bienvenue au club »). Laisse vide pour la découverte automatique.
+            <strong>URLs</strong> Cloudinary ou upload.
+          </p>
+          <div v-for="(img, i) in form.efootHome.hero" :key="i" class="media-row mt-2">
+            <img :src="resolveUrl(form.efootHome.hero[i])" alt="" class="media-prev" />
+            <input v-model="form.efootHome.hero[i]" class="input" placeholder="https://res.cloudinary.com/..." />
+            <button class="btn" @click="removeAt(form.efootHome.hero, i)" title="Retirer"><XIcon class="w-4 h-4" /></button>
+          </div>
+          <div class="flex gap-2 mt-3 flex-wrap">
+            <button class="btn" @click="addUrl(form.efootHome.hero)"><PlusIcon class="w-4 h-4" /> Ajouter une URL</button>
+            <label class="btn upload-btn">
+              <UploadIcon class="w-4 h-4" /> Uploader une image
+              <input type="file" accept="image/*" hidden @change="onUpload($event, v => form.efootHome.hero.push(v))" />
             </label>
           </div>
         </section>
@@ -195,12 +216,11 @@ async function save() {
   }
 }
 
-function addSlide() {
-  if (!Array.isArray(form.value.efootHome.slides)) form.value.efootHome.slides = []
-  form.value.efootHome.slides.push('')
+function addUrl(list) {
+  if (Array.isArray(list)) list.push('')
 }
-function removeSlide(i) {
-  form.value.efootHome.slides.splice(i, 1)
+function removeAt(list, i) {
+  if (Array.isArray(list)) list.splice(i, 1)
 }
 
 function resetDefaults() {

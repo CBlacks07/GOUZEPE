@@ -23,9 +23,10 @@ export const DEFAULTS = {
     cardText: 'Ladder, duels classés et tournois à élimination. Le pôle combat du club arrive — prépare-toi.',
     heroVideo: '/fonds/bg-tekk.mp4',
   },
-  // Carrousel de l'accueil membre eFootball — liste d'URLs (vide = découverte auto des assets)
+  // Accueil membre eFootball — listes d'URLs (vide = découverte auto des assets)
   efootHome: {
-    slides: [],
+    slides: [], // bande photos défilante (haut de l'accueil)
+    hero: [],   // image(s) du hero (visuel rotatif)
   },
 }
 

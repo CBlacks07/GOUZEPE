@@ -1335,17 +1335,25 @@ onMounted(async () => {
   syncTimer = setInterval(syncCycle, 15000)
   runTypingLoop()
 
-  // Carrousel : URLs définies dans le CMS (Cloudinary, etc.) sinon découverte auto des assets
+  // Médias de l'accueil : URLs du CMS (Cloudinary) sinon découverte auto des assets.
   const anims = ['slide-float', 'slide-zoom', 'slide-spin', 'slide-drift']
-  const cmsSlides = (site.settings.efootHome?.slides || []).filter(Boolean)
-  const photosP = probeAssets('Photo')
-  if (cmsSlides.length) {
-    heroSlides.value = cmsSlides.map((src, i) => ({ src: mediaUrl(src), alt: `GOUZEPE ${i + 1}`, anim: anims[i % anims.length] }))
+  const cmsPhotos = (site.settings.efootHome?.slides || []).filter(Boolean)
+  const cmsHero   = (site.settings.efootHome?.hero  || []).filter(Boolean)
+
+  // Bande photos défilante
+  if (cmsPhotos.length) {
+    shuffledPhotos.value = shuffle(cmsPhotos.map(mediaUrl))
+  } else {
+    shuffledPhotos.value = shuffle(await probeAssets('Photo'))
+  }
+
+  // Hero (visuel rotatif)
+  if (cmsHero.length) {
+    heroSlides.value = cmsHero.map((src, i) => ({ src: mediaUrl(src), alt: `GOUZEPE ${i + 1}`, anim: anims[i % anims.length] }))
   } else {
     const imgs = await probeAssets('image')
     heroSlides.value = imgs.map((src, i) => ({ src, alt: `GOUZEPE ${i + 1}`, anim: anims[i % anims.length] }))
   }
-  shuffledPhotos.value = shuffle(await photosP)
 
   if (heroSlides.value.length) {
     heroSlideTimer = setInterval(() => {
