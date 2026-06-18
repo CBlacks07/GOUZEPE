@@ -394,26 +394,39 @@
       <div v-else-if="!tournamentsList.length" class="text-center py-8 text-sm" style="color:var(--muted)">
         Aucun tournoi comptant pour le titre dans cette saison.
       </div>
-      <div v-else class="space-y-5">
+      <div v-else class="space-y-4">
         <p class="text-xs" style="color:var(--muted)">
           Seuls les tournois <strong>membres comptant pour le titre</strong> sont listés.
           Points = points gagnés pour le Classement Général · Moyenne = points ÷ matchs joués.
         </p>
 
-        <div v-for="t in tournamentsList" :key="t.id"
-             class="rounded-xl overflow-hidden" style="border:1px solid var(--border)">
+        <!-- Sélecteur de tournoi (chips) -->
+        <div class="flex gap-1.5 flex-wrap">
+          <button v-for="t in tournamentsOrdered" :key="t.id"
+                  @click="activeTournamentId = t.id"
+                  class="px-3 py-1 rounded-full text-xs font-semibold transition-all"
+                  :style="activeTournamentId === t.id
+                    ? 'background:rgba(37,99,235,.18);color:#60a5fa;border:1px solid rgba(37,99,235,.5)'
+                    : 'background:var(--card);color:var(--muted);border:1px solid var(--border)'">
+            {{ t.name }}
+          </button>
+        </div>
+
+        <!-- Tournoi actif -->
+        <div v-if="activeTournament" :key="activeTournament.id"
+             class="rounded-xl overflow-hidden reveal" style="border:1px solid var(--border)">
           <!-- En-tête tournoi -->
           <div class="px-3 py-2 flex flex-wrap items-center justify-between gap-2"
                style="background:var(--panel);border-bottom:1px solid var(--border)">
             <div class="font-bold text-sm flex items-center gap-2">
               <TrophyIcon class="w-4 h-4" style="color:#eab308" />
-              {{ t.name }}
-              <span class="text-xs font-normal" style="color:var(--muted)">{{ formatTitleLabel(t.format) }}</span>
+              {{ activeTournament.name }}
+              <span class="text-xs font-normal" style="color:var(--muted)">{{ formatTitleLabel(activeTournament.format) }}</span>
             </div>
             <div class="text-xs" style="color:var(--muted)">
-              {{ t.played_at ? fmtDate(String(t.played_at).slice(0,10)) : '—' }}
-              · {{ t.eligible_count }}/{{ t.participants_count }} classé(s)
-              <span v-if="t.rows && t.rows.length"> · 🏆 {{ t.rows[0].name }}</span>
+              {{ activeTournament.played_at ? fmtDate(String(activeTournament.played_at).slice(0,10)) : '—' }}
+              · {{ activeTournament.eligible_count }}/{{ activeTournament.participants_count }} classé(s)
+              <span v-if="activeTournament.rows && activeTournament.rows.length"> · 🏆 {{ activeTournament.rows[0].name }}</span>
             </div>
           </div>
 
@@ -431,7 +444,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="r in t.rows" :key="r.rank + '-' + (r.player_id || r.name)"
+                <tr v-for="r in activeTournament.rows" :key="r.rank + '-' + (r.player_id || r.name)"
                     :style="!r.eligible ? 'opacity:.55' : ''">
                   <td class="text-center" style="color:var(--muted)">{{ r.rank }}</td>
                   <td>
@@ -541,9 +554,10 @@ const playersAll   = ref([])   // liste complète /players (inclut les invités)
 const roleById     = ref(new Map())
 const rolesLoaded  = ref(false)
 
-const tournamentsModal   = ref(false)
-const tournamentsLoading = ref(false)
-const tournamentsList    = ref([])
+const tournamentsModal    = ref(false)
+const tournamentsLoading  = ref(false)
+const tournamentsList     = ref([])
+const activeTournamentId  = ref(null)
 
 const playerTitles  = ref(null)
 const titlesFilter  = ref('all')
@@ -1119,13 +1133,20 @@ const FORMAT_LABELS = {
 }
 function formatTitleLabel(f) { return FORMAT_LABELS[f] || f || '' }
 
+// Plus récents en premier (la liste API est triée par date croissante)
+const tournamentsOrdered = computed(() => [...tournamentsList.value].reverse())
+const activeTournament = computed(() =>
+  tournamentsList.value.find(t => t.id === activeTournamentId.value) || null)
+
 async function openTournamentsModal() {
   tournamentsModal.value = true
+  activeTournamentId.value = null
   if (!selectedSeason.value) { tournamentsList.value = []; return }
   tournamentsLoading.value = true
   try {
     const { data } = await api.get(`/seasons/${selectedSeason.value}/tournaments-breakdown`)
     tournamentsList.value = data.tournaments || []
+    activeTournamentId.value = tournamentsOrdered.value[0]?.id ?? null
   } catch (_) {
     tournamentsList.value = []
     toastError('Erreur lors du chargement des tournois')
