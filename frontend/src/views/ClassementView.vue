@@ -397,7 +397,7 @@
       <div v-else class="space-y-4">
         <p class="text-xs" style="color:var(--muted)">
           Seuls les tournois <strong>membres comptant pour le titre</strong> sont listés.
-          Points = points gagnés pour le Classement Général · Moyenne = points ÷ matchs joués.
+          Points = points gagnés pour le Classement Général.
         </p>
 
         <!-- Sélecteur de tournoi (chips) -->
@@ -440,7 +440,6 @@
                   <th class="text-center">Matchs</th>
                   <th class="text-center">V-N-D</th>
                   <th class="text-center">Pts saison</th>
-                  <th class="text-center">Moyenne</th>
                 </tr>
               </thead>
               <tbody>
@@ -455,7 +454,6 @@
                   <td class="text-center">{{ r.played }}</td>
                   <td class="text-center" style="color:var(--muted)">{{ r.wins }}-{{ r.draws }}-{{ r.losses }}</td>
                   <td class="text-center font-bold">{{ r.season_points != null ? r.season_points : '—' }}</td>
-                  <td class="text-center">{{ r.moyenne != null ? r.moyenne.toFixed(2) : '—' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -1047,7 +1045,7 @@ async function printSeasonA4() {
           <div class="champ-label">Champion de la saison</div>
           <div class="champ-name">${escapeHtml(champ.name || champ.id)}</div>
           <div class="champ-id">(${escapeHtml(champ.id)})</div>
-          <div class="champ-stats">${champ.total ?? 0} pts &bull; ${champ.participations ?? 0} journées &bull; moy. ${Number(champ.moyenne || 0).toFixed(2)} &bull; ${champ.won_d1 ?? 0} titre(s) D1</div>
+          <div class="champ-stats">${champ.total ?? 0} pts &bull; ${champ.participations ?? 0} particip. &bull; moy. ${Number(champ.moyenne || 0).toFixed(2)} &bull; ${champ.won_d1 ?? 0} titre(s) D1</div>
         </div>
       </div>
       <div class="highlights">`
@@ -1188,7 +1186,7 @@ async function runCompare() {
       nameB: pB?.name || cmpB.value,
       rows: [
         { label: 'Total de points',     a: sA.total ?? 0,                       b: sB.total ?? 0,                       desc: true },
-        { label: 'Moyenne / journée',   a: Number(sA.moyenne || 0).toFixed(2),  b: Number(sB.moyenne || 0).toFixed(2),  desc: true, numeric: true },
+        { label: 'Moyenne / participation', a: Number(sA.moyenne || 0).toFixed(2),  b: Number(sB.moyenne || 0).toFixed(2),  desc: true, numeric: true },
         { label: 'Participations',      a: sA.participations ?? 0,              b: sB.participations ?? 0,              desc: true },
         { label: 'Journées D1',         a: aggA.d1 ?? 0,                        b: aggB.d1 ?? 0,                        desc: true },
         { label: 'Journées D2',         a: aggA.d2 ?? 0,                        b: aggB.d2 ?? 0,                        desc: true },

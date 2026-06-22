@@ -14,18 +14,32 @@
 
     <!-- Annuaire -->
     <section class="section">
-      <div class="section-head">
-        <h2>Annuaire</h2>
-        <p v-if="!loading">{{ filtered.length }} membre(s)</p>
+      <div class="game-tabs">
+        <button :class="['gt', { on: activeGame === 'efoot' }]" @click="selectGame('efoot')">eFootball</button>
+        <button :class="['gt', { on: activeGame === 'tekken' }]" @click="selectGame('tekken')">Tekken</button>
       </div>
 
-      <div class="m-toolbar">
-        <input v-model="search" type="text" class="input m-search" placeholder="Rechercher un membre…" />
+      <!-- Tekken : à venir -->
+      <div v-if="activeGame === 'tekken'" class="soon-box">
+        <TrophyIcon class="soon-ic" />
+        <h3>Membres Tekken — bientôt</h3>
+        <p>Le pôle Tekken se prépare. Les joueurs Tekken apparaîtront ici dès le lancement.</p>
+        <RouterLink to="/inscription" class="btn-primary cta-lg">Rejoindre le club</RouterLink>
       </div>
 
-      <div v-if="loading" class="empty">Chargement…</div>
-      <div v-else-if="!filtered.length" class="empty">Aucun membre trouvé.</div>
-      <div v-else class="m-grid">
+      <template v-else>
+        <div class="section-head">
+          <h2>Annuaire</h2>
+          <p v-if="!loading">{{ filtered.length }} membre(s)</p>
+        </div>
+
+        <div class="m-toolbar">
+          <input v-model="search" type="text" class="input m-search" placeholder="Rechercher un membre…" />
+        </div>
+
+        <div v-if="loading" class="empty">Chargement…</div>
+        <div v-else-if="!filtered.length" class="empty">Aucun membre trouvé.</div>
+        <div v-else class="m-grid">
         <article v-for="m in filtered" :key="m.player_id" class="m-card">
           <div class="m-avatar">
             <img v-if="avatarUrl(m)" :src="avatarUrl(m)" :alt="m.name" />
@@ -37,7 +51,8 @@
           </div>
           <span v-if="isAdminRole(m.role)" class="m-badge">Admin</span>
         </article>
-      </div>
+        </div>
+      </template>
     </section>
 
     <section class="section join-band">
@@ -53,13 +68,23 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { TrophyIcon } from 'lucide-vue-next'
 import PublicNav from '@/components/public/PublicNav.vue'
 import PublicFooter from '@/components/public/PublicFooter.vue'
+import { useGameStore } from '@/stores/game'
 import { resolveBaseURL } from '@/composables/useAPI'
 
+const game = useGameStore()
+const activeGame = ref(game.isTekken ? 'tekken' : 'efoot')
 const members = ref([])
 const loading = ref(true)
 const search = ref('')
+
+function selectGame(g) {
+  if (activeGame.value === g) return
+  activeGame.value = g
+  game.set(g)
+}
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -84,6 +109,7 @@ function sinceLabel(d) {
 }
 
 onMounted(async () => {
+  game.set(activeGame.value)
   try {
     const r = await fetch(resolveBaseURL() + '/public/members', { headers: { Accept: 'application/json' } })
     if (r.ok) { const d = await r.json(); members.value = d.members || [] }
@@ -107,6 +133,15 @@ onMounted(async () => {
 .section-head h2 { font-family: var(--font-title); font-weight: 700; font-size: clamp(1.4rem, 3vw, 2rem); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 .3rem; }
 .section-head h2::after { content: ''; display: block; width: 3rem; height: 3px; margin-top: .6rem; border-radius: 3px; background: var(--accent); }
 .section-head p { color: var(--muted); margin: 0; }
+
+.game-tabs { display: inline-flex; gap: .4rem; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); margin-bottom: 1.5rem; }
+.gt { padding: .45rem 1.2rem; border: none; background: transparent; color: var(--muted); font-family: var(--font-title); font-weight: 700; letter-spacing: .03em; text-transform: uppercase; font-size: .84rem; border-radius: 999px; cursor: pointer; transition: all .18s; }
+.gt.on { background: var(--accent); color: #fff; box-shadow: 0 3px 12px rgba(var(--accent-rgb), .35); }
+
+.soon-box { text-align: center; border: 1px solid var(--border); border-radius: 16px; background: var(--card); padding: 3rem 1.5rem; }
+.soon-ic { width: 2.4rem; height: 2.4rem; color: var(--accent); margin: 0 auto .8rem; }
+.soon-box h3 { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 1.4rem; margin: 0 0 .5rem; }
+.soon-box p { color: var(--muted); max-width: 34rem; margin: 0 auto 1.5rem; }
 
 .m-toolbar { margin-bottom: 1.5rem; }
 .m-search { max-width: 22rem; }
