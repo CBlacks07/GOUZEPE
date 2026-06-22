@@ -2682,6 +2682,36 @@ app.post('/admin/site-media', auth, adminOnly, siteUpload.single('file'), async 
   ok(res, { url: `/uploads/site/${req.file.filename}` })
 })
 
+// Classement général public (par jeu). game=efoot (défaut) | tekken
+app.get('/public/standings', async (req, res) => {
+  try {
+    const game = String(req.query.game || 'efoot').toLowerCase() === 'tekken' ? 'tekken' : 'efoot'
+
+    // Pôle Tekken en préparation — pas encore de classement
+    if (game === 'tekken') {
+      return ok(res, { game, available: false, season: null, days_count: 0, standings: [] })
+    }
+
+    let season = (await q(`SELECT id, name FROM seasons WHERE is_closed=false ORDER BY id DESC LIMIT 1`)).rows[0]
+    if (!season) season = (await q(`SELECT id, name FROM seasons ORDER BY id DESC LIMIT 1`)).rows[0]
+    if (!season) return ok(res, { game, available: true, season: null, days_count: 0, threshold: 0, classed_count: 0, standings: [] })
+
+    const all = await computeSeasonStandings(season.id)
+    const daysCount = (await q(`SELECT COUNT(*)::int AS c FROM matchday WHERE season_id=$1`, [season.id])).rows[0]?.c || 0
+    const threshold = daysCount ? Math.ceil(daysCount * 0.25) : 0
+    // Vitrine publique : uniquement le Top 10 des joueurs classés (le détail complet reste réservé aux membres)
+    const classed = all.filter(r => (r.participations || 0) >= threshold)
+    const top = classed.slice(0, 10).map(r => ({
+      id: r.id, name: r.name, total: r.total, participations: r.participations,
+      moyenne: r.moyenne, won_d1: r.won_d1, won_d2: r.won_d2,
+    }))
+    ok(res, { game, available: true, season: { id: season.id, name: season.name }, days_count: daysCount, threshold, classed_count: classed.length, standings: top })
+  } catch (e) {
+    console.error('GET /public/standings', e)
+    ok(res, { game: 'efoot', available: true, season: null, days_count: 0, standings: [] })
+  }
+})
+
 // Annuaire public des membres (hors invités)
 app.get('/public/members', async (_req, res) => {
   const r = await q(`
@@ -3792,7 +3822,6 @@ app.get('/seasons/:id/tournaments-breakdown', auth, async (req, res) => {
           wins: r.wins, draws: r.draws, losses: r.losses,
           gf: r.gf, ga: r.ga,
           season_points: pts,
-          moyenne: (elig && played > 0) ? +(pts / played).toFixed(2) : null,
         };
       });
 

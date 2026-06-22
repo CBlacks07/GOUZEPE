@@ -60,6 +60,12 @@ const routes = [
     meta: { requiresAuth: false, title: 'Tekken' },
   },
   {
+    path: '/classements',
+    name: 'ClassementsPublic',
+    component: () => import('@/views/public/ClassementsPublicView.vue'),
+    meta: { requiresAuth: false, title: 'Classements' },
+  },
+  {
     path: '/membres',
     name: 'Membres',
     component: () => import('@/views/public/MembresView.vue'),
@@ -108,6 +114,18 @@ const routes = [
     meta: { requiresAuth: true, title: 'Tournois' },
   },
 
+  {
+    path: '/admin',
+    name: 'AdminConsole',
+    component: () => import('@/views/admin/AdminConsoleView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Administration' },
+  },
+  {
+    path: '/admin/tekken',
+    name: 'AdminTekken',
+    component: () => import('@/views/admin/AdminTekkenView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin - Tekken' },
+  },
   {
     path: '/admin/joueurs',
     name: 'AdminJoueurs',

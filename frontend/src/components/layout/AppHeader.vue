@@ -20,7 +20,7 @@
         <component :is="link.icon" class="w-3.5 h-3.5" />
         {{ link.label }}
         <!-- Badge demandes en attente -->
-        <span v-if="link.to === '/admin/utilisateurs' && pendingCount > 0"
+        <span v-if="link.to === '/admin' && pendingCount > 0"
               class="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 rounded-full text-[10px] font-bold
                      flex items-center justify-center bg-gz-red text-white leading-none">
           {{ pendingCount > 9 ? '9+' : pendingCount }}
@@ -76,11 +76,7 @@ const allLinks = [
   { to: '/classement',         label: 'Classements',      icon: BarChart2Icon, adminOnly: false },
   { to: '/profil',             label: 'Mon espace',       icon: UserIcon,     adminOnly: false },
   { to: '/tournois',           label: 'Tournois',         icon: TrophyIcon,   adminOnly: false },
-  { to: '/admin/joueurs',      label: 'Joueurs',          icon: UsersIcon,    adminOnly: false },
-  { to: '/admin/utilisateurs', label: 'Utilisateurs',     icon: ShieldIcon,   adminOnly: true },
-  { to: '/admin/tournois',     label: 'Admin Tournois',   icon: TrophyIcon,   adminOnly: true },
-  { to: '/admin/sauvegardes',  label: 'Sauvegardes',      icon: DatabaseIcon, adminOnly: true },
-  { to: '/admin/site',         label: 'Site',             icon: PaletteIcon,  adminOnly: true },
+  { to: '/admin',              label: 'Admin',            icon: ShieldIcon,   adminOnly: true },
 ]
 
 const visibleLinks = computed(() =>

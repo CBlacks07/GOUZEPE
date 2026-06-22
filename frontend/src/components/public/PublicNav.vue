@@ -10,6 +10,7 @@
         <RouterLink to="/" exact-active-class="on">Accueil</RouterLink>
         <RouterLink to="/efootball" active-class="on">eFootball</RouterLink>
         <RouterLink to="/tekken" active-class="on">Tekken</RouterLink>
+        <RouterLink to="/classements" active-class="on">Classements</RouterLink>
         <RouterLink to="/membres" active-class="on">Membres</RouterLink>
       </nav>
 

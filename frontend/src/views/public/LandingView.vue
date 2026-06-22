@@ -57,56 +57,82 @@
       </div>
     </section>
 
-    <!-- ── Résultats récents (eFoot) ── -->
+    <!-- ── Compétition (eFootball / Tekken) ── -->
     <section id="resultats" class="section">
       <div class="section-head">
-        <h2>Derniers résultats</h2>
-        <p v-if="latestDay?.day">Journée du {{ fmtDate(latestDay.day) }}</p>
-        <p v-else>Pas encore de journée enregistrée.</p>
+        <h2>Compétition</h2>
+        <p>Résultats &amp; tournois du club.</p>
       </div>
 
-      <div v-if="latestDay?.champions" class="champ-row">
-        <div v-if="latestDay.champions.d1?.id" class="champ-card">
-          <span class="champ-crown">🏆</span>
-          <div><span class="champ-div">Champion D1</span><strong>{{ latestDay.champions.d1.id }}</strong></div>
-        </div>
-        <div v-if="latestDay.champions.d2?.id" class="champ-card">
-          <span class="champ-crown">🏆</span>
-          <div><span class="champ-div">Champion D2</span><strong>{{ latestDay.champions.d2.id }}</strong></div>
-        </div>
+      <div class="comp-tabs">
+        <button :class="['ct', { on: feedGame === 'efoot' }]" @click="setFeed('efoot')">eFootball</button>
+        <button :class="['ct', { on: feedGame === 'tekken' }]" @click="setFeed('tekken')">Tekken</button>
       </div>
 
-      <div v-if="topD1.length" class="mini-board">
-        <div class="mini-head">Top D1 — {{ latestDay?.day ? fmtDate(latestDay.day) : '' }}</div>
-        <div v-for="(r, i) in topD1" :key="r.id" class="mini-row">
-          <span class="mini-rank">{{ i + 1 }}</span>
-          <span class="mini-name">{{ r.id }}</span>
-          <span class="mini-pts">{{ r.PTS }} pts</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── Tournois récents ── -->
-    <section id="tournois" class="section">
-      <div class="section-head">
-        <h2>Tournois</h2>
-        <p>Les dernières compétitions du club.</p>
-      </div>
-
-      <div v-if="tournaments.length" class="tourn-grid">
-        <article v-for="t in tournaments.slice(0, 6)" :key="t.id" class="tourn-card">
-          <div class="tourn-top">
-            <span :class="['tourn-status', t.status === 'live' ? 'live' : '']">{{ t.status === 'live' ? 'En cours' : 'Terminé' }}</span>
-            <span class="tourn-fmt">{{ formatLabel(t.format) }}</span>
+      <!-- eFootball -->
+      <template v-if="feedGame === 'efoot'">
+        <h3 class="comp-sub">Derniers résultats <span v-if="latestDay?.day" class="comp-sub-day">· {{ fmtDate(latestDay.day) }}</span></h3>
+        <div class="res-grid">
+          <!-- Champions -->
+          <div class="champs-col">
+            <div v-if="latestDay?.champions?.d1?.id" class="champ-card">
+              <span class="champ-crown">🏆</span>
+              <div class="champ-meta"><span class="champ-div">Champion D1</span><strong>{{ latestDay.champions.d1.id }}</strong></div>
+            </div>
+            <div v-if="latestDay?.champions?.d2?.id" class="champ-card">
+              <span class="champ-crown">🏆</span>
+              <div class="champ-meta"><span class="champ-div">Champion D2</span><strong>{{ latestDay.champions.d2.id }}</strong></div>
+            </div>
+            <div v-if="!latestDay?.champions?.d1?.id && !latestDay?.champions?.d2?.id" class="champ-empty">
+              Aucun champion enregistré.
+            </div>
           </div>
-          <h3 class="tourn-name">{{ t.name }}</h3>
-          <div class="tourn-meta">
-            <span>{{ t.participants_count }} joueurs</span>
-            <span v-if="t.winner_name">🏆 {{ t.winner_name }}</span>
+          <!-- Top D1 -->
+          <div class="mini-board">
+            <div class="mini-head">Top D1</div>
+            <div v-if="!topD1.length" class="mini-empty">Aucune donnée.</div>
+            <div v-for="(r, i) in topD1" :key="r.id" class="mini-row">
+              <span class="mini-rank">{{ i + 1 }}</span>
+              <span class="mini-name">{{ r.id }}</span>
+              <span class="mini-pts">{{ r.PTS }} pts</span>
+            </div>
           </div>
-        </article>
+          <!-- Top D2 -->
+          <div class="mini-board">
+            <div class="mini-head">Top D2</div>
+            <div v-if="!topD2.length" class="mini-empty">Aucune donnée.</div>
+            <div v-for="(r, i) in topD2" :key="r.id" class="mini-row">
+              <span class="mini-rank">{{ i + 1 }}</span>
+              <span class="mini-name">{{ r.id }}</span>
+              <span class="mini-pts">{{ r.PTS }} pts</span>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="comp-sub" style="margin-top:2.25rem">Tournois</h3>
+        <div v-if="tournaments.length" class="tourn-grid">
+          <article v-for="t in tournaments.slice(0, 6)" :key="t.id" class="tourn-card">
+            <div class="tourn-top">
+              <span :class="['tourn-status', t.status === 'live' ? 'live' : '']">{{ t.status === 'live' ? 'En cours' : 'Terminé' }}</span>
+              <span class="tourn-fmt">{{ formatLabel(t.format) }}</span>
+            </div>
+            <h3 class="tourn-name">{{ t.name }}</h3>
+            <div class="tourn-meta">
+              <span>{{ t.participants_count }} joueurs</span>
+              <span v-if="t.winner_name">🏆 {{ t.winner_name }}</span>
+            </div>
+          </article>
+        </div>
+        <p v-else class="empty">Aucun tournoi pour le moment.</p>
+      </template>
+
+      <!-- Tekken : à venir -->
+      <div v-else class="soon-box">
+        <TrophyIcon class="soon-ic" />
+        <h3>Tekken — bientôt</h3>
+        <p>Le ladder, les duels classés et les tournois Tekken arrivent. Le pôle combat du club se prépare.</p>
+        <RouterLink to="/tekken" class="btn-primary cta-lg">Découvrir le pôle Tekken</RouterLink>
       </div>
-      <p v-else class="empty">Aucun tournoi pour le moment.</p>
     </section>
 
     <!-- ── CTA final ── -->
@@ -124,7 +150,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ArrowRightIcon } from 'lucide-vue-next'
+import { ArrowRightIcon, TrophyIcon } from 'lucide-vue-next'
 import PublicNav from '@/components/public/PublicNav.vue'
 import PublicFooter from '@/components/public/PublicFooter.vue'
 import { useGameStore } from '@/stores/game'
@@ -137,9 +163,17 @@ const s = computed(() => site.settings)
 
 const heroVideo = computed(() => mediaUrl(game.isTekken ? s.value.tekken.heroVideo : s.value.efoot.heroVideo))
 
+// Onglet de la section Compétition (résultats + tournois)
+const feedGame = ref('efoot')
+function setFeed(g) {
+  feedGame.value = g
+  game.set(g) // bascule l'accent (bleu / orange)
+}
+
 const tournaments = ref([])
 const latestDay   = ref(null)
 const topD1       = ref([])
+const topD2       = ref([])
 const stats       = ref({ players: '—', tournaments: '—' })
 
 const FORMAT_LABELS = {
@@ -173,8 +207,8 @@ onMounted(async () => {
   try {
     const data = await getJSON('/public/latest-day')
     latestDay.value = data || null
-    const members = data?.d1?.members || []
-    topD1.value = members.slice(0, 5)
+    topD1.value = (data?.d1?.members || []).slice(0, 5)
+    topD2.value = (data?.d2?.members || []).slice(0, 5)
   } catch (_) {}
 })
 </script>
@@ -254,14 +288,29 @@ onMounted(async () => {
 .uni-body p { color: var(--muted); line-height: 1.55; margin: 0 0 1.25rem; }
 .soon { opacity: .6; cursor: not-allowed; }
 
-/* ── Résultats ── */
-.champ-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
-.champ-card { display: flex; align-items: center; gap: .8rem; padding: .9rem 1.2rem; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
-.champ-crown { font-size: 1.5rem; }
-.champ-div { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
-.champ-card strong { font-family: var(--font-title); font-size: 1.15rem; letter-spacing: .02em; }
+/* ── Compétition (onglets) ── */
+.comp-tabs { display: inline-flex; gap: .4rem; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); margin-bottom: 1.75rem; }
+.ct { padding: .45rem 1.2rem; border: none; background: transparent; color: var(--muted); font-family: var(--font-title); font-weight: 700; letter-spacing: .03em; text-transform: uppercase; font-size: .84rem; border-radius: 999px; cursor: pointer; transition: all .18s; }
+.ct.on { background: var(--accent); color: #fff; box-shadow: 0 3px 12px rgba(var(--accent-rgb), .35); }
+.comp-sub { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 1.1rem; margin: 0 0 1.1rem; }
+.comp-sub-day { color: var(--muted); font-weight: 500; font-size: .85rem; }
+.soon-box { text-align: center; border: 1px solid var(--border); border-radius: 16px; background: var(--card); padding: 3rem 1.5rem; }
+.soon-ic { width: 2.4rem; height: 2.4rem; color: var(--accent); margin: 0 auto .8rem; }
+.soon-box h3 { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 1.4rem; margin: 0 0 .5rem; }
+.soon-box p { color: var(--muted); max-width: 34rem; margin: 0 auto 1.5rem; }
 
-.mini-board { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 30rem; background: var(--card); }
+/* ── Résultats ── */
+.res-grid { display: grid; gap: 1.1rem; grid-template-columns: 1fr; align-items: start; }
+.champs-col { display: grid; gap: 1rem; align-content: start; }
+.champ-card { display: flex; align-items: center; gap: .9rem; padding: 1.1rem 1.3rem; background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
+.champ-crown { font-size: 1.8rem; line-height: 1; }
+.champ-meta { display: flex; flex-direction: column; min-width: 0; }
+.champ-div { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.champ-card strong { font-family: var(--font-title); font-size: 1.3rem; letter-spacing: .02em; }
+.champ-empty { color: var(--muted); padding: 1rem 0; }
+
+.mini-board { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--card); }
+.mini-empty { padding: .8rem 1rem; color: var(--muted); font-size: .85rem; }
 .mini-head { padding: .6rem 1rem; font-family: var(--font-title); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: .78rem; color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--border); }
 .mini-row { display: flex; align-items: center; gap: .9rem; padding: .55rem 1rem; border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent); }
 .mini-row:last-child { border-bottom: none; }
@@ -295,11 +344,13 @@ onMounted(async () => {
 @media (min-width: 720px) {
   .univers-grid { grid-template-columns: 1fr 1fr; }
   .tourn-grid { grid-template-columns: repeat(2, 1fr); }
+  .res-grid { grid-template-columns: 1fr 1fr; }
 }
-@media (min-width: 960px) {
+@media (min-width: 1100px) {
   .lnav-links { display: flex; }
   .btn-login { display: inline-flex; }
   .tourn-grid { grid-template-columns: repeat(3, 1fr); }
+  .res-grid { grid-template-columns: minmax(260px, 1fr) 1fr 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
   .uni-card, .tourn-card { transition: none; }
