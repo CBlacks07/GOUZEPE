@@ -11,38 +11,39 @@
 
     <!-- Nav desktop -->
     <nav class="hidden lg:flex items-center gap-0.5 ml-4 flex-1 overflow-x-auto">
-      <template v-for="(item, i) in visibleNav" :key="item.to || item.sep">
-        <span v-if="item.sep" class="nav-sep" />
-        <RouterLink v-else
-          :to="item.to"
-          class="navlink relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[13px] whitespace-nowrap text-gz-muted
-                 hover:text-gz-text hover:bg-gz-border/20 transition-colors duration-150"
-          active-class="nav-on"
-        >
-          <component :is="item.icon" class="w-3.5 h-3.5" />
-          {{ item.label }}
-          <span v-if="item.to === '/admin' && pendingCount > 0"
-                class="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 rounded-full text-[10px] font-bold
-                       flex items-center justify-center bg-gz-red text-white leading-none">
-            {{ pendingCount > 9 ? '9+' : pendingCount }}
-          </span>
-        </RouterLink>
-      </template>
+      <!-- Bouton retour quand on est dans un pole -->
+      <button v-if="activePole" class="navlink nav-back" @click="router.push('/accueil')">
+        <ArrowLeftIcon class="w-3.5 h-3.5" />
+        Retour
+      </button>
+      <span v-if="activePole" class="nav-sep" />
+
+      <RouterLink v-for="link in visibleNav" :key="link.to"
+        :to="link.to"
+        class="navlink relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[13px] whitespace-nowrap text-gz-muted
+               hover:text-gz-text hover:bg-gz-border/20 transition-colors duration-150"
+        active-class="nav-on"
+      >
+        <component :is="link.icon" class="w-3.5 h-3.5" />
+        {{ link.label }}
+        <span v-if="link.to === '/admin' && pendingCount > 0"
+              class="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 rounded-full text-[10px] font-bold
+                     flex items-center justify-center bg-gz-red text-white leading-none">
+          {{ pendingCount > 9 ? '9+' : pendingCount }}
+        </span>
+      </RouterLink>
     </nav>
 
     <div class="ml-auto flex items-center gap-2">
-      <!-- Bouton thème -->
       <button @click="theme.toggle()" class="btn-ghost p-2" :title="theme.mode === 'dark' ? 'Mode clair' : 'Mode sombre'">
         <SunIcon v-if="theme.mode === 'dark'" class="w-4 h-4" />
         <MoonIcon v-else class="w-4 h-4" />
       </button>
 
-      <!-- Déconnexion (desktop) -->
-      <button @click="handleLogout" class="btn-ghost p-2 hidden lg:flex text-gz-muted hover:text-gz-red" title="Se déconnecter">
+      <button @click="handleLogout" class="btn-ghost p-2 hidden lg:flex text-gz-muted hover:text-gz-red" title="Se deconnecter">
         <LogOutIcon class="w-4 h-4" />
       </button>
 
-      <!-- Hamburger (mobile) -->
       <button @click="$emit('open-drawer')" class="btn-ghost p-2 lg:hidden" aria-label="Menu">
         <MenuIcon class="w-5 h-5" />
       </button>
@@ -52,14 +53,14 @@
 
 <script setup>
 import { computed } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useMembershipNotif } from '@/composables/useMembershipNotif'
 import {
   HomeIcon, CalendarDaysIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
-  UsersIcon, ShieldIcon, DatabaseIcon, SunIcon, MoonIcon,
-  LogOutIcon, MenuIcon, PaletteIcon, GamepadIcon
+  ShieldIcon, SunIcon, MoonIcon, LogOutIcon, MenuIcon, GamepadIcon, ArrowLeftIcon,
+  FootprintsIcon
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -70,35 +71,60 @@ defineEmits(['open-drawer'])
 const auth   = useAuthStore()
 const theme  = useThemeStore()
 const router = useRouter()
+const route  = useRoute()
 const { pendingCount } = useMembershipNotif()
 
-const navStructure = [
-  { to: '/accueil',       label: 'Accueil',      icon: HomeIcon },
-  { to: '/profil',        label: 'Mon espace',   icon: UserIcon },
-  { sep: 'efoot' },
-  { to: '/journees',      label: 'Journees',     icon: CalendarDaysIcon },
-  { to: '/duel',          label: 'Duel',          icon: SwordsIcon },
-  { to: '/classement',    label: 'Classements',   icon: BarChart2Icon },
-  { to: '/tournois',      label: 'Tournois',      icon: TrophyIcon },
-  { sep: 'tekken' },
-  { to: '/tekken-ladder', label: 'Tekken',        icon: GamepadIcon },
-  { sep: 'admin' },
-  { to: '/admin',         label: 'Admin',         icon: ShieldIcon, adminOnly: true },
+const efootRoutes = ['/journees', '/duel', '/classement', '/tournois']
+const tekkenRoutes = ['/tekken-ladder']
+
+const activePole = computed(() => {
+  const p = route.path
+  if (efootRoutes.some(r => p.startsWith(r))) return 'efoot'
+  if (tekkenRoutes.some(r => p.startsWith(r))) return 'tekken'
+  return null
+})
+
+const generalLinks = [
+  { to: '/accueil',  label: 'Accueil',    icon: HomeIcon },
+  { to: '/profil',   label: 'Mon espace', icon: UserIcon },
 ]
 
-const visibleNav = computed(() =>
-  navStructure.filter((item, i, arr) => {
-    if (item.adminOnly && !auth.isAdmin) return false
-    if (item.sep) {
-      const next = arr.slice(i + 1).find(x => !x.sep)
-      if (next?.adminOnly && !auth.isAdmin) return false
-    }
-    return true
-  })
-)
+const poleEntries = [
+  { to: '/journees',      label: 'eFootball', icon: FootprintsIcon, pole: 'efoot' },
+  { to: '/tekken-ladder', label: 'Tekken',    icon: GamepadIcon,    pole: 'tekken' },
+]
+
+const efootLinks = [
+  { to: '/journees',   label: 'Journees',    icon: CalendarDaysIcon },
+  { to: '/duel',        label: 'Duel',         icon: SwordsIcon },
+  { to: '/classement',  label: 'Classements',  icon: BarChart2Icon },
+  { to: '/tournois',    label: 'Tournois',     icon: TrophyIcon },
+]
+
+const tekkenLinks = [
+  { to: '/tekken-ladder', label: 'Ladder', icon: GamepadIcon },
+]
+
+const adminLink = { to: '/admin', label: 'Admin', icon: ShieldIcon }
+
+const visibleNav = computed(() => {
+  const pole = activePole.value
+  let links = []
+
+  if (!pole) {
+    links = [...generalLinks, ...poleEntries]
+  } else if (pole === 'efoot') {
+    links = [...efootLinks]
+  } else if (pole === 'tekken') {
+    links = [...tekkenLinks]
+  }
+
+  if (auth.isAdmin) links.push(adminLink)
+  return links
+})
 
 async function handleLogout() {
-  if (!confirm('Voulez-vous vraiment vous déconnecter ?')) return
+  if (!confirm('Voulez-vous vraiment vous deconnecter ?') ) return
   await auth.logout()
   router.push('/login')
 }
@@ -113,4 +139,12 @@ async function handleLogout() {
   width: 1px; height: 18px; margin: 0 .3rem;
   background: var(--border); flex-shrink: 0;
 }
+.nav-back {
+  display: flex; align-items: center; gap: .35rem;
+  padding: .35rem .7rem; border-radius: 8px;
+  font-size: .78rem; font-weight: 600;
+  color: var(--muted); background: none; border: none; cursor: pointer;
+  transition: color .15s, background .15s;
+}
+.nav-back:hover { color: var(--text); background: color-mix(in srgb, var(--border) 30%, transparent); }
 </style>
