@@ -51,16 +51,17 @@
                 <th>ID</th>
                 <th>Nom</th>
                 <th>Statut</th>
+                <th>Admission</th>
                 <th>Compte</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="5" class="text-center text-gz-muted py-8">Chargement…</td>
+                <td colspan="6" class="text-center text-gz-muted py-8">Chargement…</td>
               </tr>
               <tr v-else-if="!filtered.length">
-                <td colspan="5" class="text-center text-gz-muted py-8">Aucun joueur.</td>
+                <td colspan="6" class="text-center text-gz-muted py-8">Aucun joueur.</td>
               </tr>
               <tr v-for="p in filtered" :key="p.player_id">
                 <td class="font-mono text-gz-muted text-xs">{{ p.player_id }}</td>
@@ -73,6 +74,7 @@
                     {{ p.role || 'MEMBRE' }}
                   </span>
                 </td>
+                <td class="text-gz-muted text-sm">{{ p.admission_year || '—' }}</td>
                 <td class="text-gz-muted text-sm">{{ p.user_email || '—' }}</td>
                 <td>
                   <div class="flex gap-1">
@@ -108,6 +110,10 @@
             <option value="MEMBRE">MEMBRE</option>
             <option value="INVITE">INVITE</option>
           </select>
+        </div>
+        <div>
+          <label class="label">Annee d'admission</label>
+          <input v-model.number="form.admission_year" type="number" class="input" min="2000" :max="new Date().getFullYear()" placeholder="2025" />
         </div>
 
         <hr class="border-gz-border" />
@@ -162,7 +168,7 @@ const editOk    = ref(true)
 const editingId = ref('')   // old player_id
 
 const newP = ref({ player_id: '', name: '', role: 'MEMBRE' })
-const form = ref({ player_id: '', name: '', role: 'MEMBRE', email: '', password: '', has_user: false })
+const form = ref({ player_id: '', name: '', role: 'MEMBRE', admission_year: new Date().getFullYear(), email: '', password: '', has_user: false })
 
 useSessionState('efoot.ui.admin.joueurs.v1', {
   search,
@@ -222,6 +228,7 @@ function openEdit(p) {
     player_id: p.player_id,
     name:      p.name || '',
     role:      (p.role || 'MEMBRE').toUpperCase(),
+    admission_year: p.admission_year || new Date().getFullYear(),
     email:     p.user_email || slugifyToEmail(p.name || p.player_id),
     password:  '',
     has_user:  !!p.user_email,
@@ -238,7 +245,7 @@ async function saveEdit() {
     const newId  = form.value.player_id.trim()
     if (!newId) { editMsg.value = 'ID requis'; editOk.value = false; saving.value = false; return }
 
-    const body = { name: form.value.name.trim(), role: form.value.role }
+    const body = { name: form.value.name.trim(), role: form.value.role, admission_year: form.value.admission_year }
     if (newId !== oldId) {
       if (!confirm(`⚠ Modifier l'ID "${oldId}" → "${newId}" ? Cela affectera toutes les références.`)) {
         saving.value = false; return
