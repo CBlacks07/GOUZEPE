@@ -3055,8 +3055,10 @@ app.get('/tekken/duels/h2h', async (req, res) => {
 app.post('/admin/tekken/ladder', auth, adminOnly, async (req, res) => {
   const { player_id, elo } = req.body || {};
   if (!player_id) return bad(res, 400, 'player_id requis');
-  const pCheck = await q(`SELECT player_id FROM players WHERE player_id=$1`, [player_id]);
+  const pCheck = await q(`SELECT player_id, main_game FROM players WHERE player_id=$1`, [player_id]);
   if (!pCheck.rowCount) return bad(res, 404, 'Joueur introuvable');
+  const pg = pCheck.rows[0].main_game || 'efoot';
+  if (pg !== 'tekken' && pg !== 'both') return bad(res, 403, 'Ce joueur n\'est pas rattache au pole Tekken');
   const startElo = parseInt(elo) || 1200;
   await q(`INSERT INTO tekken_ladder(player_id, elo, peak_elo) VALUES($1,$2,$2)
            ON CONFLICT(player_id) DO NOTHING`, [player_id, startElo]);
@@ -3081,6 +3083,11 @@ app.post('/admin/tekken/duels', auth, adminOnly, async (req, res) => {
   const { p1_id, p2_id, score_p1, score_p2, best_of, played_at } = req.body || {};
   if (!p1_id || !p2_id) return bad(res, 400, 'p1_id et p2_id requis');
   if (p1_id === p2_id) return bad(res, 400, 'joueurs identiques');
+  const pCheck = await q(`SELECT player_id, main_game FROM players WHERE player_id IN ($1,$2)`, [p1_id, p2_id]);
+  for (const p of pCheck.rows) {
+    const g = p.main_game || 'efoot';
+    if (g !== 'tekken' && g !== 'both') return bad(res, 403, `${p.player_id} n'est pas rattache au pole Tekken`);
+  }
   const s1 = parseInt(score_p1); const s2 = parseInt(score_p2);
   if (isNaN(s1) || isNaN(s2) || s1 < 0 || s2 < 0) return bad(res, 400, 'scores invalides');
   const bo = parseInt(best_of) || 3;

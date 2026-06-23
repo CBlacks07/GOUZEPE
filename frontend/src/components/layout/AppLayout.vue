@@ -12,7 +12,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import AppHeader from './AppHeader.vue'
 import AppDrawer from './AppDrawer.vue'
 import { useMembershipNotif } from '@/composables/useMembershipNotif'
@@ -24,12 +25,22 @@ defineProps({
 
 const drawerOpen = ref(false)
 const game = useGameStore()
+const route = useRoute()
+
+const tekkenRoutes = ['/tekken-ladder', '/accueil-tekken']
+
+const activePole = computed(() => {
+  const p = route.path
+  if (tekkenRoutes.some(r => p === r || p.startsWith(r))) return 'tekken'
+  return 'efoot'
+})
+
+watch(activePole, (pole) => game.set(pole), { immediate: true })
 
 const { fetchCount, setupRealtime } = useMembershipNotif()
 let disposeRealtime = null
 
 onMounted(async () => {
-  game.set('efoot') // espace membre actuellement 100% eFootball → thème bleu
   await fetchCount()
   disposeRealtime = setupRealtime()
 })

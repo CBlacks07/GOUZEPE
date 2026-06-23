@@ -79,6 +79,11 @@ const theme  = useThemeStore()
 const router = useRouter()
 const route  = useRoute()
 
+const mg = computed(() => auth.mainGame || 'efoot')
+const hasEfoot  = computed(() => mg.value === 'efoot' || mg.value === 'both')
+const hasTekken = computed(() => mg.value === 'tekken' || mg.value === 'both')
+const hasBoth   = computed(() => mg.value === 'both')
+
 const efootRoutes = ['/journees', '/duel', '/classement', '/tournois', '/accueil']
 const tekkenRoutes = ['/tekken-ladder', '/accueil-tekken']
 
@@ -93,22 +98,9 @@ const visibleGroups = computed(() => {
   const pole = activePole.value
   const groups = []
 
-  if (!pole) {
-    groups.push({
-      title: '',
-      links: [
-        { to: auth.mainGame === 'tekken' ? '/accueil-tekken' : '/accueil', label: 'Accueil', icon: HomeIcon },
-        { to: '/profil', label: 'Mon espace', icon: UserIcon },
-      ],
-    })
-    groups.push({
-      title: 'Poles',
-      links: [
-        { to: '/accueil', label: 'eFootball', icon: FootprintsIcon },
-        { to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon },
-      ],
-    })
-  } else if (pole === 'efoot') {
+  groups.push({ title: '', links: [{ to: '/profil', label: 'Mon espace', icon: UserIcon }] })
+
+  if (pole === 'efoot') {
     groups.push({
       title: 'eFootball',
       links: [
@@ -119,6 +111,7 @@ const visibleGroups = computed(() => {
         { to: '/tournois', label: 'Tournois', icon: TrophyIcon },
       ],
     })
+    if (hasBoth.value) groups.push({ title: '', links: [{ to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon }] })
   } else if (pole === 'tekken') {
     groups.push({
       title: 'Tekken',
@@ -127,6 +120,12 @@ const visibleGroups = computed(() => {
         { to: '/tekken-ladder', label: 'Ladder', icon: GamepadIcon },
       ],
     })
+    if (hasBoth.value) groups.push({ title: '', links: [{ to: '/accueil', label: 'eFootball', icon: FootprintsIcon }] })
+  } else {
+    const poleLinks = []
+    if (hasEfoot.value) poleLinks.push({ to: '/accueil', label: 'eFootball', icon: FootprintsIcon })
+    if (hasTekken.value) poleLinks.push({ to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon })
+    if (poleLinks.length) groups.push({ title: 'Poles', links: poleLinks })
   }
 
   if (auth.isAdmin) {
