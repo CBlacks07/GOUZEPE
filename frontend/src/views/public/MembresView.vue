@@ -46,8 +46,9 @@
             <span v-else>{{ initials(m.name) }}</span>
           </div>
           <div class="m-info">
+            <span class="m-id">{{ m.player_id }}</span>
             <strong class="m-name">{{ m.name }}</strong>
-            <span class="m-since">{{ sinceLabel(m.created_at) }}</span>
+            <span class="m-since">Membre depuis {{ m.admission_year || memberYear(m.created_at) }}</span>
           </div>
           <span v-if="isAdminRole(m.role)" class="m-badge">Admin</span>
         </article>
@@ -103,9 +104,9 @@ function avatarUrl(m) {
 function isAdminRole(role) {
   return String(role || '').toUpperCase() === 'ADMIN'
 }
-function sinceLabel(d) {
-  if (!d) return 'Membre'
-  try { return 'Depuis ' + new Date(d).getFullYear() } catch (_) { return 'Membre' }
+function memberYear(d) {
+  if (!d) return '—'
+  try { return String(new Date(d).getFullYear()) } catch (_) { return '—' }
 }
 
 onMounted(async () => {
@@ -152,8 +153,9 @@ onMounted(async () => {
 .m-avatar { width: 46px; height: 46px; border-radius: 50%; flex: none; display: grid; place-items: center; overflow: hidden; background: color-mix(in srgb, var(--accent) 18%, var(--panel)); color: var(--accent-l); font-family: var(--font-title); font-weight: 700; }
 .m-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .m-info { display: flex; flex-direction: column; min-width: 0; }
+.m-id { font-size: .75rem; color: var(--accent-l); font-family: var(--font-title); font-weight: 600; letter-spacing: .02em; opacity: .85; }
 .m-name { font-weight: 600; font-size: 1rem; }
-.m-since { font-size: .78rem; color: var(--muted); }
+.m-since { font-size: .75rem; color: var(--muted); }
 .m-badge { margin-left: auto; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-l); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); padding: .15rem .55rem; border-radius: 999px; }
 .empty { color: var(--muted); }
 

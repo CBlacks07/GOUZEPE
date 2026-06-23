@@ -372,17 +372,43 @@ async function restoreFromSqlString(sql) {
   if (!sql || !sql.trim()) throw new Error('SQL vide');
   const client = await pool.connect();
   try {
-    // Sépare les statements et les exécute un par un
-    const stmts = sql
-      .split(/;\s*\n/)
-      .map(s => s.trim())
-      .filter(s => s && !s.startsWith('--'));
+    const normalized = sql.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const stmts = [];
+    let current = '';
+    let inString = false;
+    for (let i = 0; i < normalized.length; i++) {
+      const ch = normalized[i];
+      if (ch === "'" ) {
+        if (inString && normalized[i + 1] === "'") {
+          current += "''"; i++; continue;
+        }
+        inString = !inString;
+        current += ch;
+        continue;
+      }
+      if (ch === ';' && !inString) {
+        const trimmed = current.trim();
+        if (trimmed && !trimmed.startsWith('--')) stmts.push(trimmed);
+        current = '';
+        continue;
+      }
+      current += ch;
+    }
+    const last = current.trim();
+    if (last && !last.startsWith('--')) stmts.push(last);
 
     await client.query('BEGIN');
     await client.query(`SET session_replication_role = 'replica'`);
-    for (const stmt of stmts) {
-      if (!stmt || stmt.startsWith('--')) continue;
-      await client.query(stmt);
+    for (let si = 0; si < stmts.length; si++) {
+      const line = stmts[si].replace(/^--[^\n]*\n/gm, '').trim();
+      if (!line || line.startsWith('--')) continue;
+      try {
+        await client.query(line);
+      } catch (stmtErr) {
+        console.error(`[RESTORE] stmt #${si} failed:`, line.slice(0, 120));
+        console.error(`[RESTORE] error:`, stmtErr.message);
+        throw stmtErr;
+      }
     }
     await client.query(`SET session_replication_role = 'origin'`);
     await client.query('COMMIT');
@@ -635,6 +661,8 @@ async function ensureSchema(){
     created_at TIMESTAMP DEFAULT now()
   )`);
   await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS profile_pic_url TEXT`);
+  await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS admission_year INT`);
+  await q(`UPDATE players SET admission_year = EXTRACT(YEAR FROM created_at)::INT WHERE admission_year IS NULL`);
 
   /* tournaments (single elimination v1) */
   await q(`CREATE TABLE IF NOT EXISTS tournaments(
@@ -2544,7 +2572,7 @@ function markOnlineField(rows){
 }
 app.get('/players', auth, async (_req,res)=>{
   const r = await q(`
-    SELECT p.player_id, p.name, p.role, p.profile_pic_url, u.email AS user_email
+    SELECT p.player_id, p.name, p.role, p.profile_pic_url, p.admission_year, u.email AS user_email
     FROM players p
     LEFT JOIN users u ON u.player_id = p.player_id
     ORDER BY p.name ASC
@@ -2715,7 +2743,8 @@ app.get('/public/standings', async (req, res) => {
 // Annuaire public des membres (hors invités)
 app.get('/public/members', async (_req, res) => {
   const r = await q(`
-    SELECT player_id, name, role, profile_pic_url, created_at
+    SELECT player_id, name, role, profile_pic_url, created_at,
+           COALESCE(admission_year, EXTRACT(YEAR FROM created_at)::INT) AS admission_year
     FROM players
     WHERE UPPER(COALESCE(role,'MEMBRE')) <> 'INVITE'
     ORDER BY name ASC
@@ -2925,15 +2954,16 @@ app.get('/players/:pid', auth, async (req,res)=>{
 // Mettre Ã  jour un joueur (admin seulement)
 app.put('/admin/players/:oldId', auth, adminOnly, async (req, res) => {
   const oldId = req.params.oldId;
-  const { player_id: newId, name, role } = req.body || {};
+  const { player_id: newId, name, role, admission_year } = req.body || {};
 
   // Vérifier que le joueur existe
-  const existing = await q(`SELECT player_id, name, role FROM players WHERE player_id = $1`, [oldId]);
+  const existing = await q(`SELECT player_id, name, role, admission_year FROM players WHERE player_id = $1`, [oldId]);
   if (!existing.rowCount) return bad(res, 404, 'Joueur introuvable');
 
   const player = existing.rows[0];
   const updatedName = name !== undefined ? name : player.name;
   const updatedRole = role !== undefined ? role : player.role;
+  const updatedYear = admission_year !== undefined ? (parseInt(admission_year) || null) : player.admission_year;
 
   // Si l'ID change
   if (newId && newId !== oldId) {
@@ -3009,16 +3039,16 @@ app.put('/admin/players/:oldId', auth, adminOnly, async (req, res) => {
     ok(res, { player: { player_id: newId, name: updatedName, role: updatedRole } });
   } else {
     // Mise Ã  jour simple sans changement d'ID
-    await q(`UPDATE players SET name = $1, role = $2 WHERE player_id = $3`,
-      [updatedName, updatedRole, oldId]);
-    ok(res, { player: { player_id: oldId, name: updatedName, role: updatedRole } });
+    await q(`UPDATE players SET name = $1, role = $2, admission_year = $3 WHERE player_id = $4`,
+      [updatedName, updatedRole, updatedYear, oldId]);
+    ok(res, { player: { player_id: oldId, name: updatedName, role: updatedRole, admission_year: updatedYear } });
   }
 });
 
 // POST /admin/players - Créer un nouveau joueur
 app.post('/admin/players', auth, adminOnly, async (req, res) => {
   try {
-    const { player_id, name, role } = req.body || {};
+    const { player_id, name, role, admission_year } = req.body || {};
 
     if (!player_id || !player_id.trim()) {
       return bad(res, 400, 'player_id requis');
@@ -3031,6 +3061,7 @@ app.post('/admin/players', auth, adminOnly, async (req, res) => {
     const trimmedId = player_id.trim();
     const trimmedName = name.trim();
     const playerRole = (role || 'MEMBRE').toUpperCase();
+    const year = admission_year ? parseInt(admission_year) || new Date().getFullYear() : new Date().getFullYear();
 
     // Vérifier que le player_id n'existe pas déjÃ 
     const existing = await q(`SELECT player_id FROM players WHERE player_id = $1`, [trimmedId]);
@@ -3040,8 +3071,8 @@ app.post('/admin/players', auth, adminOnly, async (req, res) => {
 
     // Créer le joueur
     const result = await q(
-      `INSERT INTO players (player_id, name, role) VALUES ($1, $2, $3) RETURNING *`,
-      [trimmedId, trimmedName, playerRole]
+      `INSERT INTO players (player_id, name, role, admission_year) VALUES ($1, $2, $3, $4) RETURNING *`,
+      [trimmedId, trimmedName, playerRole, year]
     );
 
     ok(res, {
