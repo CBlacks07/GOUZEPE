@@ -27,7 +27,7 @@ const drawerOpen = ref(false)
 const game = useGameStore()
 const route = useRoute()
 
-const tekkenRoutes = ['/tekken-ladder', '/accueil-tekken']
+const tekkenRoutes = ['/tekken-ladder', '/tekken-tournois', '/accueil-tekken', '/admin/tekken']
 
 const activePole = computed(() => {
   const p = route.path

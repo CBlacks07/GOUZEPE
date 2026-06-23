@@ -1,14 +1,14 @@
-﻿<template>
-  <AppLayout season-label="Tournois">
+<template>
+  <AppLayout season-label="Tournois Tekken">
     <div class="page-wrap tournois-wrap">
       <div class="grid grid-cols-1 2xl:grid-cols-[280px_minmax(0,1fr)] gap-6 items-start">
         <aside class="reveal space-y-4">
           <section class="card sidebar-card">
-            <h2 class="text-xs font-semibold text-gz-muted uppercase tracking-wide mb-3">Tournois</h2>
+            <h2 class="text-xs font-semibold text-gz-muted uppercase tracking-wide mb-3">Tournois Tekken</h2>
             <div v-if="loadingList" class="text-gz-muted text-sm py-4 text-center">Chargement...</div>
             <div v-else-if="!tournaments.length" class="empty-sidebar">
               <TrophyIcon class="w-8 h-8 text-gz-muted/40 mx-auto mb-2" />
-              <p class="text-gz-muted text-xs text-center">Aucun tournoi actif pour le moment.</p>
+              <p class="text-gz-muted text-xs text-center">Aucun tournoi Tekken actif pour le moment.</p>
             </div>
             <div v-else class="space-y-1.5 sidebar-scroll pr-1">
               <button
@@ -22,7 +22,6 @@
                     : 'border-gz-border/30 hover:border-gz-green/25 hover:bg-gz-card text-gz-muted hover:text-gz-text'
                 ]"
               >
-                <!-- Indicateur live -->
                 <span v-if="t.status === 'live'"
                   class="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-gz-green animate-pulse" />
                 <div class="font-semibold truncate text-sm pr-4">{{ t.name }}</div>
@@ -73,7 +72,7 @@
                     :class="row.rank === 1 ? 'text-gz-amber' : 'text-gz-muted'">{{ row.stage }}</div>
                   <div>
                     <span class="text-xs text-gz-green font-medium">{{ row.wins }}V</span>
-                    <span class="text-xs text-gz-muted mx-0.5">·</span>
+                    <span class="text-xs text-gz-muted mx-0.5">.</span>
                     <span class="text-xs text-gz-red">{{ row.losses }}D</span>
                   </div>
                 </div>
@@ -86,14 +85,13 @@
           <section v-if="!selected" class="empty-main reveal delay-1">
             <div class="empty-main-inner">
               <div class="empty-trophy-wrap">
-                <TrophyIcon class="w-16 h-16" style="color:rgba(34,197,94,.25)" />
+                <TrophyIcon class="w-16 h-16" style="color:rgba(255,90,44,.25)" />
                 <div class="empty-trophy-glow" />
               </div>
-              <h2 class="text-xl font-bold mt-5 mb-2">Tournois GOUZEPE</h2>
+              <h2 class="text-xl font-bold mt-5 mb-2">Tournois Tekken</h2>
               <p class="text-sm text-gz-muted max-w-sm text-center leading-relaxed">
-                Sélectionne un tournoi dans la liste pour afficher le bracket, les scores et le classement final.
+                Selectionne un tournoi dans la liste pour afficher le bracket, les scores et le classement final.
               </p>
-              <!-- Chips de tournois récents -->
               <div v-if="tournaments.length" class="mt-6 flex flex-wrap gap-2 justify-center">
                 <button
                   v-for="t in tournaments.slice(0, 5)"
@@ -106,8 +104,8 @@
                 </button>
               </div>
               <div v-else class="mt-6 flex flex-wrap gap-2 justify-center">
-                <span class="format-chip">Élimination simple</span>
-                <span class="format-chip">Double élimination</span>
+                <span class="format-chip">Elimination simple</span>
+                <span class="format-chip">Double elimination</span>
                 <span class="format-chip">Round Robin</span>
                 <span class="format-chip">Groupes + Finales</span>
               </div>
@@ -117,7 +115,6 @@
           <template v-else>
             <section class="tournament-header-card reveal delay-1">
               <div class="th-top">
-                <!-- Statut badge -->
                 <span :class="[
                   'th-status-badge',
                   selected.status === 'live' ? 'th-live' :
@@ -128,7 +125,7 @@
                 </span>
                 <span class="th-format">{{ formatLabel(selected.format) }}
                   <template v-if="selected.format === 'round_robin'">
-                    &nbsp;·&nbsp;{{ rrMatchModeLabel(selected.rr_match_mode) }}
+                    &nbsp;.&nbsp;{{ rrMatchModeLabel(selected.rr_match_mode) }}
                   </template>
                 </span>
                 <span v-if="selected.participants?.length" class="th-participants">
@@ -136,7 +133,6 @@
                 </span>
               </div>
               <h1 class="th-title">{{ selected.name }}</h1>
-              <!-- Vainqueur si terminé -->
               <div v-if="selected.winner_name && selected.status === 'completed'" class="th-winner">
                 <TrophyIcon class="th-winner-crown-icon" />
                 <span class="th-winner-label">Vainqueur</span>
@@ -154,13 +150,13 @@
                     v-if="selected.format === 'single_elimination'"
                     :matches="matches"
                     :admin-mode="false"
-                    :persist-key="`tournois-public-${selected?.id || 'none'}-se`"
+                    :persist-key="`tekken-tournois-${selected?.id || 'none'}-se`"
                   />
                   <BracketDE
                     v-else-if="selected.format === 'double_elimination'"
                     :matches="matches"
                     :admin-mode="false"
-                    :persist-key="`tournois-public-${selected?.id || 'none'}-de`"
+                    :persist-key="`tekken-tournois-${selected?.id || 'none'}-de`"
                   />
                   <BracketRR
                     v-else-if="selected.format === 'round_robin'"
@@ -250,7 +246,7 @@
                       </div>
                       <div v-if="knockoutMatches.length" class="knockout-grid">
                         <div class="min-w-0">
-                          <BracketSE :matches="knockoutMatches" :admin-mode="false" :persist-key="`tournois-public-${selected?.id || 'none'}-gk-ko`" />
+                          <BracketSE :matches="knockoutMatches" :admin-mode="false" :persist-key="`tekken-tournois-${selected?.id || 'none'}-gk-ko`" />
                         </div>
                       </div>
                       <div v-else class="text-sm text-gz-muted py-4">Tableau final non genere pour ce tournoi.</div>
@@ -270,7 +266,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import BaseBadge from '@/components/ui/BaseBadge.vue'
 import BracketSE from '@/components/tournament/BracketSE.vue'
 import BracketDE from '@/components/tournament/BracketDE.vue'
 import BracketRR from '@/components/tournament/BracketRR.vue'
@@ -296,7 +291,7 @@ const selectedTournamentId = ref(null)
 let realtimeOffTournamentChanged = null
 let joinedTournamentRoom = ''
 
-useSessionState('efoot.ui.tournois.view.v1', {
+useSessionState('tekken.ui.tournois.view.v1', {
   selectedTournamentId,
 })
 
@@ -353,7 +348,7 @@ onMounted(async () => {
   bindRealtimeListeners()
   loadingList.value = true
   try {
-    const { data } = await api.get('/tournaments')
+    const { data } = await api.get('/tekken/tournaments')
     tournaments.value = (data.tournaments || []).filter((t) => t.status !== 'draft')
     const wantedId = Number(selectedTournamentId.value || 0)
     if (wantedId > 0) {
@@ -392,7 +387,7 @@ function bindRealtimeListeners() {
     const tournamentId = Number(event.tournamentId || 0)
     if (!Number.isInteger(tournamentId) || tournamentId <= 0) return
     try {
-      const { data } = await api.get('/tournaments')
+      const { data } = await api.get('/tekken/tournaments')
       tournaments.value = (data.tournaments || []).filter((t) => t.status !== 'draft')
       if (selected.value?.id === tournamentId) {
         const fresh = tournaments.value.find((t) => Number(t.id) === tournamentId)
@@ -425,7 +420,7 @@ async function selectTournament(t) {
   groupStandings.value = []
   loadingBracket.value = true
   try {
-    const { data } = await api.get(`/tournaments/${t.id}`)
+    const { data } = await api.get(`/tekken/tournaments/${t.id}`)
     const tournament = data.tournament || t
     const useIds = tournament.member_tournament !== false
     const rawParts = Array.isArray(data.participants) ? data.participants : []
@@ -433,7 +428,7 @@ async function selectTournament(t) {
     rawMatchesRef.value = Array.isArray(data.matches) ? data.matches : []
     const idIndex = buildIdIndex(rawParts)
     const participants = rawParts
-      .map((p) => (useIds ? participantIdLabel(p, true) : normalizePersonName(p)))
+      .map((p) => participantIdLabel(p, useIds))
       .filter(Boolean)
 
     selected.value = {
@@ -449,7 +444,7 @@ async function selectTournament(t) {
 
     if (tournament.format === 'round_robin' || tournament.format === 'groups_knockout') {
       try {
-        const { data: s } = await api.get(`/tournaments/${t.id}/standings`)
+        const { data: s } = await api.get(`/tekken/tournaments/${t.id}/standings`)
         if (tournament.format === 'round_robin') {
           rrStandings.value = applyIdStandings(s.standings || [], useIds)
           groupStandings.value = []
@@ -464,10 +459,6 @@ async function selectTournament(t) {
     }
   } catch (_) {}
   loadingBracket.value = false
-}
-
-function statusVariant(s) {
-  return { live: 'green', completed: 'blue', archived: 'muted', draft: 'amber' }[s] ?? 'muted'
 }
 
 function statusLabel(s) {
@@ -485,10 +476,6 @@ function formatLabel(f) {
 
 function rrMatchModeLabel(mode) {
   return mode === 'home_away' ? 'Aller / Retour' : 'Match simple'
-}
-
-function rrStandingsModeLabel(mode) {
-  return mode === 'wins' ? 'Classement: victoires' : 'Classement: points + buts'
 }
 
 function normalizeMatches(rawMatches, format) {
@@ -543,25 +530,11 @@ function toInt(v) {
   return Number.isFinite(n) ? n : 0
 }
 
-function winOf(s) {
-  return toInt(s.w ?? s.wins)
-}
-
-function drawOf(s) {
-  return toInt(s.d ?? s.draws)
-}
-
-function lossOf(s) {
-  return toInt(s.l ?? s.losses)
-}
-
-function bfOf(s) {
-  return toInt(s.bf ?? s.goals_for)
-}
-
-function bcOf(s) {
-  return toInt(s.bc ?? s.goals_against)
-}
+function winOf(s) { return toInt(s.w ?? s.wins) }
+function drawOf(s) { return toInt(s.d ?? s.draws) }
+function lossOf(s) { return toInt(s.l ?? s.losses) }
+function bfOf(s) { return toInt(s.bf ?? s.goals_for) }
+function bcOf(s) { return toInt(s.bc ?? s.goals_against) }
 
 function diffOf(s) {
   const explicit = s.diff
@@ -569,9 +542,7 @@ function diffOf(s) {
   return bfOf(s) - bcOf(s)
 }
 
-function ptsOf(s) {
-  return toInt(s.pts ?? s.points)
-}
+function ptsOf(s) { return toInt(s.pts ?? s.points) }
 
 function playedOf(s) {
   const explicit = s.played
@@ -592,7 +563,7 @@ function playedOf(s) {
 .tournois-wrap :deep(.card:hover) {
   transform: translateY(-1px);
   box-shadow: 0 12px 26px rgba(2, 6, 23, 0.2);
-  border-color: color-mix(in srgb, var(--border) 68%, var(--blue) 32%);
+  border-color: color-mix(in srgb, var(--border) 68%, var(--accent) 32%);
 }
 
 .sidebar-card {
@@ -684,7 +655,6 @@ function playedOf(s) {
   padding: 1.5rem 0.5rem;
 }
 
-/* ── Quick pick buttons ── */
 .quick-pick-btn {
   font-size: 0.78rem; font-weight: 600;
   padding: 0.35rem 0.85rem; border-radius: 99px;
@@ -694,9 +664,8 @@ function playedOf(s) {
   transition: border-color .2s, color .2s, background .2s;
   display: inline-flex; align-items: center; gap: 0.3rem;
 }
-.quick-pick-btn:hover { border-color: rgba(34,197,94,.4); color: var(--text); background: rgba(34,197,94,.07); }
+.quick-pick-btn:hover { border-color: rgba(255,90,44,.4); color: var(--text); background: rgba(255,90,44,.07); }
 
-/* ── Tournament header card ── */
 .tournament-header-card {
   background: color-mix(in srgb, var(--panel) 90%, transparent);
   border: 1px solid rgba(148,163,184,.15);
@@ -722,7 +691,6 @@ function playedOf(s) {
   background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.2);
   border-radius: 10px; padding: 0.4rem 0.85rem; font-size: 0.85rem;
 }
-.th-winner-crown { font-size: 1rem; }
 .th-winner-crown-icon { width: 1.2rem; height: 1.2rem; color: #eab308; }
 .th-winner-label { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
 .th-winner-name { font-weight: 800; color: #fbbf24; }
@@ -755,7 +723,7 @@ function playedOf(s) {
   position: absolute;
   inset: -20px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(22, 163, 74, 0.10) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 90, 44, 0.10) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -768,17 +736,6 @@ function playedOf(s) {
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: color-mix(in srgb, var(--panel) 80%, transparent);
   color: var(--muted);
-}
-
-.format-chip-btn {
-  cursor: pointer;
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
-}
-
-.format-chip-btn:hover {
-  border-color: rgba(22, 163, 74, 0.4);
-  color: var(--text);
-  background: rgba(22, 163, 74, 0.08);
 }
 
 .group-table-scroll {

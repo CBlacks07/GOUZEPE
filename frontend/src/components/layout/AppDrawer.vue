@@ -85,7 +85,7 @@ const hasTekken = computed(() => mg.value === 'tekken' || mg.value === 'both')
 const hasBoth   = computed(() => mg.value === 'both')
 
 const efootRoutes = ['/journees', '/duel', '/classement', '/tournois', '/accueil']
-const tekkenRoutes = ['/tekken-ladder', '/accueil-tekken']
+const tekkenRoutes = ['/tekken-ladder', '/tekken-tournois', '/accueil-tekken']
 
 const activePole = computed(() => {
   const p = route.path
@@ -118,6 +118,7 @@ const visibleGroups = computed(() => {
       links: [
         { to: '/accueil-tekken', label: 'Accueil', icon: HomeIcon },
         { to: '/tekken-ladder', label: 'Ladder', icon: GamepadIcon },
+        { to: '/tekken-tournois', label: 'Tournois', icon: TrophyIcon },
       ],
     })
     if (hasBoth.value) groups.push({ title: '', links: [{ to: '/accueil', label: 'eFootball', icon: FootprintsIcon }] })
