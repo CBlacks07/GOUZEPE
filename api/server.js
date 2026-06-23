@@ -765,6 +765,8 @@ async function ensureSchema(){
   await q(`CREATE INDEX IF NOT EXISTS tournaments_season_idx ON tournaments(season_id)`);
   /* migration: tournoi comptant pour le titre D1 */
   await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS counts_for_title BOOLEAN NOT NULL DEFAULT FALSE`);
+  /* migration: pole de jeu (efoot / tekken) */
+  await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS game_type TEXT NOT NULL DEFAULT 'efoot'`);
   // Backfill winner_name depuis winner_player_id existants
   await q(`UPDATE tournaments t SET winner_name = p.name
     FROM players p WHERE p.player_id = t.winner_player_id AND t.winner_name IS NULL`);
@@ -1276,7 +1278,10 @@ async function getTournamentBundle(tournamentId) {
       m.p1_participant_id, m.p2_participant_id, m.winner_participant_id,
       tp1.display_name AS p1_name,
       tp2.display_name AS p2_name,
-      tpw.display_name AS winner_name
+      tpw.display_name AS winner_name,
+      tp1.player_id AS p1_player_id,
+      tp2.player_id AS p2_player_id,
+      tpw.player_id AS winner_player_id
     FROM tournament_matches m
     LEFT JOIN tournament_participants tp1 ON tp1.id=m.p1_participant_id
     LEFT JOIN tournament_participants tp2 ON tp2.id=m.p2_participant_id
@@ -1608,13 +1613,13 @@ async function computeRoundRobinStandings(clientOrPool, tournamentId) {
   `, [tournamentId]);
   const standingsMode = String(tCfg.rows?.[0]?.rr_standings_mode || 'goals');
   const parts = await db.query(`
-    SELECT tp.id AS participant_id, tp.display_name AS name
+    SELECT tp.id AS participant_id, tp.display_name AS name, tp.player_id
     FROM tournament_participants tp
     WHERE tp.tournament_id=$1 ORDER BY tp.seed ASC NULLS LAST, tp.id ASC
   `, [tournamentId]);
   const stats = new Map();
   parts.rows.forEach(r => {
-    stats.set(r.participant_id, { participant_id:r.participant_id, name:r.name, pts:0, w:0, d:0, l:0, bf:0, bc:0, played:0 });
+    stats.set(r.participant_id, { participant_id:r.participant_id, name:r.name, player_id:r.player_id, pts:0, w:0, d:0, l:0, bf:0, bc:0, played:0 });
   });
   const matches = await db.query(`
     SELECT m.score_p1, m.score_p2,
@@ -1653,14 +1658,14 @@ async function computeRoundRobinStandings(clientOrPool, tournamentId) {
 async function computeGroupStandings(clientOrPool, tournamentId, group_no) {
   const db = clientOrPool || pool;
   const parts = await db.query(`
-    SELECT tp.id AS participant_id, tp.display_name AS name
+    SELECT tp.id AS participant_id, tp.display_name AS name, tp.player_id
     FROM tournament_participants tp
     WHERE tp.tournament_id=$1 AND tp.group_no=$2
     ORDER BY tp.seed ASC NULLS LAST, tp.id ASC
   `, [tournamentId, group_no]);
   const stats = new Map();
   parts.rows.forEach(r => {
-    stats.set(r.participant_id, { participant_id:r.participant_id, name:r.name, pts:0, w:0, d:0, l:0, bf:0, bc:0, played:0 });
+    stats.set(r.participant_id, { participant_id:r.participant_id, name:r.name, player_id:r.player_id, pts:0, w:0, d:0, l:0, bf:0, bc:0, played:0 });
   });
   const matches = await db.query(`
     SELECT m.score_p1, m.score_p2, m.p1_participant_id AS p1_pid, m.p2_participant_id AS p2_pid
@@ -1971,27 +1976,30 @@ app.get('/tournaments/:id/standings', auth, async (req, res) => {
   } catch(e) { bad(res, 500, e.message); }
 });
 
-app.get('/tournaments', auth, async (req, res) => {
-  try {
-    const includeArchived = req.user?.role === 'admin' && String(req.query.all || '') === '1';
-    const rows = await q(`
-      SELECT
-        t.id, t.slug, t.name, t.format, t.status, t.starts_at, t.ended_at,
-        t.winner_name, t.member_tournament, t.counts_for_title, t.day_comment, t.season_id,
-        t.rr_match_mode, t.rr_standings_mode,
-        t.created_at, t.updated_at,
-        (SELECT COUNT(*)::int FROM tournament_participants tp WHERE tp.tournament_id=t.id) AS participants_count
-      FROM tournaments t
-      ${includeArchived ? '' : `WHERE t.status <> 'archived'`}
-      ORDER BY
-        CASE t.status WHEN 'live' THEN 0 WHEN 'draft' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END,
-        t.created_at DESC
-    `);
-    ok(res, { tournaments: rows.rows });
-  } catch (e) {
-    bad(res, 500, e.message || 'Impossible de charger les tournois');
-  }
-});
+function listTournamentsHandler(gameType) {
+  return async (req, res) => {
+    try {
+      const includeArchived = req.user?.role === 'admin' && String(req.query.all || '') === '1';
+      const rows = await q(`
+        SELECT
+          t.id, t.slug, t.name, t.format, t.status, t.starts_at, t.ended_at,
+          t.winner_name, t.member_tournament, t.counts_for_title, t.day_comment, t.season_id,
+          t.rr_match_mode, t.rr_standings_mode,
+          t.created_at, t.updated_at,
+          (SELECT COUNT(*)::int FROM tournament_participants tp WHERE tp.tournament_id=t.id) AS participants_count
+        FROM tournaments t
+        WHERE t.game_type=$1 ${includeArchived ? '' : `AND t.status <> 'archived'`}
+        ORDER BY
+          CASE t.status WHEN 'live' THEN 0 WHEN 'draft' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END,
+          t.created_at DESC
+      `, [gameType]);
+      ok(res, { tournaments: rows.rows });
+    } catch (e) {
+      bad(res, 500, e.message || 'Impossible de charger les tournois');
+    }
+  };
+}
+app.get('/tournaments', auth, listTournamentsHandler('efoot'));
 
 app.get('/tournaments/:id', auth, async (req, res) => {
   const id = Number(req.params.id);
@@ -2005,7 +2013,8 @@ app.get('/tournaments/:id', auth, async (req, res) => {
   }
 });
 
-app.post('/admin/tournaments', auth, adminOnly, async (req, res) => {
+function createTournamentHandler(gameType) {
+  return async (req, res) => {
   const name = sanitizeTournamentName(req.body?.name);
   const startsAt = req.body?.starts_at ? new Date(req.body.starts_at) : null;
   if (!name) return bad(res, 400, 'Nom du tournoi requis');
@@ -2013,7 +2022,7 @@ app.post('/admin/tournaments', auth, adminOnly, async (req, res) => {
   const format = allowedFormats.includes(req.body?.format) ? req.body.format : 'single_elimination';
   const rrMatchMode = req.body?.rr_match_mode === 'home_away' ? 'home_away' : 'single';
   const rrStandingsMode = req.body?.rr_standings_mode === 'wins' ? 'wins' : 'goals';
-  const memberTournament = req.body?.member_tournament === undefined ? false : !!req.body.member_tournament;
+  const memberTournament = gameType === 'tekken' ? true : (req.body?.member_tournament === undefined ? false : !!req.body.member_tournament);
   const countsForTitle = memberTournament ? !!req.body?.counts_for_title : false;
   const dayComment = String(req.body?.day_comment || '').trim() || null;
   const slug = slugifyTournamentName(name);
@@ -2029,17 +2038,19 @@ app.post('/admin/tournaments', auth, adminOnly, async (req, res) => {
     }
 
     const created = await q(`
-      INSERT INTO tournaments(slug,name,format,status,starts_at,created_by,member_tournament,counts_for_title,season_id,day_comment,rr_match_mode,rr_standings_mode)
-      VALUES($1,$2,$3,'draft',$4,$5,$6,$7,$8,$9,$10,$11)
+      INSERT INTO tournaments(slug,name,format,status,starts_at,created_by,member_tournament,counts_for_title,season_id,day_comment,rr_match_mode,rr_standings_mode,game_type)
+      VALUES($1,$2,$3,'draft',$4,$5,$6,$7,$8,$9,$10,$11,$12)
       RETURNING id
-    `, [slug, name, format, (startsAt && !Number.isNaN(startsAt.getTime())) ? startsAt.toISOString() : null, req.user.uid, memberTournament, countsForTitle, seasonId, dayComment, rrMatchMode, rrStandingsMode]);
+    `, [slug, name, format, (startsAt && !Number.isNaN(startsAt.getTime())) ? startsAt.toISOString() : null, req.user.uid, memberTournament, countsForTitle, seasonId, dayComment, rrMatchMode, rrStandingsMode, gameType]);
     const bundle = await getTournamentBundle(created.rows[0].id);
     emitTournamentRealtime(bundle, 'created');
     ok(res, bundle);
   } catch (e) {
     bad(res, 500, e.message || 'Création du tournoi impossible');
   }
-});
+  };
+}
+app.post('/admin/tournaments', auth, adminOnly, createTournamentHandler('efoot'));
 
 const updateTournamentHandler = async (req, res) => {
   const id = Number(req.params.id);
@@ -2637,17 +2648,18 @@ app.get('/players/search', auth, async (req,res)=>{
 /* ====== Routes publiques (sans authentification) ====== */
 
 // Tournois en cours / récents (public) — avec podium et nb participants
-app.get('/public/tournaments', async (_req, res) => {
+function publicTournamentsHandler(gameType) {
+  return async (_req, res) => {
   const r = await q(`
     SELECT t.id, t.slug, t.name, t.format, t.status,
            t.starts_at, t.ended_at, t.winner_name,
            t.rr_match_mode, t.member_tournament, t.counts_for_title,
            (SELECT COUNT(*) FROM tournament_participants tp WHERE tp.tournament_id = t.id) AS participants_count
     FROM tournaments t
-    WHERE t.status IN ('live','completed')
+    WHERE t.status IN ('live','completed') AND t.game_type=$1
     ORDER BY COALESCE(t.starts_at, t.created_at) DESC
     LIMIT 12
-  `)
+  `, [gameType])
 
   // Pour chaque tournoi, récupérer le top 3 du classement
   const tournaments = []
@@ -2666,7 +2678,9 @@ app.get('/public/tournaments', async (_req, res) => {
   }
 
   ok(res, { tournaments })
-})
+  };
+}
+app.get('/public/tournaments', publicTournamentsHandler('efoot'));
 
 // Dernière journée confirmée (public) — classements D1 et D2 complets
 app.get('/public/latest-day', async (_req, res) => {
@@ -2997,6 +3011,253 @@ app.get('/players/:pid', auth, async (req,res)=>{
   const ts = presence.players.get(row.player_id);
   const online = ts && (Date.now()-ts < PRESENCE_TTL_MS);
   ok(res,{ player:{...row, online: !!online} });
+});
+
+/* ====== Tekken : Tournois ====== */
+
+async function ensureTekkenTournament(id) {
+  const r = await q(`SELECT id FROM tournaments WHERE id=$1 AND game_type='tekken'`, [id]);
+  return r.rowCount > 0;
+}
+
+app.get('/tekken/tournaments', auth, listTournamentsHandler('tekken'));
+app.get('/tekken/tournaments/:id', auth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
+  try {
+    if (!await ensureTekkenTournament(id)) return bad(res, 404, 'Tournoi introuvable');
+    const bundle = await getTournamentBundle(id);
+    if (!bundle) return bad(res, 404, 'Tournoi introuvable');
+    ok(res, bundle);
+  } catch (e) { bad(res, 500, e.message); }
+});
+app.get('/tekken/tournaments/:id/standings', auth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
+  if (!await ensureTekkenTournament(id)) return bad(res, 404, 'Tournoi introuvable');
+  const t = await q(`SELECT format, nb_groups FROM tournaments WHERE id=$1`, [id]);
+  if (!t.rowCount) return bad(res, 404, 'Tournoi introuvable');
+  const fmt = t.rows[0].format;
+  try {
+    if (fmt === 'round_robin') {
+      const standings = await computeRoundRobinStandings(null, id);
+      ok(res, { standings });
+    } else if (fmt === 'groups_knockout') {
+      const nbG = t.rows[0].nb_groups || 2;
+      const groups = [];
+      for (let gn = 0; gn < nbG; gn++) groups.push({ group_no: gn, standings: await computeGroupStandings(null, id, gn) });
+      ok(res, { groups });
+    } else {
+      return bad(res, 404, 'Pas de classement pour ce format');
+    }
+  } catch (e) { bad(res, 500, e.message); }
+});
+app.get('/public/tekken/tournaments', publicTournamentsHandler('tekken'));
+
+app.post('/admin/tekken/tournaments', auth, adminOnly, createTournamentHandler('tekken'));
+
+app.patch('/admin/tekken/tournaments/:id', auth, adminOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
+  if (!await ensureTekkenTournament(id)) return bad(res, 404, 'Tournoi Tekken introuvable');
+  req.params.id = String(id);
+  updateTournamentHandler(req, res);
+});
+
+app.delete('/admin/tekken/tournaments/:id', auth, adminOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
+  if (!await ensureTekkenTournament(id)) return bad(res, 404, 'Tournoi Tekken introuvable');
+  try {
+    const t = await q(`SELECT id, name, status, member_tournament, starts_at FROM tournaments WHERE id=$1`, [id]);
+    await q(`DELETE FROM tournaments WHERE id=$1`, [id]);
+    emitTournamentRealtime(t.rows[0], 'deleted');
+    ok(res, { ok: true, deleted: { id: t.rows[0].id, name: t.rows[0].name } });
+  } catch (e) { bad(res, 500, e.message); }
+});
+
+app.put('/admin/tekken/tournaments/:id/participants', auth, adminOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
+  if (!await ensureTekkenTournament(id)) return bad(res, 404, 'Tournoi Tekken introuvable');
+  const raw = Array.isArray(req.body?.names) ? req.body.names : [];
+  const names = raw.map(x => String(x || '').trim()).filter(Boolean);
+  if (names.length < 2) return bad(res, 400, 'Au moins 2 participants requis');
+  if (new Set(names.map(n => n.toLowerCase())).size !== names.length) return bad(res, 400, 'Noms en doublon');
+  if (names.some(n => n.length > 64)) return bad(res, 400, 'Nom trop long (max 64)');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const t = await client.query(`SELECT id, status FROM tournaments WHERE id=$1 FOR UPDATE`, [id]);
+    if (!t.rowCount) { await client.query('ROLLBACK'); return bad(res, 404, 'Tournoi introuvable'); }
+    if (['completed','archived'].includes(t.rows[0].status)) { await client.query('ROLLBACK'); return bad(res, 400, 'Tournoi verrouille'); }
+    await client.query(`DELETE FROM tournament_matches WHERE tournament_id=$1`, [id]);
+    await client.query(`DELETE FROM tournament_participants WHERE tournament_id=$1`, [id]);
+    const seenPlayerIds = new Set();
+    for (const token of names) {
+      const ref = String(token).trim();
+      const found = await client.query(`
+        SELECT player_id, name, main_game FROM players
+        WHERE (lower(player_id)=lower($1) OR lower(name)=lower($1))
+        ORDER BY CASE WHEN lower(player_id)=lower($1) THEN 0 ELSE 1 END, player_id ASC LIMIT 3
+      `, [ref]);
+      if (!found.rowCount) { await client.query('ROLLBACK'); return bad(res, 400, `Joueur introuvable: ${ref}`); }
+      const hasExact = found.rows.some(r => r.player_id.toLowerCase() === ref.toLowerCase());
+      if (!hasExact && found.rowCount > 1) { await client.query('ROLLBACK'); return bad(res, 400, `Nom ambigu: ${ref}`); }
+      const picked = found.rows[0];
+      const pg = picked.main_game || 'efoot';
+      if (pg !== 'tekken' && pg !== 'both') { await client.query('ROLLBACK'); return bad(res, 403, `${picked.name || picked.player_id} n'est pas du pole Tekken`); }
+      if (seenPlayerIds.has(picked.player_id)) { await client.query('ROLLBACK'); return bad(res, 400, `Doublon: ${picked.name}`); }
+      seenPlayerIds.add(picked.player_id);
+      await client.query(`INSERT INTO tournament_participants(tournament_id, display_name, player_id, seed) VALUES($1,$2,$3,$4)`,
+        [id, picked.name || picked.player_id, picked.player_id, seenPlayerIds.size]);
+    }
+    await client.query(`UPDATE tournaments SET status='draft', winner_name=NULL, ended_at=NULL, updated_at=now() WHERE id=$1`, [id]);
+    await client.query('COMMIT');
+    const bundle = await getTournamentBundle(id);
+    emitTournamentRealtime(bundle, 'participants');
+    ok(res, bundle);
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    bad(res, 500, e.message);
+  } finally { client.release(); }
+});
+
+app.post('/admin/tekken/tournaments/:id/generate', auth, adminOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
+  if (!await ensureTekkenTournament(id)) return bad(res, 404, 'Tournoi Tekken introuvable');
+  req.params.id = String(id);
+  // Delegate to existing generate handler
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const t = await client.query(`SELECT id, format, status, rr_match_mode FROM tournaments WHERE id=$1 FOR UPDATE`, [id]);
+    if (!t.rowCount) { await client.query('ROLLBACK'); return bad(res, 404, 'Tournoi introuvable'); }
+    const fmt = t.rows[0].format;
+    const rrMatchMode = t.rows[0].rr_match_mode || 'single';
+    if (t.rows[0].status === 'archived') { await client.query('ROLLBACK'); return bad(res, 400, 'Tournoi archive'); }
+    const participants = await client.query(`SELECT id, seed FROM tournament_participants WHERE tournament_id=$1 ORDER BY seed ASC NULLS LAST, id ASC`, [id]);
+    if (participants.rowCount < 2) { await client.query('ROLLBACK'); return bad(res, 400, 'Il faut au moins 2 participants'); }
+    if (fmt === 'groups_knockout') {
+      const nb_groups = Math.max(2, parseInt(req.body?.nb_groups || 2, 10));
+      const qual_per_group = Math.max(1, parseInt(req.body?.qualifiers_per_group || 2, 10));
+      if (nb_groups > participants.rowCount) { await client.query('ROLLBACK'); return bad(res, 400, 'Trop de groupes'); }
+      if (qual_per_group > Math.floor(participants.rowCount / nb_groups)) { await client.query('ROLLBACK'); return bad(res, 400, 'Trop de qualifies/groupe'); }
+    }
+    await client.query(`DELETE FROM tournament_matches WHERE tournament_id=$1`, [id]);
+    if (fmt === 'round_robin') await generateRoundRobin(client, id, participants, rrMatchMode);
+    else if (fmt === 'double_elimination') await generateDoubleElimination(client, id, participants);
+    else if (fmt === 'groups_knockout') {
+      const nb_groups = Math.max(2, parseInt(req.body?.nb_groups || 2, 10));
+      const qual_per_group = Math.max(1, parseInt(req.body?.qualifiers_per_group || 2, 10));
+      await client.query(`UPDATE tournaments SET nb_groups=$1, qualifiers_per_group=$2, updated_at=now() WHERE id=$3`, [nb_groups, qual_per_group, id]);
+      await generateGroupsKnockout(client, id, participants, nb_groups, qual_per_group);
+    } else await generateSingleElimination(client, id, participants);
+    if (fmt !== 'round_robin' && fmt !== 'groups_knockout') await autoAdvanceWalkovers(client, id);
+    await client.query(`UPDATE tournaments SET status = CASE WHEN status='completed' THEN status ELSE 'live' END, updated_at=now() WHERE id=$1`, [id]);
+    await client.query('COMMIT');
+    const bundle = await getTournamentBundle(id);
+    emitTournamentRealtime(bundle, 'generated');
+    ok(res, bundle);
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    bad(res, 500, e.message);
+  } finally { client.release(); }
+});
+
+app.post('/admin/tekken/tournaments/:id/generate-knockout', auth, adminOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
+  if (!await ensureTekkenTournament(id)) return bad(res, 404, 'Tournoi Tekken introuvable');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const t = await client.query(`SELECT id, format, status, nb_groups, qualifiers_per_group FROM tournaments WHERE id=$1 FOR UPDATE`, [id]);
+    if (!t.rowCount) { await client.query('ROLLBACK'); return bad(res, 404, 'Tournoi introuvable'); }
+    const { format, status, nb_groups, qualifiers_per_group } = t.rows[0];
+    if (format !== 'groups_knockout') { await client.query('ROLLBACK'); return bad(res, 400, 'Format non applicable'); }
+    if (status === 'archived') { await client.query('ROLLBACK'); return bad(res, 400, 'Tournoi archive'); }
+    const nbG = nb_groups || 2;
+    const qualPG = qualifiers_per_group || 2;
+    const pending = await client.query(`SELECT COUNT(*) FROM tournament_matches WHERE tournament_id=$1 AND bracket_side='G' AND status!='completed'`, [id]);
+    if (Number(pending.rows[0].count) > 0) { await client.query('ROLLBACK'); return bad(res, 400, 'Phase de groupes non terminee'); }
+    const perGroup = [];
+    for (let gn = 0; gn < nbG; gn++) perGroup.push(await computeGroupStandings(client, id, gn));
+    const qualifiers = [];
+    for (let rank = 0; rank < qualPG; rank++) for (let gn = 0; gn < nbG; gn++) if (perGroup[gn][rank]) qualifiers.push({ id: perGroup[gn][rank].participant_id });
+    if (qualifiers.length < 2) { await client.query('ROLLBACK'); return bad(res, 400, 'Pas assez de qualifies'); }
+    await client.query(`DELETE FROM tournament_matches WHERE tournament_id=$1 AND (bracket_side IS NULL OR bracket_side != 'G')`, [id]);
+    await generateSingleElimination(client, id, { rows: qualifiers, rowCount: qualifiers.length }, 100);
+    await autoAdvanceWalkovers(client, id);
+    await client.query('COMMIT');
+    const bundle = await getTournamentBundle(id);
+    emitTournamentRealtime(bundle, 'knockout-generated');
+    ok(res, bundle);
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    bad(res, 500, e.message);
+  } finally { client.release(); }
+});
+
+app.post('/admin/tekken/tournaments/:id/matches/:matchId/result', auth, adminOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
+  if (!await ensureTekkenTournament(id)) return bad(res, 404, 'Tournoi Tekken introuvable');
+  req.params.id = String(id);
+  // Forward to the shared match result handler logic
+  const tournamentId = id;
+  const matchId = Number(req.params.matchId);
+  if (!Number.isInteger(matchId) || matchId <= 0) return bad(res, 400, 'id match invalide');
+  const score1 = parseScoreValue(req.body?.score_p1);
+  const score2 = parseScoreValue(req.body?.score_p2);
+  if (score1 === null || score2 === null) return bad(res, 400, 'Scores invalides');
+  if (score1 < 0 || score2 < 0 || score1 > 99 || score2 > 99) return bad(res, 400, 'Scores doivent etre entre 0 et 99');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const t = await client.query(`SELECT id, status, format FROM tournaments WHERE id=$1 FOR UPDATE`, [tournamentId]);
+    if (!t.rowCount) { await client.query('ROLLBACK'); return bad(res, 404, 'Tournoi introuvable'); }
+    if (t.rows[0].status === 'archived') { await client.query('ROLLBACK'); return bad(res, 400, 'Tournoi archive'); }
+    const format = t.rows[0].format;
+    const m = await client.query(`SELECT id, tournament_id, status, p1_participant_id, p2_participant_id, winner_participant_id, next_match_id, next_match_slot, bracket_side, loser_next_match_id, loser_next_match_slot, group_no FROM tournament_matches WHERE id=$1 AND tournament_id=$2 FOR UPDATE`, [matchId, tournamentId]);
+    if (!m.rowCount) { await client.query('ROLLBACK'); return bad(res, 404, 'Match introuvable'); }
+    const match = m.rows[0];
+    if (!match.p1_participant_id || !match.p2_participant_id) { await client.query('ROLLBACK'); return bad(res, 400, 'Match sans 2 participants'); }
+    const isReedit = match.status === 'completed';
+    const isGroupMatch = match.group_no !== null && match.group_no !== undefined;
+    if (format === 'round_robin' || isGroupMatch) {
+      const winnerRR = score1 > score2 ? match.p1_participant_id : (score2 > score1 ? match.p2_participant_id : null);
+      await client.query(`UPDATE tournament_matches SET score_p1=$1, score_p2=$2, winner_participant_id=$3, status='completed', walkover=false, finished_at=COALESCE(finished_at, now()), updated_at=now() WHERE id=$4`, [score1, score2, winnerRR, match.id]);
+      if (format === 'round_robin') { await checkRoundRobinCompletion(client, tournamentId); if (isReedit) await updateRoundRobinStandings(client, tournamentId); }
+      else if (format === 'groups_knockout') await checkGroupTournamentCompletion(client, tournamentId);
+    } else {
+      if (score1 === score2) { await client.query('ROLLBACK'); return bad(res, 400, 'Match nul interdit en elimination'); }
+      const newWinner = score1 > score2 ? match.p1_participant_id : match.p2_participant_id;
+      const newLoser = score1 > score2 ? match.p2_participant_id : match.p1_participant_id;
+      const oldWinner = match.winner_participant_id;
+      const oldLoser = oldWinner ? (oldWinner === match.p1_participant_id ? match.p2_participant_id : match.p1_participant_id) : null;
+      await client.query(`UPDATE tournament_matches SET score_p1=$1, score_p2=$2, winner_participant_id=$3, status='completed', walkover=false, finished_at=COALESCE(finished_at, now()), updated_at=now() WHERE id=$4`, [score1, score2, newWinner, match.id]);
+      if (!isReedit || newWinner !== oldWinner) {
+        if (isReedit && oldWinner && newWinner !== oldWinner) await cascadeResetWinner(client, tournamentId, match.next_match_id, oldWinner);
+        await assignWinnerToNextMatch(client, tournamentId, match, newWinner);
+      }
+      const loserRoute = format === 'double_elimination' ? await resolveLoserRoute(client, tournamentId, match) : null;
+      if (format === 'double_elimination' && loserRoute?.targetMatchId && newLoser) {
+        if (isReedit && oldLoser && newLoser !== oldLoser) await cascadeResetWinner(client, tournamentId, loserRoute.targetMatchId, oldLoser);
+        if (!isReedit || newLoser !== oldLoser) await assignLoserToNextMatch(client, tournamentId, match, newLoser, loserRoute);
+      }
+      await autoAdvanceWalkovers(client, tournamentId);
+      await client.query(`UPDATE tournaments SET status = CASE WHEN status='draft' THEN 'live' ELSE status END, updated_at=now() WHERE id=$1`, [tournamentId]);
+    }
+    await client.query('COMMIT');
+    const bundle = await getTournamentBundle(tournamentId);
+    emitTournamentRealtime(bundle, 'score');
+    ok(res, bundle);
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    bad(res, 500, e.message);
+  } finally { client.release(); }
 });
 
 /* ====== Tekken : Ladder ELO + Duels ====== */

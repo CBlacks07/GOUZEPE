@@ -1,6 +1,9 @@
-﻿<template>
-  <AppLayout season-label="Admin Tournois">
+<template>
+  <AppLayout season-label="Admin Tournois Tekken">
     <div class="page-wrap admin-tournois-wrap">
+      <div class="mb-4">
+        <RouterLink to="/admin/tekken" class="text-sm text-gz-muted hover:text-gz-text transition-colors">&larr; Admin Tekken</RouterLink>
+      </div>
       <div class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-4 md:gap-6 items-start">
         <aside class="space-y-4 reveal admin-sidebar">
           <section class="card">
@@ -40,12 +43,8 @@
                 <input v-model="newT.startsAtInput" type="datetime-local" class="input" />
               </div>
               <div class="space-y-2">
-                <label class="inline-flex items-center gap-2 text-sm text-gz-text cursor-pointer">
-                  <input v-model="newT.memberTournament" type="checkbox" class="accent-[var(--green)]" />
-                  Tournoi membre
-                </label>
-                <div v-if="newT.memberTournament" class="pl-5 space-y-1.5 border-l-2 border-gz-green/30">
-                  <p class="text-xs text-gz-muted font-medium">Comptant pour le titre D1 ?</p>
+                <div class="pl-5 space-y-1.5 border-l-2 border-gz-green/30">
+                  <p class="text-xs text-gz-muted font-medium">Comptant pour le ladder ELO ?</p>
                   <div class="flex gap-4">
                     <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer">
                       <input v-model="newT.countsForTitle" type="radio" :value="true" class="accent-[var(--green)]" />
@@ -57,8 +56,8 @@
                     </label>
                   </div>
                   <p class="text-[11px] text-gz-muted leading-snug">
-                    <span v-if="newT.countsForTitle">Les résultats compteront dans le classement D1.</span>
-                    <span v-else>Tournoi amical — sans impact sur le classement D1.</span>
+                    <span v-if="newT.countsForTitle">Les resultats impacteront le classement ELO.</span>
+                    <span v-else>Tournoi amical -- sans impact sur le ladder ELO.</span>
                   </p>
                 </div>
               </div>
@@ -98,7 +97,7 @@
 
         <main class="min-w-0 space-y-4">
           <section v-if="!selected" class="card reveal delay-1 text-gz-muted text-sm py-12 text-center">
-            Selectionne ou cree un tournoi.
+            Selectionne ou cree un tournoi Tekken.
           </section>
 
           <template v-else>
@@ -113,8 +112,7 @@
                       • {{ rrMatchModeLabel(selected.rr_match_mode) }} • {{ rrStandingsModeLabel(selected.rr_standings_mode) }}
                     </span>
                     <span class="text-sm text-gz-muted">
-                      <template v-if="!isMemberTournament">• Tournoi ouvert (noms libres)</template>
-                      <template v-else-if="selected.counts_for_title">• Tournoi membre <span class="text-gz-green font-medium">· Compte pour le titre D1</span></template>
+                      <template v-if="selected.counts_for_title">• Tournoi membre <span class="text-gz-green font-medium">· Compte pour le ladder ELO</span></template>
                       <template v-else>• Tournoi membre <span class="text-gz-muted">· Amical</span></template>
                     </span>
                     <span v-if="selected.participants?.length" class="text-sm text-gz-muted">• {{ selected.participants.length }} participants</span>
@@ -182,11 +180,11 @@
                     <input v-model="selectedStartsAtInput" type="datetime-local" class="input" />
                   </div>
                   <div>
-                    <label class="label">Commentaire du tournoi (affiché sur l'accueil à cette date)</label>
+                    <label class="label">Commentaire du tournoi (affiche sur l'accueil a cette date)</label>
                     <textarea
                       v-model="selectedDayComment"
                       class="input min-h-[92px]"
-                      placeholder="Commentaire de la journée tournoi..."
+                      placeholder="Commentaire de la journee tournoi..."
                     />
                   </div>
                   <template v-if="selected?.format === 'round_robin'">
@@ -221,23 +219,9 @@
               </h3>
 
               <div class="space-y-2 mb-3">
-                <div class="flex items-center justify-between gap-2 flex-wrap">
-                  <label class="inline-flex items-center gap-2 text-sm text-gz-text cursor-pointer">
-                    <input
-                      :checked="isMemberTournament"
-                      @change="setTournamentMemberMode($event.target.checked)"
-                      type="checkbox"
-                      class="accent-[var(--green)]"
-                    />
-                    Tournoi membre
-                  </label>
-                  <span class="text-xs text-gz-muted">
-                    {{ isMemberTournament ? 'Sélection depuis la base joueurs' : 'Saisie libre des noms participants' }}
-                  </span>
-                </div>
-                <!-- Comptant pour le titre — visible uniquement si tournoi membre -->
-                <div v-if="isMemberTournament" class="pl-5 space-y-1.5 border-l-2 border-gz-green/30">
-                  <p class="text-xs text-gz-muted font-medium">Comptant pour le titre D1 ?</p>
+                <!-- Comptant pour le ladder ELO -->
+                <div class="pl-5 space-y-1.5 border-l-2 border-gz-green/30">
+                  <p class="text-xs text-gz-muted font-medium">Comptant pour le ladder ELO ?</p>
                   <div class="flex gap-4">
                     <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer">
                       <input
@@ -248,7 +232,7 @@
                         class="accent-[var(--green)]"
                       />
                       <span class="text-gz-text">Oui</span>
-                      <span class="text-[11px] text-gz-muted">(journée D1 comptée)</span>
+                      <span class="text-[11px] text-gz-muted">(ELO impacte)</span>
                     </label>
                     <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer">
                       <input
@@ -265,7 +249,7 @@
                 </div>
               </div>
 
-              <div v-if="isMemberTournament" class="space-y-2 mb-3">
+              <div class="space-y-2 mb-3">
                 <input
                   v-model="memberSelectionSearch"
                   type="text"
@@ -293,36 +277,19 @@
                     @click="applyMemberSelection"
                     :disabled="memberSelection.length < 2"
                     class="btn w-full sm:w-auto justify-center"
-                    title="Valider les joueurs cochés"
+                    title="Valider les joueurs coches"
                   >
-                    Valider la sélection
+                    Valider la selection
                   </button>
                   <button
                     @click="memberSelection = []"
                     class="btn w-full sm:w-auto justify-center"
-                    title="Tout décocher"
+                    title="Tout decocher"
                   >
-                    Tout décocher
+                    Tout decocher
                   </button>
-                  <span class="text-xs text-gz-muted">{{ memberSelection.length }} sélectionné(s)</span>
+                  <span class="text-xs text-gz-muted">{{ memberSelection.length }} selectionne(s)</span>
                 </div>
-              </div>
-
-              <div v-else class="space-y-2 mb-3">
-                <textarea
-                  v-model="manualNamesText"
-                  class="input min-h-[110px]"
-                  placeholder="Un nom par ligne, ou separes par virgules"
-                />
-                <div class="flex gap-2 flex-col sm:flex-row">
-                  <button @click="applyManualParticipants" class="btn w-full sm:w-auto justify-center" title="Appliquer la liste des participants">
-                    Appliquer la liste
-                  </button>
-                  <button @click="manualNamesText=''" class="btn w-full sm:w-auto justify-center" title="Vider la saisie">
-                    Vider
-                  </button>
-                </div>
-                <p class="text-xs text-gz-muted">Minimum 2 noms, sans doublons.</p>
               </div>
 
               <div class="flex flex-wrap gap-2">
@@ -346,14 +313,14 @@
                   v-if="selected.format === 'single_elimination'"
                   :matches="matches"
                   :admin-mode="true"
-                  :persist-key="`tournois-admin-${selected?.id || 'none'}-se`"
+                  :persist-key="`tk-tournois-admin-${selected?.id || 'none'}-se`"
                   @score-saved="onScoreSaved"
                 />
                 <BracketDE
                   v-else-if="selected.format === 'double_elimination'"
                   :matches="matches"
                   :admin-mode="true"
-                  :persist-key="`tournois-admin-${selected?.id || 'none'}-de`"
+                  :persist-key="`tk-tournois-admin-${selected?.id || 'none'}-de`"
                   @score-saved="onScoreSaved"
                 />
                 <template v-else-if="selected.format === 'round_robin'">
@@ -462,7 +429,7 @@
                       v-if="knockoutMatches.length"
                       :matches="knockoutMatches"
                       :admin-mode="true"
-                      :persist-key="`tournois-admin-${selected?.id || 'none'}-gk-ko`"
+                      :persist-key="`tk-tournois-admin-${selected?.id || 'none'}-gk-ko`"
                       @score-saved="onScoreSaved"
                     />
                     <div v-else class="py-4 space-y-3">
@@ -531,7 +498,7 @@ const newT = ref({
   name: '',
   format: 'single_elimination',
   startsAtInput: '',
-  memberTournament: false,
+  memberTournament: true,
   countsForTitle: false,
   rrMatchMode: 'single',
   rrStandingsMode: 'goals',
@@ -540,7 +507,7 @@ const selectedTournamentId = ref(null)
 let realtimeOffTournamentChanged = null
 let joinedTournamentRoom = ''
 
-useSessionState('efoot.ui.admin.tournois.v1', {
+useSessionState('tekken.ui.admin.tournois.v1', {
   selectedTournamentId,
   selectedStartsAtInput,
   selectedDayComment,
@@ -581,12 +548,17 @@ const shouldShowKnockoutGenerate = computed(() => (
 
 const filteredMemberPlayers = computed(() => {
   const q = String(memberSelectionSearch.value || '').trim().toLowerCase()
-  return allPlayers.value.filter((p) => {
-    if (!q) return true
-    const name = String(p?.name || '').toLowerCase()
-    const pid = String(p?.player_id || '').toLowerCase()
-    return name.includes(q) || pid.includes(q)
-  })
+  return allPlayers.value
+    .filter((p) => {
+      const game = String(p?.main_game || '').toLowerCase()
+      return game === 'tekken' || game === 'both'
+    })
+    .filter((p) => {
+      if (!q) return true
+      const name = String(p?.name || '').toLowerCase()
+      const pid = String(p?.player_id || '').toLowerCase()
+      return name.includes(q) || pid.includes(q)
+    })
 })
 const isMemberTournament = computed(() => selected.value?.member_tournament !== false)
 
@@ -675,7 +647,7 @@ function bindRealtimeListeners() {
     const tournamentId = Number(event.tournamentId || 0)
     if (!Number.isInteger(tournamentId) || tournamentId <= 0) return
     try {
-      const { data } = await api.get('/tournaments')
+      const { data } = await api.get('/tekken/tournaments')
       tournaments.value = data.tournaments || []
       if (selected.value?.id === tournamentId) {
         const scrollPos = capturePageScroll()
@@ -707,7 +679,7 @@ onMounted(async () => {
   bindRealtimeListeners()
   loadingList.value = true
   try {
-    const [tRes, pRes] = await Promise.all([api.get('/tournaments'), api.get('/players')])
+    const [tRes, pRes] = await Promise.all([api.get('/tekken/tournaments'), api.get('/players')])
     tournaments.value = tRes.data.tournaments || []
     allPlayers.value = (pRes.data.players || []).sort((a, b) =>
       (a.name || a.player_id).localeCompare(b.name || b.player_id, 'fr')
@@ -732,12 +704,12 @@ async function createTournament() {
   creating.value = true
   try {
     const startsAt = String(newT.value.startsAtInput || '').trim()
-    const { data } = await api.post('/admin/tournaments', {
+    const { data } = await api.post('/admin/tekken/tournaments', {
       name: newT.value.name,
       format: newT.value.format,
       starts_at: startsAt || null,
-      member_tournament: !!newT.value.memberTournament,
-      counts_for_title: !!newT.value.memberTournament && !!newT.value.countsForTitle,
+      member_tournament: true,
+      counts_for_title: !!newT.value.countsForTitle,
       rr_match_mode: newT.value.format === 'round_robin' ? newT.value.rrMatchMode : 'single',
       rr_standings_mode: newT.value.format === 'round_robin' ? newT.value.rrStandingsMode : 'goals',
     })
@@ -747,7 +719,7 @@ async function createTournament() {
       name: '',
       format: 'single_elimination',
       startsAtInput: '',
-      memberTournament: false,
+      memberTournament: true,
       countsForTitle: false,
       rrMatchMode: 'single',
       rrStandingsMode: 'goals',
@@ -767,7 +739,7 @@ async function selectTournament(t) {
   groupStandings.value = []
   loadingBracket.value = true
   try {
-    const { data } = await api.get(`/tournaments/${t.id}`)
+    const { data } = await api.get(`/tekken/tournaments/${t.id}`)
     const tournament = data.tournament || t
     const participants = Array.isArray(data.participants) ? data.participants : []
 
@@ -790,7 +762,7 @@ async function selectTournament(t) {
     matches.value = normalizeMatches(data.matches || [], tournament.format)
 
     if (tournament.format === 'round_robin' || tournament.format === 'groups_knockout') {
-      const { data: s } = await api.get(`/tournaments/${t.id}/standings`)
+      const { data: s } = await api.get(`/tekken/tournaments/${t.id}/standings`)
       if (tournament.format === 'round_robin') {
         rrStandings.value = applyIdStandings(s.standings || [], true)
         groupStandings.value = []
@@ -834,7 +806,7 @@ async function applyMemberSelection() {
 async function setTournamentMemberMode(enabled) {
   if (!selected.value) return
   try {
-    const { data } = await api.patch(`/admin/tournaments/${selected.value.id}`, {
+    const { data } = await api.patch(`/admin/tekken/tournaments/${selected.value.id}`, {
       member_tournament: !!enabled,
       ...(!enabled ? { counts_for_title: false } : {}),
     })
@@ -867,12 +839,12 @@ async function setTournamentMemberMode(enabled) {
 async function setCountsForTitle(value) {
   if (!selected.value) return
   try {
-    const { data } = await api.patch(`/admin/tournaments/${selected.value.id}`, { counts_for_title: !!value })
+    const { data } = await api.patch(`/admin/tekken/tournaments/${selected.value.id}`, { counts_for_title: !!value })
     const tournament = data.tournament || selected.value
     selected.value = { ...selected.value, ...tournament, counts_for_title: !!value }
     const idx = tournaments.value.findIndex((t) => t.id === selected.value.id)
     if (idx !== -1) tournaments.value[idx] = { ...tournaments.value[idx], counts_for_title: !!value }
-    success(value ? 'Tournoi comptant pour le titre D1' : 'Tournoi amical (ne compte pas pour D1)')
+    success(value ? 'Tournoi comptant pour le ladder ELO' : 'Tournoi amical (pas d\'impact ELO)')
   } catch (e) {
     toastError(e.response?.data?.error || 'Erreur')
   }
@@ -881,7 +853,7 @@ async function setCountsForTitle(value) {
 async function updateParticipants(namesRaw) {
   const names = parseManualNames(Array.isArray(namesRaw) ? namesRaw.join('\n') : String(namesRaw || ''))
   try {
-    const { data } = await api.put(`/admin/tournaments/${selected.value.id}/participants`, { names })
+    const { data } = await api.put(`/admin/tekken/tournaments/${selected.value.id}/participants`, { names })
     const participantNames = (data.participants || [])
       .map((p) => String(p.player_id || p.display_name || p.name || '').trim())
       .filter(Boolean)
@@ -923,8 +895,8 @@ function parseManualNames(input) {
 async function generateBracket() {
   generating.value = true
   try {
-    await api.post(`/admin/tournaments/${selected.value.id}/generate`)
-    const { data } = await api.get('/tournaments')
+    await api.post(`/admin/tekken/tournaments/${selected.value.id}/generate`)
+    const { data } = await api.get('/tekken/tournaments')
     tournaments.value = data.tournaments || []
     const fresh = tournaments.value.find((t) => t.id === selected.value.id)
     if (fresh) await selectTournament(fresh)
@@ -937,7 +909,7 @@ async function generateBracket() {
 
 async function changeStatus(status) {
   try {
-    await api.put(`/admin/tournaments/${selected.value.id}`, { status })
+    await api.put(`/admin/tekken/tournaments/${selected.value.id}`, { status })
     selected.value = { ...selected.value, status }
     const idx = tournaments.value.findIndex((t) => t.id === selected.value.id)
     if (idx !== -1) tournaments.value[idx] = { ...tournaments.value[idx], status }
@@ -951,7 +923,7 @@ async function deleteTournament() {
   if (!selected.value) return
   const isMember = selected.value.member_tournament !== false
   const firstMessage = isMember
-    ? `Supprimer le tournoi membre "${selected.value.name}" ?\n\nAttention: cette suppression retirera aussi ses points du classement général.`
+    ? `Supprimer le tournoi membre "${selected.value.name}" ?\n\nAttention: cette suppression retirera aussi ses points du classement general.`
     : `Supprimer le tournoi "${selected.value.name}" ?`
   if (!confirm(firstMessage)) return
 
@@ -962,7 +934,7 @@ async function deleteTournament() {
     payload = { confirm_member_delete: true, confirm_points_reset: true }
   }
   try {
-    await api.delete(`/admin/tournaments/${selected.value.id}`, payload ? { data: payload } : undefined)
+    await api.delete(`/admin/tekken/tournaments/${selected.value.id}`, payload ? { data: payload } : undefined)
     tournaments.value = tournaments.value.filter((t) => t.id !== selected.value.id)
     await syncTournamentRoom(null)
     selectedTournamentId.value = null
@@ -976,14 +948,14 @@ async function deleteTournament() {
 async function onScoreSaved({ matchId, score1, score2, done, fail }) {
   const scrollPos = capturePageScroll()
   try {
-    await api.post(`/admin/tournaments/${selected.value.id}/matches/${matchId}/result`, {
+    await api.post(`/admin/tekken/tournaments/${selected.value.id}/matches/${matchId}/result`, {
       score_p1: score1,
       score_p2: score2,
     })
-    const { data } = await api.get(`/tournaments/${selected.value.id}`)
+    const { data } = await api.get(`/tekken/tournaments/${selected.value.id}`)
     matches.value = normalizeMatches(data.matches || [], selected.value.format)
     if (selected.value.format === 'round_robin' || selected.value.format === 'groups_knockout') {
-      const { data: s } = await api.get(`/tournaments/${selected.value.id}/standings`)
+      const { data: s } = await api.get(`/tekken/tournaments/${selected.value.id}/standings`)
       if (selected.value.format === 'round_robin') {
         rrStandings.value = applyIdStandings(s.standings || [], true)
         groupStandings.value = []
@@ -1006,24 +978,21 @@ async function onScoreSaved({ matchId, score1, score2, done, fail }) {
   }
 }
 
-// 🔧 FEATURE: Handle batch score saves in a single request
 async function onBatchScoresSaved({ edits, done, fail }) {
   const scrollPos = capturePageScroll()
   try {
-    // Save all scores together via new endpoint or loop efficiently
     for (const edit of edits) {
-      await api.post(`/admin/tournaments/${selected.value.id}/matches/${edit.matchId}/result`, {
+      await api.post(`/admin/tekken/tournaments/${selected.value.id}/matches/${edit.matchId}/result`, {
         score_p1: edit.score1,
         score_p2: edit.score2,
       })
     }
-    
-    // Load data once after all saves
-    const { data } = await api.get(`/tournaments/${selected.value.id}`)
+
+    const { data } = await api.get(`/tekken/tournaments/${selected.value.id}`)
     matches.value = normalizeMatches(data.matches || [], selected.value.format)
-    
+
     if (selected.value.format === 'round_robin' || selected.value.format === 'groups_knockout') {
-      const { data: s } = await api.get(`/tournaments/${selected.value.id}/standings`)
+      const { data: s } = await api.get(`/tekken/tournaments/${selected.value.id}/standings`)
       if (selected.value.format === 'round_robin') {
         rrStandings.value = applyIdStandings(s.standings || [], true)
         groupStandings.value = []
@@ -1032,10 +1001,10 @@ async function onBatchScoresSaved({ edits, done, fail }) {
         groupStandings.value = (s.groups || []).map((g) => ({ ...g, standings: applyIdStandings(g.standings || [], true) }))
       }
     }
-    
+
     done()
     showSaisieRapide.value = false
-    success(`${edits.length} score(s) enregistrés`)
+    success(`${edits.length} score(s) enregistres`)
     await nextTick()
     restorePageScroll(scrollPos, 14)
   } catch (e) {
@@ -1051,7 +1020,7 @@ async function generateKnockoutFromGroups({ automatic = false } = {}) {
 
   generatingKnockout.value = true
   try {
-    const { data } = await api.post(`/admin/tournaments/${selected.value.id}/generate-knockout`)
+    const { data } = await api.post(`/admin/tekken/tournaments/${selected.value.id}/generate-knockout`)
     matches.value = normalizeMatches(data.matches || [], selected.value.format)
 
     const tournament = data.tournament || null
@@ -1061,7 +1030,7 @@ async function generateKnockoutFromGroups({ automatic = false } = {}) {
       if (idx !== -1) tournaments.value[idx] = { ...tournaments.value[idx], ...tournament }
     }
 
-    const { data: s } = await api.get(`/tournaments/${selected.value.id}/standings`)
+    const { data: s } = await api.get(`/tekken/tournaments/${selected.value.id}/standings`)
     rrStandings.value = []
     groupStandings.value = (s.groups || []).map((g) => ({ ...g, standings: applyIdStandings(g.standings || [], true) }))
     success(automatic ? 'Tableau final genere automatiquement' : 'Tableau final genere')
@@ -1109,7 +1078,7 @@ async function saveTournamentMeta() {
         }
         : {}),
     }
-    const { data } = await api.patch(`/admin/tournaments/${selected.value.id}`, payload)
+    const { data } = await api.patch(`/admin/tekken/tournaments/${selected.value.id}`, payload)
     const tournament = data.tournament || selected.value
     selected.value = { ...selected.value, ...tournament }
     selectedStartsAtInput.value = toDatetimeLocalValue(tournament.starts_at)
@@ -1177,8 +1146,7 @@ const rrPairRows = computed(() => {
 })
 
 function normalizeMatches(rawMatches, format) {
-  // Tournoi membre : affiche le player_id. Tournoi ouvert (noms libres,
-  // sans player_id) : conserve le nom car le fallback retient p1_name.
+  // Tournoi Tekken = toujours membre : on affiche l'identifiant joueur (player_id).
   return (rawMatches || []).map((m) => {
     const roundNo = Number(m.round_no ?? m.roundNo ?? 0)
     return {

@@ -69,9 +69,9 @@ const efootCards = [
 ]
 
 const tekkenCards = [
-  { to: '/admin/tekken', label: 'Ladder',   desc: 'Classement ELO des duels classés', icon: ListOrderedIcon, soon: true },
-  { to: '/admin/tekken', label: 'Duels',    desc: 'Duels classés Tekken',              icon: SwordsIcon,      soon: true },
-  { to: '/admin/tekken', label: 'Tournois', desc: 'Tournois Tekken à élimination',     icon: GamepadIcon,     soon: true },
+  { to: '/admin/tekken', label: 'Ladder',   desc: 'Classement ELO des duels classes', icon: ListOrderedIcon },
+  { to: '/admin/tekken', label: 'Duels',    desc: 'Duels classes Tekken',              icon: SwordsIcon },
+  { to: '/admin/tekken/tournois', label: 'Tournois', desc: 'Tournois Tekken',          icon: GamepadIcon },
 ]
 
 const commonCards = [

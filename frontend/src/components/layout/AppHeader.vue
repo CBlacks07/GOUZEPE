@@ -75,7 +75,7 @@ const hasTekken = computed(() => mg.value === 'tekken' || mg.value === 'both')
 const hasBoth   = computed(() => mg.value === 'both')
 
 const efootRoutes = ['/journees', '/duel', '/classement', '/tournois', '/accueil']
-const tekkenRoutes = ['/tekken-ladder', '/accueil-tekken']
+const tekkenRoutes = ['/tekken-ladder', '/tekken-tournois', '/accueil-tekken']
 
 const activePole = computed(() => {
   const p = route.path
@@ -101,6 +101,7 @@ const visibleNav = computed(() => {
     links.push(
       { to: '/accueil-tekken', label: 'Accueil Tekken', icon: HomeIcon },
       { to: '/tekken-ladder', label: 'Ladder', icon: GamepadIcon },
+      { to: '/tekken-tournois', label: 'Tournois', icon: TrophyIcon },
     )
     if (hasBoth.value) links.push({ to: '/accueil', label: 'eFootball', icon: FootprintsIcon, sep: true })
   } else if (!route.path.startsWith('/admin') && !auth.isAdmin) {
