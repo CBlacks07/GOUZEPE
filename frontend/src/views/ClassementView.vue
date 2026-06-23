@@ -93,9 +93,9 @@
               </tr>
               <tr v-for="(row, i) in classedRows" :key="row.id">
                 <td class="text-center">
-                  <span v-if="i === 0">🥇</span>
-                  <span v-else-if="i === 1">🥈</span>
-                  <span v-else-if="i === 2">🥉</span>
+                  <span v-if="i === 0" class="rank-medal rank-gold">1</span>
+                  <span v-else-if="i === 1" class="rank-medal rank-silver">2</span>
+                  <span v-else-if="i === 2" class="rank-medal rank-bronze">3</span>
                   <span v-else style="color:var(--muted)">{{ i + 1 }}</span>
                 </td>
                 <td>
@@ -219,13 +219,13 @@
         <div v-if="dayPayloadData.champions?.d1?.id || dayPayloadData.champions?.d2?.id"
              class="mt-4 p-3 rounded-xl text-sm" style="background:var(--panel);border:1px solid var(--border)">
           <p v-if="dayPayloadData.champions?.d1?.id">
-            🏆 Champion D1 : <strong>{{ dayPayloadData.champions.d1.id }}</strong>
+            <TrophyIcon class="w-4 h-4 inline" style="color:#eab308" /> Champion D1 : <strong>{{ dayPayloadData.champions.d1.id }}</strong>
             <span v-if="dayPayloadData.champions.d1.team" style="color:var(--muted)">
               — {{ dayPayloadData.champions.d1.team }}
             </span>
           </p>
           <p v-if="dayPayloadData.champions?.d2?.id">
-            🏆 Champion D2 : <strong>{{ dayPayloadData.champions.d2.id }}</strong>
+            <TrophyIcon class="w-4 h-4 inline" style="color:#eab308" /> Champion D2 : <strong>{{ dayPayloadData.champions.d2.id }}</strong>
             <span v-if="dayPayloadData.champions.d2.team" style="color:var(--muted)">
               — {{ dayPayloadData.champions.d2.team }}
             </span>
@@ -426,7 +426,7 @@
             <div class="text-xs" style="color:var(--muted)">
               {{ activeTournament.played_at ? fmtDate(String(activeTournament.played_at).slice(0,10)) : '—' }}
               · {{ activeTournament.eligible_count }}/{{ activeTournament.participants_count }} classé(s)
-              <span v-if="activeTournament.rows && activeTournament.rows.length"> · 🏆 {{ activeTournament.rows[0].name }}</span>
+              <span v-if="activeTournament.rows && activeTournament.rows.length"> · <TrophyIcon class="w-3 h-3 inline" style="color:#eab308" /> {{ activeTournament.rows[0].name }}</span>
             </div>
           </div>
 
@@ -636,11 +636,11 @@ const seasonHighlights = computed(() => {
   return {
     champion,
     highlights: [
-      { icon: '📅', title: 'Plus régulier',      players: regularPlayers,    detail: `${regularPlayers[0]?.participations || 0} journées jouées` },
-      { icon: '🎽', title: "Plus d'équipes",      players: teamsPlayers,      detail: `${teamsPlayers[0]?.teams_used || 0} équipes différentes` },
-      { icon: '🛡️', title: 'Meilleure défense',  players: defPlayers,        detail: defPlayers[0] ? `${ratio(defPlayers[0], 'BC', 'J')} buts encaissés/match` : '—' },
-      { icon: '⚽', title: 'Meilleure attaque',  players: attPlayers,        detail: attPlayers[0] ? `${ratio(attPlayers[0], 'BP', 'J')} buts marqués/match`   : '—' },
-      { icon: '🌟', title: 'À féliciter',         players: felicitatePlayers, detail: `${winPct(felicitatePlayers[0] || {})}% de victoires` },
+      { icon: svgIcon('calendar'), title: 'Plus régulier',      players: regularPlayers,    detail: `${regularPlayers[0]?.participations || 0} journées jouées` },
+      { icon: svgIcon('shirt'),    title: "Plus d'équipes",      players: teamsPlayers,      detail: `${teamsPlayers[0]?.teams_used || 0} équipes différentes` },
+      { icon: svgIcon('shield'),   title: 'Meilleure défense',  players: defPlayers,        detail: defPlayers[0] ? `${ratio(defPlayers[0], 'BC', 'J')} buts encaissés/match` : '—' },
+      { icon: svgIcon('target'),   title: 'Meilleure attaque',  players: attPlayers,        detail: attPlayers[0] ? `${ratio(attPlayers[0], 'BP', 'J')} buts marqués/match`   : '—' },
+      { icon: svgIcon('star'),     title: 'À féliciter',         players: felicitatePlayers, detail: `${winPct(felicitatePlayers[0] || {})}% de victoires` },
     ],
   }
 })
@@ -654,6 +654,20 @@ const filteredTitles = computed(() => {
 // Joueurs scindés membres / invités pour les sélecteurs du comparateur
 const memberPlayers = computed(() => allPlayers.value.filter(p => !p.invite))
 const guestPlayers  = computed(() => allPlayers.value.filter(p => p.invite))
+
+const SVG_TROPHY = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>'
+
+function svgIcon(name) {
+  const icons = {
+    trophy:   SVG_TROPHY,
+    calendar: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>',
+    shirt:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>',
+    shield:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>',
+    target:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+    star:     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  }
+  return icons[name] || ''
+}
 
 /* ====== Helpers ====== */
 function partPct(row) {
@@ -958,10 +972,10 @@ async function printSelectedDay() {
     let html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>Résultats — ${day}</title><style>${css}</style></head><body onload="window.print()">`
     html += `<h1>${logo ? `<img src="${logo}" alt="logo">` : ''}GOUZEPE GAMING CLUB — Journée du ${new Date(day).toLocaleDateString('fr-FR')}</h1>`
     html += '<h2>SCORES D1</h2>' + renderMatches(payload?.d1 || [])
-    html += `<div class="champ">🏆${escapeHtml(c1.id || '—')} — CHAMPION avec ${escapeHtml(team1)}</div>`
+    html += `<div class="champ">${SVG_TROPHY} ${escapeHtml(c1.id || '—')} — CHAMPION avec ${escapeHtml(team1)}</div>`
     html += renderStand('CLASSEMENT D1', main1, inv1)
     html += '<h2>SCORES D2</h2>' + renderMatches(payload?.d2 || [])
-    html += `<div class="champ">🏆${escapeHtml(c2.id || '—')} — CHAMPION avec ${escapeHtml(team2)}</div>`
+    html += `<div class="champ">${SVG_TROPHY} ${escapeHtml(c2.id || '—')} — CHAMPION avec ${escapeHtml(team2)}</div>`
     html += renderStand('CLASSEMENT D2', main2, inv2)
 
     const printBarrageAffiche = payload?.barrage?.ids || '—'
@@ -1001,7 +1015,7 @@ async function printSeasonA4() {
       padding:14px 16px;border-radius:8px;text-align:center;
       background:#fffbeb;border:2px solid #ca8a04;margin-bottom:10px
     }
-    .champion-box .crown{font-size:28px;line-height:1;margin-bottom:4px}
+    .champion-box .crown{font-size:22px;line-height:1;margin-bottom:4px;font-weight:900;color:#ca8a04}
     .champ-label{font-size:9px;font-weight:800;letter-spacing:.1em;color:#92400e;text-transform:uppercase}
     .champ-name{font-size:20px;font-weight:900;color:#78350f;line-height:1.1}
     .champ-id{font-size:11px;color:#92400e}
@@ -1040,7 +1054,7 @@ async function printSeasonA4() {
     <div class="bilan">
       <h2>Bilan de la saison</h2>
       <div class="champion-box">
-        <div class="crown">🏆</div>
+        <div class="crown">${SVG_TROPHY.replace('width="16"','width="28"').replace('height="16"','height="28"')}</div>
         <div>
           <div class="champ-label">Champion de la saison</div>
           <div class="champ-name">${escapeHtml(champ.name || champ.id)}</div>
@@ -1412,6 +1426,14 @@ async function createSeason() {
     transition: none !important;
   }
 }
+
+.rank-medal {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 800;
+}
+.rank-gold   { background: #ca8a04; color: #fff; }
+.rank-silver { background: #94a3b8; color: #fff; }
+.rank-bronze { background: #b45309; color: #fff; }
 
 </style>
 

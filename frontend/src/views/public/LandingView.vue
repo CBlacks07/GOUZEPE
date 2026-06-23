@@ -76,11 +76,11 @@
           <!-- Champions -->
           <div class="champs-col">
             <div v-if="latestDay?.champions?.d1?.id" class="champ-card">
-              <span class="champ-crown">🏆</span>
+              <TrophyIcon class="champ-crown-icon" />
               <div class="champ-meta"><span class="champ-div">Champion D1</span><strong>{{ latestDay.champions.d1.id }}</strong></div>
             </div>
             <div v-if="latestDay?.champions?.d2?.id" class="champ-card">
-              <span class="champ-crown">🏆</span>
+              <TrophyIcon class="champ-crown-icon" />
               <div class="champ-meta"><span class="champ-div">Champion D2</span><strong>{{ latestDay.champions.d2.id }}</strong></div>
             </div>
             <div v-if="!latestDay?.champions?.d1?.id && !latestDay?.champions?.d2?.id" class="champ-empty">
@@ -119,7 +119,7 @@
             <h3 class="tourn-name">{{ t.name }}</h3>
             <div class="tourn-meta">
               <span>{{ t.participants_count }} joueurs</span>
-              <span v-if="t.winner_name">🏆 {{ t.winner_name }}</span>
+              <span v-if="t.winner_name"><TrophyIcon class="w-3 h-3 inline" style="color:#eab308" /> {{ t.winner_name }}</span>
             </div>
           </article>
         </div>
@@ -304,6 +304,7 @@ onMounted(async () => {
 .champs-col { display: grid; gap: 1rem; align-content: start; }
 .champ-card { display: flex; align-items: center; gap: .9rem; padding: 1.1rem 1.3rem; background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
 .champ-crown { font-size: 1.8rem; line-height: 1; }
+.champ-crown-icon { width: 1.5rem; height: 1.5rem; color: #eab308; }
 .champ-meta { display: flex; flex-direction: column; min-width: 0; }
 .champ-div { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
 .champ-card strong { font-family: var(--font-title); font-size: 1.3rem; letter-spacing: .02em; }

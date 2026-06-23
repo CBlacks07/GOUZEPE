@@ -90,6 +90,12 @@ const routes = [
     meta: { requiresAuth: true, title: 'Accueil' },
   },
   {
+    path: '/journees',
+    name: 'Journees',
+    component: () => import('@/views/JourneesView.vue'),
+    meta: { requiresAuth: true, title: 'Journées' },
+  },
+  {
     path: '/duel',
     name: 'Duel',
     component: () => import('@/views/DuelView.vue'),

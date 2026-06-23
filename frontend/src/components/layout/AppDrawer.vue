@@ -63,7 +63,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useMembershipNotif } from '@/composables/useMembershipNotif'
 import {
-  HomeIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
+  HomeIcon, CalendarDaysIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
   UsersIcon, ShieldIcon, DatabaseIcon, SunIcon, MoonIcon,
   LogOutIcon, XIcon, PaletteIcon
 } from 'lucide-vue-next'
@@ -78,6 +78,7 @@ const router = useRouter()
 
 const allLinks = [
   { to: '/accueil',            label: 'Accueil',        icon: HomeIcon },
+  { to: '/journees',           label: 'Journées',      icon: CalendarDaysIcon },
   { to: '/duel',               label: 'Duel',           icon: SwordsIcon },
   { to: '/classement',         label: 'Classements',    icon: BarChart2Icon },
   { to: '/profil',             label: 'Mon espace',     icon: UserIcon },

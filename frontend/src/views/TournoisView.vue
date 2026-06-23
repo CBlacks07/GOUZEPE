@@ -35,7 +35,7 @@
                   ]">{{ statusLabel(t.status) }}</span>
                   <span class="text-[10px] text-gz-muted">{{ formatLabel(t.format) }}</span>
                   <span v-if="t.winner_name && t.status === 'completed'" class="text-[10px] text-gz-amber font-semibold ml-auto">
-                    🏆 {{ t.winner_name }}
+                    <TrophyIcon class="w-3 h-3 inline" /> {{ t.winner_name }}
                   </span>
                 </div>
               </button>
@@ -132,7 +132,7 @@
               <h1 class="th-title">{{ selected.name }}</h1>
               <!-- Vainqueur si terminé -->
               <div v-if="selected.winner_name && selected.status === 'completed'" class="th-winner">
-                <span class="th-winner-crown">🏆</span>
+                <TrophyIcon class="th-winner-crown-icon" />
                 <span class="th-winner-label">Vainqueur</span>
                 <span class="th-winner-name">{{ selected.winner_name }}</span>
               </div>
@@ -811,6 +811,7 @@ function playedOf(s) {
   border-radius: 10px; padding: 0.4rem 0.85rem; font-size: 0.85rem;
 }
 .th-winner-crown { font-size: 1rem; }
+.th-winner-crown-icon { width: 1.2rem; height: 1.2rem; color: #eab308; }
 .th-winner-label { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
 .th-winner-name { font-weight: 800; color: #fbbf24; }
 
