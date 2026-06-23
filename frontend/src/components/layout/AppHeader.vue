@@ -103,7 +103,7 @@ const visibleNav = computed(() => {
       { to: '/tekken-ladder', label: 'Ladder', icon: GamepadIcon },
     )
     if (hasBoth.value) links.push({ to: '/accueil', label: 'eFootball', icon: FootprintsIcon, sep: true })
-  } else if (!route.path.startsWith('/admin')) {
+  } else if (!route.path.startsWith('/admin') && !auth.isAdmin) {
     if (hasEfoot.value) links.push({ to: '/accueil', label: 'eFootball', icon: FootprintsIcon })
     if (hasTekken.value) links.push({ to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon })
   }
