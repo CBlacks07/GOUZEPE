@@ -232,9 +232,7 @@ router.beforeEach(async (to, from) => {
   const auth = useAuthStore()
 
   function homeRoute() {
-    const g = auth.mainGame
-    if (g === 'tekken') return '/accueil-tekken'
-    return '/accueil'
+    return '/profil'
   }
 
   document.title = to.meta.title

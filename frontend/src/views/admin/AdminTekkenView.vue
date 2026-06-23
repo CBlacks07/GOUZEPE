@@ -246,9 +246,13 @@ const duelMsg = ref('')
 const duelOk = ref(true)
 const lastResult = ref(null)
 
+const tekkenPlayers = computed(() => {
+  return allPlayers.value.filter(p => p.main_game === 'tekken' || p.main_game === 'both')
+})
+
 const availablePlayers = computed(() => {
   const inLadder = new Set(ladder.value.map(p => p.player_id))
-  return allPlayers.value.filter(p => !inLadder.has(p.player_id))
+  return tekkenPlayers.value.filter(p => !inLadder.has(p.player_id))
 })
 
 const canSubmitDuel = computed(() => {

@@ -11,7 +11,9 @@
 
     <!-- Nav desktop -->
     <nav class="hidden lg:flex items-center gap-0.5 ml-4 flex-1 overflow-x-auto">
-      <RouterLink v-for="link in visibleNav" :key="link.to"
+      <template v-for="link in visibleNav" :key="link.to">
+      <span v-if="link.sep" class="nav-sep" />
+      <RouterLink
         :to="link.to"
         class="navlink relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[13px] whitespace-nowrap text-gz-muted
                hover:text-gz-text hover:bg-gz-border/20 transition-colors duration-150"
@@ -25,6 +27,7 @@
           {{ pendingCount > 9 ? '9+' : pendingCount }}
         </span>
       </RouterLink>
+      </template>
     </nav>
 
     <div class="ml-auto flex items-center gap-2">
@@ -66,9 +69,13 @@ const router = useRouter()
 const route  = useRoute()
 const { pendingCount } = useMembershipNotif()
 
+const mg = computed(() => auth.mainGame || 'efoot')
+const hasEfoot  = computed(() => mg.value === 'efoot' || mg.value === 'both')
+const hasTekken = computed(() => mg.value === 'tekken' || mg.value === 'both')
+const hasBoth   = computed(() => mg.value === 'both')
+
 const efootRoutes = ['/journees', '/duel', '/classement', '/tournois', '/accueil']
 const tekkenRoutes = ['/tekken-ladder', '/accueil-tekken']
-const neutralRoutes = ['/profil', '/admin']
 
 const activePole = computed(() => {
   const p = route.path
@@ -77,32 +84,28 @@ const activePole = computed(() => {
   return null
 })
 
-const myHome = computed(() => auth.mainGame === 'tekken' ? '/accueil-tekken' : '/accueil')
-
 const visibleNav = computed(() => {
   const pole = activePole.value
-  let links = []
+  let links = [{ to: '/profil', label: 'Mon espace', icon: UserIcon }]
 
-  if (!pole) {
-    links = [
-      { to: myHome.value, label: 'Accueil', icon: HomeIcon },
-      { to: '/profil', label: 'Mon espace', icon: UserIcon },
-      { to: '/accueil', label: 'eFootball', icon: FootprintsIcon },
-      { to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon },
-    ]
-  } else if (pole === 'efoot') {
-    links = [
-      { to: '/accueil', label: 'Accueil', icon: HomeIcon },
+  if (pole === 'efoot') {
+    links.push(
+      { to: '/accueil', label: 'Accueil eFootball', icon: HomeIcon },
       { to: '/journees', label: 'Journees', icon: CalendarDaysIcon },
       { to: '/duel', label: 'Duel', icon: SwordsIcon },
       { to: '/classement', label: 'Classements', icon: BarChart2Icon },
       { to: '/tournois', label: 'Tournois', icon: TrophyIcon },
-    ]
+    )
+    if (hasBoth.value) links.push({ to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon, sep: true })
   } else if (pole === 'tekken') {
-    links = [
-      { to: '/accueil-tekken', label: 'Accueil', icon: HomeIcon },
+    links.push(
+      { to: '/accueil-tekken', label: 'Accueil Tekken', icon: HomeIcon },
       { to: '/tekken-ladder', label: 'Ladder', icon: GamepadIcon },
-    ]
+    )
+    if (hasBoth.value) links.push({ to: '/accueil', label: 'eFootball', icon: FootprintsIcon, sep: true })
+  } else {
+    if (hasEfoot.value) links.push({ to: '/accueil', label: 'eFootball', icon: FootprintsIcon })
+    if (hasTekken.value) links.push({ to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon })
   }
 
   if (auth.isAdmin) links.push({ to: '/admin', label: 'Admin', icon: ShieldIcon })
