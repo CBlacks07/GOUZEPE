@@ -1,8 +1,8 @@
-﻿<template>
+<template>
   <AppLayout season-label="Mon espace">
     <div class="page-wrap panel-membre-wrap">
 
-      <!-- ── Onglets ── -->
+      <!-- Onglets principaux -->
       <div class="profil-tabs reveal">
         <button :class="['profil-tab', activeTab === 'stats' && 'profil-tab--on']" @click="activeTab = 'stats'">
           <BarChart2Icon class="w-4 h-4" /> Statistiques
@@ -12,7 +12,7 @@
         </button>
       </div>
 
-      <!-- ── Hero profil ── -->
+      <!-- Hero profil -->
       <div class="profil-hero reveal">
         <div class="profil-avatar-col">
           <div class="profil-avatar" @click="activeTab === 'settings' && $refs.photoInput?.click()" :style="activeTab === 'settings' ? 'cursor:pointer' : ''">
@@ -39,92 +39,175 @@
         </div>
       </div>
 
-      <!-- ════════ ONGLET STATS ════════ -->
+      <!-- ONGLET STATS -->
       <template v-if="activeTab === 'stats'">
-        <div v-if="loading" class="profil-loading reveal delay-1">
-          <div class="profil-spinner" />
-          <span>Chargement…</span>
+
+        <!-- Sous-onglets jeu -->
+        <div class="game-tabs reveal delay-1">
+          <button :class="['gt', { on: statsGame === 'efoot' }]" @click="statsGame = 'efoot'">
+            <SwordsIcon class="w-3.5 h-3.5" /> eFootball
+          </button>
+          <button :class="['gt', { on: statsGame === 'tekken' }]" @click="statsGame = 'tekken'">
+            <GamepadIcon class="w-3.5 h-3.5" /> Tekken
+          </button>
         </div>
 
-        <div v-else-if="!stats" class="profil-unlinked reveal delay-1">
-          <p class="text-gz-muted text-sm">Votre compte n'est lie a aucun joueur. Contactez un administrateur.</p>
-        </div>
-
-        <template v-else>
-          <div class="profil-top-grid reveal delay-1">
-            <div v-if="myRank" class="rank-showcase">
-              <div class="rank-showcase-bg" />
-              <span class="rank-label">Rang saison</span>
-              <div class="rank-num">#{{ myRank.rank }}</div>
-              <div class="rank-detail">
-                <span class="rank-pts">{{ myRank.points }} pts</span>
-                <span class="rank-sep">·</span>
-                <span class="rank-played">{{ myRank.played }} participations</span>
-              </div>
-            </div>
-            <div class="kpi-grid">
-              <div v-for="kpi in kpis" :key="kpi.label" class="kpi-tile">
-                <div class="kpi-icon-wrap" :style="`background:${kpi.bg}`">
-                  <component :is="kpi.icon" class="w-5 h-5" :style="`color:${kpi.accent}`" />
-                </div>
-                <div :class="['kpi-val', kpi.valClass]">{{ kpi.value }}</div>
-                <div class="kpi-label">{{ kpi.label }}</div>
-              </div>
-            </div>
+        <!-- eFootball stats -->
+        <template v-if="statsGame === 'efoot'">
+          <div v-if="loading" class="profil-loading reveal delay-1">
+            <div class="profil-spinner" />
+            <span>Chargement...</span>
           </div>
 
-          <div class="profil-bottom-grid reveal delay-2">
-            <div class="profil-card">
-              <h3 class="profil-card-title">Statistiques</h3>
-              <div class="stat-list">
-                <div v-for="row in statRows" :key="row.label" class="stat-row">
-                  <span class="stat-label">{{ row.label }}</span>
-                  <div class="stat-bar-wrap">
-                    <div v-if="row.pct != null" class="stat-bar">
-                      <div class="stat-bar-fill" :style="`width:${row.pct}%;background:${row.accent || 'var(--green)'}`" />
-                    </div>
+          <div v-else-if="!stats" class="profil-unlinked reveal delay-1">
+            <p class="text-gz-muted text-sm">Votre compte n'est lie a aucun joueur. Contactez un administrateur.</p>
+          </div>
+
+          <template v-else>
+            <div class="profil-top-grid reveal delay-1">
+              <div v-if="myRank" class="rank-showcase">
+                <div class="rank-showcase-bg" />
+                <span class="rank-label">Rang saison</span>
+                <div class="rank-num">#{{ myRank.rank }}</div>
+                <div class="rank-detail">
+                  <span class="rank-pts">{{ myRank.points }} pts</span>
+                  <span class="rank-sep">·</span>
+                  <span class="rank-played">{{ myRank.played }} participations</span>
+                </div>
+              </div>
+              <div class="kpi-grid">
+                <div v-for="kpi in kpis" :key="kpi.label" class="kpi-tile">
+                  <div class="kpi-icon-wrap" :style="`background:${kpi.bg}`">
+                    <component :is="kpi.icon" class="w-5 h-5" :style="`color:${kpi.accent}`" />
                   </div>
-                  <span :class="['stat-val', row.valClass]">{{ row.value }}</span>
+                  <div :class="['kpi-val', kpi.valClass]">{{ kpi.value }}</div>
+                  <div class="kpi-label">{{ kpi.label }}</div>
                 </div>
               </div>
             </div>
 
-            <div class="profil-card">
-              <h3 class="profil-card-title">Forme recente</h3>
-              <div v-if="recentMatches.length" class="form-strip">
-                <span v-for="m in recentMatches.slice(0,10)" :key="m.id"
-                      :class="['form-dot', m.gf > m.ga ? 'dot-w' : m.gf < m.ga ? 'dot-l' : 'dot-d']"
-                      :title="`${m.gf}-${m.ga} vs ${m.opponent_name}`">
-                  {{ m.gf > m.ga ? 'V' : m.gf < m.ga ? 'D' : 'N' }}
-                </span>
+            <div class="profil-bottom-grid reveal delay-2">
+              <div class="profil-card">
+                <h3 class="profil-card-title">Statistiques</h3>
+                <div class="stat-list">
+                  <div v-for="row in statRows" :key="row.label" class="stat-row">
+                    <span class="stat-label">{{ row.label }}</span>
+                    <div class="stat-bar-wrap">
+                      <div v-if="row.pct != null" class="stat-bar">
+                        <div class="stat-bar-fill" :style="`width:${row.pct}%;background:${row.accent || 'var(--green)'}`" />
+                      </div>
+                    </div>
+                    <span :class="['stat-val', row.valClass]">{{ row.value }}</span>
+                  </div>
+                </div>
               </div>
-              <div v-if="!recentMatches.length" class="text-gz-muted text-sm py-4">Aucun match recent.</div>
-              <div v-else class="match-list">
-                <div v-for="m in recentMatches.slice(0,8)" :key="m.id" class="match-row">
-                  <span class="match-date">{{ fmtDate(m.match_date) }}</span>
-                  <span :class="['match-badge', m.gf > m.ga ? 'badge-w' : m.gf < m.ga ? 'badge-l' : 'badge-d']">
+
+              <div class="profil-card">
+                <h3 class="profil-card-title">Forme recente</h3>
+                <div v-if="recentMatches.length" class="form-strip">
+                  <span v-for="m in recentMatches.slice(0,10)" :key="m.id"
+                        :class="['form-dot', m.gf > m.ga ? 'dot-w' : m.gf < m.ga ? 'dot-l' : 'dot-d']"
+                        :title="`${m.gf}-${m.ga} vs ${m.opponent_name}`">
                     {{ m.gf > m.ga ? 'V' : m.gf < m.ga ? 'D' : 'N' }}
                   </span>
-                  <span class="match-vs">vs {{ m.opponent_name }}</span>
-                  <span class="match-score">{{ m.gf }} – {{ m.ga }}</span>
-                  <span class="match-div">{{ m.division }}</span>
+                </div>
+                <div v-if="!recentMatches.length" class="text-gz-muted text-sm py-4">Aucun match recent.</div>
+                <div v-else class="match-list">
+                  <div v-for="m in recentMatches.slice(0,8)" :key="m.id" class="match-row">
+                    <span class="match-date">{{ fmtDate(m.match_date) }}</span>
+                    <span :class="['match-badge', m.gf > m.ga ? 'badge-w' : m.gf < m.ga ? 'badge-l' : 'badge-d']">
+                      {{ m.gf > m.ga ? 'V' : m.gf < m.ga ? 'D' : 'N' }}
+                    </span>
+                    <span class="match-vs">vs {{ m.opponent_name }}</span>
+                    <span class="match-score">{{ m.gf }} - {{ m.ga }}</span>
+                    <span class="match-div">{{ m.division }}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </template>
         </template>
+
+        <!-- Tekken stats -->
+        <template v-if="statsGame === 'tekken'">
+          <div v-if="tkLoading" class="profil-loading reveal delay-1">
+            <div class="profil-spinner" />
+            <span>Chargement...</span>
+          </div>
+
+          <div v-else-if="!tkLadder" class="profil-unlinked reveal delay-1">
+            <p class="text-gz-muted text-sm">Vous n'etes pas inscrit au ladder Tekken.</p>
+          </div>
+
+          <template v-else>
+            <div class="profil-top-grid reveal delay-1">
+              <div class="rank-showcase tk-rank">
+                <div class="rank-showcase-bg" />
+                <span class="rank-label">ELO</span>
+                <div class="rank-num">{{ tkLadder.elo }}</div>
+                <div class="rank-detail">
+                  <span class="rank-pts">Peak {{ tkLadder.peak_elo }}</span>
+                </div>
+              </div>
+              <div class="kpi-grid">
+                <div v-for="kpi in tkKpis" :key="kpi.label" class="kpi-tile">
+                  <div class="kpi-icon-wrap" :style="`background:${kpi.bg}`">
+                    <component :is="kpi.icon" class="w-5 h-5" :style="`color:${kpi.accent}`" />
+                  </div>
+                  <div :class="['kpi-val', kpi.valClass]">{{ kpi.value }}</div>
+                  <div class="kpi-label">{{ kpi.label }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="profil-bottom-grid reveal delay-2">
+              <div class="profil-card">
+                <h3 class="profil-card-title">Statistiques</h3>
+                <div class="stat-list">
+                  <div v-for="row in tkStatRows" :key="row.label" class="stat-row">
+                    <span class="stat-label">{{ row.label }}</span>
+                    <div class="stat-bar-wrap">
+                      <div v-if="row.pct != null" class="stat-bar">
+                        <div class="stat-bar-fill" :style="`width:${row.pct}%;background:${row.accent || 'var(--green)'}`" />
+                      </div>
+                    </div>
+                    <span :class="['stat-val', row.valClass]">{{ row.value }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="profil-card">
+                <h3 class="profil-card-title">Duels recents</h3>
+                <div v-if="!tkDuels.length" class="text-gz-muted text-sm py-4">Aucun duel enregistre.</div>
+                <div v-else class="match-list">
+                  <div v-for="d in tkDuels.slice(0, 8)" :key="d.id" class="match-row">
+                    <span class="match-date">{{ fmtDate(d.played_at) }}</span>
+                    <span :class="['match-badge', d.winner_id === linkedPlayerId ? 'badge-w' : 'badge-l']">
+                      {{ d.winner_id === linkedPlayerId ? 'V' : 'D' }}
+                    </span>
+                    <span class="match-vs">vs {{ d.p1_id === linkedPlayerId ? d.p2_name : d.p1_name }}</span>
+                    <span class="match-score">{{ d.score_p1 }} - {{ d.score_p2 }}</span>
+                    <span class="match-div tk-elo-delta" :class="tkEloDelta(d) >= 0 ? 'stat-green' : 'stat-red'">
+                      {{ tkEloDelta(d) > 0 ? '+' : '' }}{{ tkEloDelta(d) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </template>
+
       </template>
 
-      <!-- ════════ ONGLET PARAMETRES ════════ -->
+      <!-- ONGLET PARAMETRES -->
       <template v-if="activeTab === 'settings'">
         <div class="settings-grid reveal delay-1">
 
-          <!-- Informations personnelles -->
           <div class="profil-card">
             <h3 class="profil-card-title">Informations personnelles</h3>
             <div class="settings-form">
               <div class="setting-field">
-                <label class="setting-label">Nom affiché</label>
+                <label class="setting-label">Nom affiche</label>
                 <div class="setting-row">
                   <input v-model="formName" class="input flex-1" placeholder="Votre nom" />
                   <button @click="saveName" class="btn text-sm" :disabled="savingName">
@@ -145,19 +228,18 @@
               </div>
               <div class="setting-field">
                 <label class="setting-label">ID Joueur</label>
-                <input :value="linkedPlayerId || '—'" class="input" disabled style="opacity:.6" />
-                <p class="setting-hint">L'identifiant joueur est geré par l'administrateur.</p>
+                <input :value="linkedPlayerId || '--'" class="input" disabled style="opacity:.6" />
+                <p class="setting-hint">L'identifiant joueur est gere par l'administrateur.</p>
               </div>
             </div>
           </div>
 
-          <!-- Mot de passe -->
           <div class="profil-card">
             <h3 class="profil-card-title">Mot de passe</h3>
             <div class="settings-form">
               <div class="setting-field">
                 <label class="setting-label">Mot de passe actuel</label>
-                <input v-model="formCurrentPwd" type="password" class="input" placeholder="••••••••" />
+                <input v-model="formCurrentPwd" type="password" class="input" placeholder="--------" />
               </div>
               <div class="setting-field">
                 <label class="setting-label">Nouveau mot de passe</label>
@@ -174,7 +256,6 @@
             </div>
           </div>
 
-          <!-- Apparence -->
           <div class="profil-card">
             <h3 class="profil-card-title">Apparence</h3>
             <div class="settings-form">
@@ -199,15 +280,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { useAPI, mediaUrl } from '@/composables/useAPI'
+import { useAPI, mediaUrl, resolveBaseURL } from '@/composables/useAPI'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useToast } from '@/composables/useToast'
 import {
   SwordsIcon, TrophyIcon, MinusIcon, XIcon, TargetIcon, ShieldIcon,
-  BarChart2Icon, SettingsIcon, CameraIcon, Loader2Icon, SunIcon, MoonIcon
+  BarChart2Icon, SettingsIcon, CameraIcon, Loader2Icon, SunIcon, MoonIcon,
+  GamepadIcon, ZapIcon, FlameIcon
 } from 'lucide-vue-next'
 
 const api = useAPI()
@@ -216,6 +298,7 @@ const theme = useThemeStore()
 const { success, error: toastError } = useToast()
 
 const activeTab = ref('stats')
+const statsGame = ref('efoot')
 const seasons = ref([])
 const selectedSeason = ref(null)
 const loading = ref(false)
@@ -226,6 +309,10 @@ const linkedPlayerId = ref('')
 const playerName = ref('')
 const playerPhoto = ref('')
 const userEmail = ref('')
+
+const tkLoading = ref(false)
+const tkLadder = ref(null)
+const tkDuels = ref([])
 
 const formName = ref('')
 const formEmail = ref('')
@@ -244,6 +331,10 @@ onMounted(async () => {
     await ensureLinkedPlayerId()
     await load()
   } catch (_) {}
+})
+
+watch(statsGame, (g) => {
+  if (g === 'tekken' && !tkLadder.value && !tkLoading.value) loadTekken()
 })
 
 async function ensureLinkedPlayerId() {
@@ -274,10 +365,7 @@ async function load() {
   recentMatches.value = []
   try {
     const pid = await ensureLinkedPlayerId()
-    if (!pid) {
-      loading.value = false
-      return
-    }
+    if (!pid) { loading.value = false; return }
 
     const [statsRes, matchRes, standingsRes] = await Promise.all([
       api.get('/me/stats', { params: { season: selectedSeason.value } }),
@@ -288,7 +376,6 @@ async function load() {
     const matchRows = Array.isArray(matchRes?.data?.matches) ? matchRes.data.matches : []
     const legs = mapMatchRowsToLegs(matchRows)
     recentMatches.value = legs.slice(0, 10)
-
     stats.value = buildStatsSummary(statsRes?.data || {}, legs)
 
     const rows = standingsRes?.data?.standings || []
@@ -297,7 +384,6 @@ async function load() {
       const row = rows[idx]
       myRank.value = {
         rank: idx + 1,
-        division: 'General',
         points: Number(row.total ?? row.points ?? 0) || 0,
         played: Number(row.participations ?? row.games ?? 0) || 0,
       }
@@ -308,67 +394,57 @@ async function load() {
   loading.value = false
 }
 
+async function loadTekken() {
+  const pid = linkedPlayerId.value
+  if (!pid) return
+  tkLoading.value = true
+  try {
+    const base = resolveBaseURL()
+    const r = await fetch(base + '/tekken/player/' + encodeURIComponent(pid) + '/stats', {
+      headers: { Accept: 'application/json' },
+    })
+    if (r.ok) {
+      const d = await r.json()
+      tkLadder.value = d.ladder || null
+      tkDuels.value = d.recent_duels || []
+    }
+  } catch (_) {}
+  tkLoading.value = false
+}
+
 function mapMatchRowsToLegs(rows) {
   const out = []
   for (const r of rows || []) {
     const date = String(r?.date || '')
     const division = String(r?.division || '-').toUpperCase()
     const opponent = String(r?.opponent_name || r?.opponent || '-').trim() || '-'
-
     const addLeg = (legName, leg) => {
       const gf = Number(leg?.gf)
       const ga = Number(leg?.ga)
       if (!Number.isFinite(gf) || !Number.isFinite(ga)) return
-      out.push({
-        id: `${date}-${division}-${opponent}-${legName}`,
-        match_date: date,
-        division,
-        leg: legName,
-        opponent_name: opponent,
-        gf,
-        ga,
-      })
+      out.push({ id: `${date}-${division}-${opponent}-${legName}`, match_date: date, division, leg: legName, opponent_name: opponent, gf, ga })
     }
-
     addLeg('Aller', r?.aller)
     addLeg('Retour', r?.retour)
   }
-
   return out.sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())
 }
 
 function buildStatsSummary(rawStats, legs) {
-  let wins = 0
-  let draws = 0
-  let losses = 0
-  let pointsByLegs = 0
-  let gfByLegs = 0
-  let gaByLegs = 0
-
+  let wins = 0, draws = 0, losses = 0, pointsByLegs = 0, gfByLegs = 0, gaByLegs = 0
   for (const m of legs) {
-    gfByLegs += m.gf
-    gaByLegs += m.ga
-    if (m.gf > m.ga) {
-      wins += 1
-      pointsByLegs += 3
-    } else if (m.gf < m.ga) {
-      losses += 1
-    } else {
-      draws += 1
-      pointsByLegs += 1
-    }
+    gfByLegs += m.gf; gaByLegs += m.ga
+    if (m.gf > m.ga) { wins++; pointsByLegs += 3 }
+    else if (m.gf < m.ga) losses++
+    else { draws++; pointsByLegs++ }
   }
-
   const played = Number(rawStats?.played_legs)
   const goalsFor = Number(rawStats?.goals_for)
   const goalsAgainst = Number(rawStats?.goals_against)
   const seasonPoints = Number(rawStats?.season_points)
-
   return {
     played: Number.isFinite(played) ? played : legs.length,
-    wins,
-    draws,
-    losses,
+    wins, draws, losses,
     goals_for: Number.isFinite(goalsFor) ? goalsFor : gfByLegs,
     goals_against: Number.isFinite(goalsAgainst) ? goalsAgainst : gaByLegs,
     points: Number.isFinite(seasonPoints) ? seasonPoints : pointsByLegs,
@@ -379,12 +455,27 @@ const kpis = computed(() => {
   if (!stats.value) return []
   const s = stats.value
   return [
-    { label: 'Matchs joués', value: s.played ?? 0, icon: SwordsIcon, bg: 'rgba(95,141,255,.12)', accent: '#5f8dff', valClass: 'text-gz-text' },
+    { label: 'Matchs joues', value: s.played ?? 0, icon: SwordsIcon, bg: 'rgba(95,141,255,.12)', accent: '#5f8dff', valClass: 'text-gz-text' },
     { label: 'Victoires',    value: s.wins ?? 0,   icon: TrophyIcon,  bg: 'rgba(34,197,94,.12)', accent: '#22c55e', valClass: 'kpi-green' },
     { label: 'Nuls',         value: s.draws ?? 0,  icon: MinusIcon,   bg: 'rgba(148,163,184,.1)', accent: 'var(--muted)', valClass: 'text-gz-muted' },
-    { label: 'Défaites',     value: s.losses ?? 0, icon: XIcon,       bg: 'rgba(212,60,73,.1)',   accent: '#d43c49', valClass: 'kpi-red' },
-    { label: 'Buts marqués', value: s.goals_for ?? 0, icon: TargetIcon, bg: 'rgba(251,191,36,.1)', accent: '#fbbf24', valClass: 'kpi-amber' },
-    { label: 'Buts encaissés', value: s.goals_against ?? 0, icon: ShieldIcon, bg: 'rgba(148,163,184,.08)', accent: 'var(--muted)', valClass: 'text-gz-muted' },
+    { label: 'Defaites',     value: s.losses ?? 0, icon: XIcon,       bg: 'rgba(212,60,73,.1)',   accent: '#d43c49', valClass: 'kpi-red' },
+    { label: 'Buts marques', value: s.goals_for ?? 0, icon: TargetIcon, bg: 'rgba(251,191,36,.1)', accent: '#fbbf24', valClass: 'kpi-amber' },
+    { label: 'Buts encaisses', value: s.goals_against ?? 0, icon: ShieldIcon, bg: 'rgba(148,163,184,.08)', accent: 'var(--muted)', valClass: 'text-gz-muted' },
+  ]
+})
+
+const tkKpis = computed(() => {
+  if (!tkLadder.value) return []
+  const l = tkLadder.value
+  const total = (l.wins || 0) + (l.losses || 0)
+  const wr = total ? Math.round((l.wins / total) * 100) : 0
+  return [
+    { label: 'Duels joues',  value: total,          icon: SwordsIcon,  bg: 'rgba(95,141,255,.12)', accent: '#5f8dff', valClass: 'text-gz-text' },
+    { label: 'Victoires',    value: l.wins || 0,    icon: TrophyIcon,  bg: 'rgba(34,197,94,.12)', accent: '#22c55e', valClass: 'kpi-green' },
+    { label: 'Defaites',     value: l.losses || 0,  icon: XIcon,       bg: 'rgba(212,60,73,.1)',   accent: '#d43c49', valClass: 'kpi-red' },
+    { label: 'Win rate',     value: wr + '%',        icon: TargetIcon,  bg: 'rgba(251,191,36,.1)', accent: '#fbbf24', valClass: 'kpi-amber' },
+    { label: 'Serie',        value: l.streak > 0 ? 'W' + l.streak : l.streak < 0 ? 'L' + Math.abs(l.streak) : '--', icon: FlameIcon, bg: l.streak > 0 ? 'rgba(34,197,94,.12)' : 'rgba(212,60,73,.1)', accent: l.streak > 0 ? '#22c55e' : l.streak < 0 ? '#d43c49' : 'var(--muted)', valClass: l.streak > 0 ? 'kpi-green' : l.streak < 0 ? 'kpi-red' : 'text-gz-muted' },
+    { label: 'Meilleure serie', value: l.best_streak || 0, icon: ZapIcon, bg: 'rgba(251,191,36,.1)', accent: '#fbbf24', valClass: 'kpi-amber' },
   ]
 })
 
@@ -404,6 +495,25 @@ const statRows = computed(() => {
   ]
 })
 
+const tkStatRows = computed(() => {
+  if (!tkLadder.value) return []
+  const l = tkLadder.value
+  const total = (l.wins || 0) + (l.losses || 0) || 1
+  const wr = Math.round(((l.wins || 0) / total) * 100)
+  return [
+    { label: 'Win rate',     value: wr + '%',            pct: wr,                                     accent: '#22c55e', valClass: 'stat-green' },
+    { label: 'ELO actuel',   value: l.elo || 1000,       pct: Math.min(100, ((l.elo || 1000) - 800) / 6), accent: '#5f8dff', valClass: '' },
+    { label: 'Peak ELO',     value: l.peak_elo || 1000,  pct: Math.min(100, ((l.peak_elo || 1000) - 800) / 6), accent: '#fbbf24', valClass: 'stat-amber' },
+    { label: 'Diff. V/D',    value: (l.wins || 0) - (l.losses || 0), pct: null, valClass: (l.wins || 0) >= (l.losses || 0) ? 'stat-green' : 'stat-red' },
+  ]
+})
+
+function tkEloDelta(d) {
+  const pid = linkedPlayerId.value
+  if (pid === d.p1_id) return (d.elo_p1_after || 0) - (d.elo_p1_before || 0)
+  return (d.elo_p2_after || 0) - (d.elo_p2_before || 0)
+}
+
 function fmtDate(s) {
   if (!s) return '-'
   return new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -417,9 +527,7 @@ async function saveName() {
     playerName.value = data.player?.name || formName.value.trim()
     formName.value = playerName.value
     success('Nom mis a jour')
-  } catch (e) {
-    toastError(e?.response?.data?.error || 'Erreur')
-  }
+  } catch (e) { toastError(e?.response?.data?.error || 'Erreur') }
   savingName.value = false
 }
 
@@ -431,9 +539,7 @@ async function saveEmail() {
     userEmail.value = formEmail.value.trim().toLowerCase()
     formEmail.value = userEmail.value
     success('Email mis a jour')
-  } catch (e) {
-    toastError(e?.response?.data?.error || 'Erreur')
-  }
+  } catch (e) { toastError(e?.response?.data?.error || 'Erreur') }
   savingEmail.value = false
 }
 
@@ -444,13 +550,9 @@ async function savePassword() {
   savingPwd.value = true
   try {
     await api.put('/me/password', { currentPassword: formCurrentPwd.value, newPassword: formNewPwd.value })
-    formCurrentPwd.value = ''
-    formNewPwd.value = ''
-    formConfirmPwd.value = ''
+    formCurrentPwd.value = ''; formNewPwd.value = ''; formConfirmPwd.value = ''
     success('Mot de passe change')
-  } catch (e) {
-    toastError(e?.response?.data?.error || 'Erreur')
-  }
+  } catch (e) { toastError(e?.response?.data?.error || 'Erreur') }
   savingPwd.value = false
 }
 
@@ -463,29 +565,14 @@ async function uploadPhoto(e) {
     const { data } = await api.post('/me/photo', form)
     playerPhoto.value = data.player?.profile_pic_url ? mediaUrl(data.player.profile_pic_url) : ''
     success('Photo mise a jour')
-  } catch (err) {
-    toastError(err?.response?.data?.error || 'Erreur upload')
-  }
-}
-
-function matchResultVariant(m) {
-  const gf = Number(m?.gf)
-  const ga = Number(m?.ga)
-  if (!Number.isFinite(gf) || !Number.isFinite(ga)) return 'muted'
-  return gf > ga ? 'green' : gf < ga ? 'red' : 'muted'
-}
-
-function matchResultLabel(m) {
-  const gf = Number(m?.gf)
-  const ga = Number(m?.ga)
-  if (!Number.isFinite(gf) || !Number.isFinite(ga)) return '-'
-  return gf > ga ? 'V' : gf < ga ? 'D' : 'N'
+  } catch (err) { toastError(err?.response?.data?.error || 'Erreur upload') }
 }
 </script>
 
 <style scoped>
-/* ── Hero profil ── */
 .panel-membre-wrap { display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* Hero profil */
 .profil-hero {
   display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
   background: color-mix(in srgb, var(--panel) 85%, transparent);
@@ -514,7 +601,36 @@ function matchResultLabel(m) {
 @keyframes spin { to{transform:rotate(360deg)} }
 .profil-unlinked { padding: 2.5rem; text-align: center; }
 
-/* ── Rank + KPIs ── */
+/* Onglets principaux */
+.profil-tabs { display: flex; gap: .5rem; margin-bottom: .25rem; }
+.profil-tab {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .5rem 1rem; border-radius: 10px;
+  font-size: .82rem; font-weight: 600;
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  cursor: pointer; transition: all .15s;
+}
+.profil-tab:hover { color: var(--text); border-color: rgba(148,163,184,.3); }
+.profil-tab--on {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--accent); color: var(--accent);
+}
+
+/* Sous-onglets jeu */
+.game-tabs {
+  display: inline-flex; gap: .35rem; padding: 4px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--card);
+}
+.gt {
+  display: flex; align-items: center; gap: .35rem;
+  padding: .4rem 1rem; border: none; background: transparent;
+  color: var(--muted); font-family: var(--font-title); font-weight: 700;
+  letter-spacing: .03em; text-transform: uppercase; font-size: .78rem;
+  border-radius: 999px; cursor: pointer; transition: all .18s;
+}
+.gt.on { background: var(--accent); color: #fff; box-shadow: 0 3px 12px rgba(var(--accent-rgb), .35); }
+
+/* Rank + KPIs */
 .profil-top-grid { display: grid; grid-template-columns: 200px 1fr; gap: 1.25rem; align-items: start; }
 @media(max-width:768px) { .profil-top-grid { grid-template-columns: 1fr; } }
 
@@ -525,6 +641,12 @@ function matchResultLabel(m) {
   padding: 1.5rem; text-align: center; min-height: 160px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem;
 }
+.tk-rank {
+  background: linear-gradient(135deg, rgba(95,141,255,.12), rgba(95,141,255,.04));
+  border-color: rgba(95,141,255,.25);
+}
+.tk-rank .rank-label { color: rgba(95,141,255,.7); }
+.tk-rank .rank-num { color: #5f8dff; }
 .rank-showcase-bg {
   position: absolute; inset: 0; border-radius: 50%;
   background: radial-gradient(circle, rgba(34,197,94,.08) 0%, transparent 70%);
@@ -535,7 +657,6 @@ function matchResultLabel(m) {
 .rank-detail { display: flex; gap: .4rem; align-items: center; font-size: .78rem; color: var(--muted); }
 .rank-pts { font-weight: 700; color: var(--text); }
 .rank-sep { color: var(--muted); }
-.rank-played { }
 
 .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
 @media(max-width:480px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
@@ -553,7 +674,7 @@ function matchResultLabel(m) {
 .kpi-red { color: #d43c49; }
 .kpi-amber { color: #fbbf24; }
 
-/* ── Bottom grid ── */
+/* Bottom grid */
 .profil-bottom-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; }
 .profil-card {
   background: color-mix(in srgb, var(--card) 90%, transparent);
@@ -561,7 +682,7 @@ function matchResultLabel(m) {
 }
 .profil-card-title { font-size: .8rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 1rem; }
 
-/* Stats avec barres */
+/* Stats barres */
 .stat-list { display: flex; flex-direction: column; gap: .7rem; }
 .stat-row { display: grid; grid-template-columns: 110px 1fr 60px; align-items: center; gap: .6rem; }
 .stat-label { font-size: .78rem; color: var(--muted); }
@@ -571,8 +692,9 @@ function matchResultLabel(m) {
 .stat-val { font-size: .88rem; font-weight: 700; text-align: right; }
 .stat-green { color: #22c55e; }
 .stat-red { color: #d43c49; }
+.stat-amber { color: #fbbf24; }
 
-/* Forme récente */
+/* Forme recente */
 .form-strip { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .85rem; }
 .form-dot {
   width: 26px; height: 26px; border-radius: 7px;
@@ -599,51 +721,26 @@ function matchResultLabel(m) {
 .match-vs { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .match-score { font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
 .match-div { font-size: .65rem; color: var(--muted); text-align: right; }
+.tk-elo-delta { font-size: .72rem; font-weight: 700; }
 
-/* ── Onglets ── */
-.profil-tabs {
-  display: flex; gap: .5rem; margin-bottom: .25rem;
-}
-.profil-tab {
-  display: flex; align-items: center; gap: .4rem;
-  padding: .5rem 1rem; border-radius: 10px;
-  font-size: .82rem; font-weight: 600;
-  background: transparent; border: 1px solid var(--border); color: var(--muted);
-  cursor: pointer; transition: all .15s;
-}
-.profil-tab:hover { color: var(--text); border-color: rgba(148,163,184,.3); }
-.profil-tab--on {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  border-color: var(--accent); color: var(--accent);
-}
-
-/* ── Avatar photo ── */
-.profil-avatar { position: relative; }
-.profil-avatar-img {
-  width: 64px; height: 64px; border-radius: 18px; object-fit: cover;
-}
+/* Avatar photo */
+.profil-avatar-img { width: 64px; height: 64px; border-radius: 18px; object-fit: cover; }
 .profil-avatar-overlay {
   position: absolute; inset: 0; border-radius: 18px;
   background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center;
   color: #fff; opacity: 0; transition: opacity .15s;
 }
 .profil-avatar:hover .profil-avatar-overlay { opacity: 1; }
-
-.profil-avatar-col {
-  display: flex; flex-direction: column; align-items: center; gap: .4rem; flex-shrink: 0;
-}
+.profil-avatar-col { display: flex; flex-direction: column; align-items: center; gap: .4rem; flex-shrink: 0; }
 .profil-photo-btn {
   display: flex; align-items: center; gap: .3rem;
   font-size: .68rem; font-weight: 600; color: var(--accent);
-  background: none; border: none; cursor: pointer; padding: 0;
-  white-space: nowrap;
+  background: none; border: none; cursor: pointer; padding: 0; white-space: nowrap;
 }
 .profil-photo-btn:hover { text-decoration: underline; }
 
-/* ── Parametres ── */
-.settings-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;
-}
+/* Parametres */
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; }
 .settings-form { display: flex; flex-direction: column; gap: 1rem; }
 .setting-field { display: flex; flex-direction: column; gap: .3rem; }
 .setting-label { font-size: .75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
@@ -669,45 +766,7 @@ function matchResultLabel(m) {
 .delay-2 { animation-delay: 160ms; }
 @keyframes riseIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-/* ancien compat */
-.recent-score {
-  font-size: 0.96rem;
-  font-weight: 800;
-  line-height: 1;
-  padding: 0 0.2rem;
-  font-variant-numeric: tabular-nums;
-}
-
 @media (max-width: 640px) {
-  .rank-main {
-    align-items: flex-start;
-  }
-
-  .recent-main {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "me score"
-      "opp badge";
-    row-gap: 0.4rem;
-  }
-
-  .recent-main > :nth-child(1) {
-    grid-area: me;
-  }
-
-  .recent-main > :nth-child(2) {
-    grid-area: score;
-    justify-self: end;
-  }
-
-  .recent-main > :nth-child(3) {
-    grid-area: opp;
-    text-align: left !important;
-  }
-
-  .recent-main > :nth-child(4) {
-    grid-area: badge;
-    justify-self: end;
-  }
+  .match-row { grid-template-columns: 60px 22px 1fr 50px 28px; }
 }
 </style>

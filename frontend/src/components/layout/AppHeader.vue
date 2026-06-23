@@ -11,21 +11,23 @@
 
     <!-- Nav desktop -->
     <nav class="hidden lg:flex items-center gap-0.5 ml-4 flex-1 overflow-x-auto">
-      <RouterLink v-for="link in visibleLinks" :key="link.to"
-        :to="link.to"
-        class="navlink relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[13px] whitespace-nowrap text-gz-muted
-               hover:text-gz-text hover:bg-gz-border/20 transition-colors duration-150"
-        active-class="nav-on"
-      >
-        <component :is="link.icon" class="w-3.5 h-3.5" />
-        {{ link.label }}
-        <!-- Badge demandes en attente -->
-        <span v-if="link.to === '/admin' && pendingCount > 0"
-              class="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 rounded-full text-[10px] font-bold
-                     flex items-center justify-center bg-gz-red text-white leading-none">
-          {{ pendingCount > 9 ? '9+' : pendingCount }}
-        </span>
-      </RouterLink>
+      <template v-for="(item, i) in visibleNav" :key="item.to || item.sep">
+        <span v-if="item.sep" class="nav-sep" />
+        <RouterLink v-else
+          :to="item.to"
+          class="navlink relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[13px] whitespace-nowrap text-gz-muted
+                 hover:text-gz-text hover:bg-gz-border/20 transition-colors duration-150"
+          active-class="nav-on"
+        >
+          <component :is="item.icon" class="w-3.5 h-3.5" />
+          {{ item.label }}
+          <span v-if="item.to === '/admin' && pendingCount > 0"
+                class="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 rounded-full text-[10px] font-bold
+                       flex items-center justify-center bg-gz-red text-white leading-none">
+            {{ pendingCount > 9 ? '9+' : pendingCount }}
+          </span>
+        </RouterLink>
+      </template>
     </nav>
 
     <div class="ml-auto flex items-center gap-2">
@@ -70,19 +72,29 @@ const theme  = useThemeStore()
 const router = useRouter()
 const { pendingCount } = useMembershipNotif()
 
-const allLinks = [
-  { to: '/accueil',            label: 'Accueil',          icon: HomeIcon,         adminOnly: false },
-  { to: '/journees',           label: 'Journées',        icon: CalendarDaysIcon, adminOnly: false },
-  { to: '/duel',               label: 'Duel',             icon: SwordsIcon,   adminOnly: false },
-  { to: '/classement',         label: 'Classements',      icon: BarChart2Icon, adminOnly: false },
-  { to: '/profil',             label: 'Mon espace',       icon: UserIcon,     adminOnly: false },
-  { to: '/tournois',           label: 'Tournois',         icon: TrophyIcon,   adminOnly: false },
-  { to: '/tekken-ladder',      label: 'Tekken',           icon: GamepadIcon,  adminOnly: false },
-  { to: '/admin',              label: 'Admin',            icon: ShieldIcon,   adminOnly: true },
+const navStructure = [
+  { to: '/accueil',       label: 'Accueil',      icon: HomeIcon },
+  { to: '/profil',        label: 'Mon espace',   icon: UserIcon },
+  { sep: 'efoot' },
+  { to: '/journees',      label: 'Journees',     icon: CalendarDaysIcon },
+  { to: '/duel',          label: 'Duel',          icon: SwordsIcon },
+  { to: '/classement',    label: 'Classements',   icon: BarChart2Icon },
+  { to: '/tournois',      label: 'Tournois',      icon: TrophyIcon },
+  { sep: 'tekken' },
+  { to: '/tekken-ladder', label: 'Tekken',        icon: GamepadIcon },
+  { sep: 'admin' },
+  { to: '/admin',         label: 'Admin',         icon: ShieldIcon, adminOnly: true },
 ]
 
-const visibleLinks = computed(() =>
-  allLinks.filter(l => !l.adminOnly || auth.isAdmin)
+const visibleNav = computed(() =>
+  navStructure.filter((item, i, arr) => {
+    if (item.adminOnly && !auth.isAdmin) return false
+    if (item.sep) {
+      const next = arr.slice(i + 1).find(x => !x.sep)
+      if (next?.adminOnly && !auth.isAdmin) return false
+    }
+    return true
+  })
 )
 
 async function handleLogout() {
@@ -96,5 +108,9 @@ async function handleLogout() {
 .nav-on {
   color: var(--accent-l) !important;
   background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.nav-sep {
+  width: 1px; height: 18px; margin: 0 .3rem;
+  background: var(--border); flex-shrink: 0;
 }
 </style>
