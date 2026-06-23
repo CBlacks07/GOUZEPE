@@ -661,6 +661,8 @@ async function ensureSchema(){
     created_at TIMESTAMP DEFAULT now()
   )`);
   await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS profile_pic_url TEXT`);
+  await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS profile_pic_data TEXT`);
+  await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS profile_pic_mime TEXT`);
   await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS admission_year INT`);
   await q(`UPDATE players SET admission_year = EXTRACT(YEAR FROM created_at)::INT WHERE admission_year IS NULL`);
 
@@ -3085,6 +3087,21 @@ app.post('/admin/players', auth, adminOnly, async (req, res) => {
   }
 });
 
+app.post('/admin/players/:playerId/photo', auth, adminOnly, upload.single('photo'), async (req, res) => {
+  const { playerId } = req.params;
+  const check = await q(`SELECT player_id FROM players WHERE player_id=$1`, [playerId]);
+  if (!check.rowCount) return bad(res, 404, 'Joueur introuvable');
+  if (!req.file) return bad(res, 400, 'fichier requis');
+  const buf = fs.readFileSync(req.file.path);
+  const b64 = buf.toString('base64');
+  const mime = req.file.mimetype || 'image/jpeg';
+  try { fs.unlinkSync(req.file.path); } catch(_){}
+  const url = `/avatar/${encodeURIComponent(playerId)}`;
+  await q(`UPDATE players SET profile_pic_url=$2, profile_pic_data=$3, profile_pic_mime=$4 WHERE player_id=$1`,
+    [playerId, url, b64, mime]);
+  ok(res, { ok: true, profile_pic_url: url });
+});
+
 // POST /admin/players/:playerId/attach_user - Lier/créer un compte utilisateur
 app.post('/admin/players/:playerId/attach_user', auth, adminOnly, async (req, res) => {
   try {
@@ -3664,9 +3681,26 @@ app.post('/me/photo', auth, upload.single('photo'), async (req,res)=>{
   const pid = await getLinkedPlayerId(req.user.uid);
   if(!pid) return bad(res,404,'player not linked');
   if(!req.file) return bad(res,400,'fichier requis');
-  const url = `/uploads/players/${req.file.filename}`;
-  const r = await q(`UPDATE players SET profile_pic_url=$2 WHERE player_id=$1 RETURNING player_id,name,role,profile_pic_url`, [pid, url]);
+  const buf = fs.readFileSync(req.file.path);
+  const b64 = buf.toString('base64');
+  const mime = req.file.mimetype || 'image/jpeg';
+  try { fs.unlinkSync(req.file.path); } catch(_){}
+  const url = `/avatar/${encodeURIComponent(pid)}`;
+  const r = await q(
+    `UPDATE players SET profile_pic_url=$2, profile_pic_data=$3, profile_pic_mime=$4
+     WHERE player_id=$1 RETURNING player_id,name,role,profile_pic_url`,
+    [pid, url, b64, mime]
+  );
   ok(res,{ player:r.rows[0] });
+});
+
+app.get('/avatar/:pid', async (req,res)=>{
+  const r = await q(`SELECT profile_pic_data, profile_pic_mime FROM players WHERE player_id=$1`, [req.params.pid]);
+  if(!r.rowCount || !r.rows[0].profile_pic_data) return res.status(404).send('no photo');
+  const buf = Buffer.from(r.rows[0].profile_pic_data, 'base64');
+  res.set('Content-Type', r.rows[0].profile_pic_mime || 'image/jpeg');
+  res.set('Cache-Control', 'public, max-age=3600');
+  res.send(buf);
 });
 
 /* ====== Presence (beat & list) ====== */

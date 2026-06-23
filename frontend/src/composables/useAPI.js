@@ -15,7 +15,7 @@ export function mediaUrl(u) {
   if (!u) return ''
   if (/^https?:\/\//.test(u)) return u
   const path = u.startsWith('/') ? u : '/' + u
-  if (path.startsWith('/uploads')) return resolveBaseURL() + path
+  if (path.startsWith('/uploads') || path.startsWith('/avatar')) return resolveBaseURL() + path
   return path
 }
 
