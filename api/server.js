@@ -666,6 +666,7 @@ async function ensureSchema(){
   await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS profile_pic_mime TEXT`);
   await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS admission_year INT`);
   await q(`UPDATE players SET admission_year = EXTRACT(YEAR FROM created_at)::INT WHERE admission_year IS NULL`);
+  await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS main_game TEXT NOT NULL DEFAULT 'efoot'`);
 
   /* tournaments (single elimination v1) */
   await q(`CREATE TABLE IF NOT EXISTS tournaments(
@@ -1019,7 +1020,11 @@ app.post('/auth/login', loginRateLimit, async (req,res)=>{
   ok(res,{ token, user:{id:u.id,email:u.email,role:u.role}, expHours:24 });
 });
 app.get('/auth/me', auth, async (req,res)=>{
-  const r=await q(`SELECT id,email,role,player_id FROM users WHERE id=$1`,[req.user.uid]);
+  const r=await q(`
+    SELECT u.id, u.email, u.role, u.player_id, COALESCE(p.main_game, 'efoot') AS main_game
+    FROM users u LEFT JOIN players p ON p.player_id = u.player_id
+    WHERE u.id=$1
+  `,[req.user.uid]);
   if(!r.rowCount) return bad(res,404,'User not found');
   ok(res,{ user:r.rows[0] });
 });
@@ -2608,7 +2613,7 @@ function markOnlineField(rows){
 }
 app.get('/players', auth, async (_req,res)=>{
   const r = await q(`
-    SELECT p.player_id, p.name, p.role, p.profile_pic_url, p.admission_year, u.email AS user_email
+    SELECT p.player_id, p.name, p.role, p.profile_pic_url, p.admission_year, p.main_game, u.email AS user_email
     FROM players p
     LEFT JOIN users u ON u.player_id = p.player_id
     ORDER BY p.name ASC
@@ -3150,16 +3155,17 @@ app.get('/tekken/player/:pid/stats', async (req, res) => {
 // Mettre Ã  jour un joueur (admin seulement)
 app.put('/admin/players/:oldId', auth, adminOnly, async (req, res) => {
   const oldId = req.params.oldId;
-  const { player_id: newId, name, role, admission_year } = req.body || {};
+  const { player_id: newId, name, role, admission_year, main_game } = req.body || {};
 
   // Vérifier que le joueur existe
-  const existing = await q(`SELECT player_id, name, role, admission_year FROM players WHERE player_id = $1`, [oldId]);
+  const existing = await q(`SELECT player_id, name, role, admission_year, main_game FROM players WHERE player_id = $1`, [oldId]);
   if (!existing.rowCount) return bad(res, 404, 'Joueur introuvable');
 
   const player = existing.rows[0];
   const updatedName = name !== undefined ? name : player.name;
   const updatedRole = role !== undefined ? role : player.role;
   const updatedYear = admission_year !== undefined ? (parseInt(admission_year) || null) : player.admission_year;
+  const updatedGame = main_game !== undefined ? String(main_game) : (player.main_game || 'efoot');
 
   // Si l'ID change
   if (newId && newId !== oldId) {
@@ -3222,8 +3228,8 @@ app.put('/admin/players/:oldId', auth, adminOnly, async (req, res) => {
     }
 
     // Mettre Ã  jour la table players (CASCADE vers users et champion_result)
-    await q(`UPDATE players SET player_id = $1, name = $2, role = $3 WHERE player_id = $4`,
-      [newId, updatedName, updatedRole, oldId]);
+    await q(`UPDATE players SET player_id = $1, name = $2, role = $3, main_game = $4 WHERE player_id = $5`,
+      [newId, updatedName, updatedRole, updatedGame, oldId]);
 
     // Mettre Ã  jour la présence
     if (presence.players.has(oldId)) {
@@ -3235,16 +3241,16 @@ app.put('/admin/players/:oldId', auth, adminOnly, async (req, res) => {
     ok(res, { player: { player_id: newId, name: updatedName, role: updatedRole } });
   } else {
     // Mise Ã  jour simple sans changement d'ID
-    await q(`UPDATE players SET name = $1, role = $2, admission_year = $3 WHERE player_id = $4`,
-      [updatedName, updatedRole, updatedYear, oldId]);
-    ok(res, { player: { player_id: oldId, name: updatedName, role: updatedRole, admission_year: updatedYear } });
+    await q(`UPDATE players SET name = $1, role = $2, admission_year = $3, main_game = $4 WHERE player_id = $5`,
+      [updatedName, updatedRole, updatedYear, updatedGame, oldId]);
+    ok(res, { player: { player_id: oldId, name: updatedName, role: updatedRole, admission_year: updatedYear, main_game: updatedGame } });
   }
 });
 
 // POST /admin/players - Créer un nouveau joueur
 app.post('/admin/players', auth, adminOnly, async (req, res) => {
   try {
-    const { player_id, name, role, admission_year } = req.body || {};
+    const { player_id, name, role, admission_year, main_game } = req.body || {};
 
     if (!player_id || !player_id.trim()) {
       return bad(res, 400, 'player_id requis');
@@ -3258,6 +3264,7 @@ app.post('/admin/players', auth, adminOnly, async (req, res) => {
     const trimmedName = name.trim();
     const playerRole = (role || 'MEMBRE').toUpperCase();
     const year = admission_year ? parseInt(admission_year) || new Date().getFullYear() : new Date().getFullYear();
+    const game = main_game || 'efoot';
 
     // Vérifier que le player_id n'existe pas déjÃ 
     const existing = await q(`SELECT player_id FROM players WHERE player_id = $1`, [trimmedId]);
@@ -3267,8 +3274,8 @@ app.post('/admin/players', auth, adminOnly, async (req, res) => {
 
     // Créer le joueur
     const result = await q(
-      `INSERT INTO players (player_id, name, role, admission_year) VALUES ($1, $2, $3, $4) RETURNING *`,
-      [trimmedId, trimmedName, playerRole, year]
+      `INSERT INTO players (player_id, name, role, admission_year, main_game) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [trimmedId, trimmedName, playerRole, year, game]
     );
 
     ok(res, {
@@ -3793,7 +3800,7 @@ app.get('/me/player', auth, async (req,res)=>{
   const r=await q(`SELECT id,email,role,player_id FROM users WHERE id=$1`,[req.user.uid]);
   const user = r.rows[0];
   if(!user?.player_id) return bad(res,404,'Aucun joueur lié');
-  const p = await q(`SELECT player_id,name,role,profile_pic_url FROM players WHERE player_id=$1`,[user.player_id]);
+  const p = await q(`SELECT player_id,name,role,profile_pic_url,main_game FROM players WHERE player_id=$1`,[user.player_id]);
   ok(res,{ player:p.rows[0]||null });
 });
 app.get('/me/matches', auth, async (req,res)=>{

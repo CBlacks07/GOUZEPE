@@ -90,6 +90,12 @@ const routes = [
     meta: { requiresAuth: true, title: 'Accueil' },
   },
   {
+    path: '/accueil-tekken',
+    name: 'AccueilTekken',
+    component: () => import('@/views/AccueilTekkenView.vue'),
+    meta: { requiresAuth: true, title: 'Accueil Tekken' },
+  },
+  {
     path: '/journees',
     name: 'Journees',
     component: () => import('@/views/JourneesView.vue'),
@@ -225,11 +231,16 @@ router.beforeEach(async (to, from) => {
 
   const auth = useAuthStore()
 
+  function homeRoute() {
+    const g = auth.mainGame
+    if (g === 'tekken') return '/accueil-tekken'
+    return '/accueil'
+  }
+
   document.title = to.meta.title
     ? `${to.meta.title} - GOUZEPE eFOOTBALL`
     : 'GOUZEPE eFOOTBALL'
 
-  // Page protégée et non connecté → page publique
   if (to.meta.requiresAuth !== false && !auth.isValid) {
     return '/'
   }
@@ -238,13 +249,12 @@ router.beforeEach(async (to, from) => {
     await auth.hydrateFromServer()
   }
 
-  // Connecté sur pages publiques → rediriger vers l'app
   if (auth.isValid && to.meta.public) {
-    return auth.isAdmin ? '/accueil' : '/accueil'
+    return homeRoute()
   }
 
   if (to.name === 'Login' && auth.isValid) {
-    return '/accueil'
+    return homeRoute()
   }
 
   if (to.meta.requiresAdmin && !auth.isAdmin) {
