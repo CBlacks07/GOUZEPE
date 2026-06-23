@@ -10,7 +10,7 @@
         <p class="c-lead" v-if="activeGame === 'efoot' && season">
           {{ cleanName(season.name) }}<span v-if="daysCount"> · {{ daysCount }} journée(s)</span>
         </p>
-        <p class="c-lead" v-else-if="activeGame === 'tekken'">Le ladder Tekken est en préparation.</p>
+        <p class="c-lead" v-else-if="activeGame === 'tekken'">Classement ELO des duels classes.</p>
       </div>
     </section>
 
@@ -21,13 +21,40 @@
         <button :class="['gt', { on: activeGame === 'tekken' }]" @click="selectGame('tekken')">Tekken</button>
       </div>
 
-      <!-- Tekken : à venir -->
-      <div v-if="activeGame === 'tekken'" class="soon-box">
-        <TrophyIcon class="soon-ic" />
-        <h3>Ladder Tekken — bientôt</h3>
-        <p>Le classement Tekken (duels classés + tournois) arrive prochainement. En attendant, consulte le classement eFootball.</p>
-        <RouterLink to="/inscription" class="btn-primary cta-lg">Devenir membre</RouterLink>
-      </div>
+      <!-- Tekken ladder -->
+      <template v-if="activeGame === 'tekken'">
+        <div class="section-head">
+          <h2>Ladder ELO</h2>
+        </div>
+        <div v-if="loading" class="empty">Chargement...</div>
+        <div v-else-if="!tekkenLadder.length" class="empty">Aucun joueur dans le ladder Tekken.</div>
+        <div v-else class="overflow-x-auto tk-table-wrap">
+          <table class="tk-table">
+            <thead>
+              <tr><th>#</th><th>Joueur</th><th>ELO</th><th>V</th><th>D</th><th>Serie</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="(p, i) in tekkenLadder" :key="p.player_id">
+                <td>
+                  <span v-if="i === 0" class="rank-medal gold">1</span>
+                  <span v-else-if="i === 1" class="rank-medal silver">2</span>
+                  <span v-else-if="i === 2" class="rank-medal bronze">3</span>
+                  <span v-else class="text-muted font-bold">{{ i + 1 }}</span>
+                </td>
+                <td class="font-semibold">{{ p.name }}</td>
+                <td class="font-bold tk-elo">{{ p.elo }}</td>
+                <td class="tk-w">{{ p.wins }}</td>
+                <td class="tk-l">{{ p.losses }}</td>
+                <td>
+                  <span :class="p.streak > 0 ? 'tk-w' : p.streak < 0 ? 'tk-l' : 'text-muted'">
+                    {{ p.streak > 0 ? 'W' + p.streak : p.streak < 0 ? 'L' + Math.abs(p.streak) : '--' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
 
       <!-- eFootball -->
       <template v-else>
@@ -106,7 +133,8 @@ const standings = ref([])
 
 const threshold = ref(0)
 const classedCount = ref(0)
-const classed = computed(() => standings.value) // le serveur renvoie déjà le Top 10 des classés
+const classed = computed(() => standings.value)
+const tekkenLadder = ref([])
 
 function cleanName(n) { return String(n || '').replace(/^"+|"+$/g, '') }
 
@@ -126,17 +154,27 @@ async function load() {
   loading.value = false
 }
 
+async function loadTekken() {
+  loading.value = true
+  try {
+    const r = await fetch(resolveBaseURL() + '/tekken/ladder', { headers: { Accept: 'application/json' } })
+    if (r.ok) { const d = await r.json(); tekkenLadder.value = d.ladder || [] }
+  } catch (_) {}
+  loading.value = false
+}
+
 function selectGame(g) {
   if (activeGame.value === g) return
   activeGame.value = g
-  game.set(g)            // synchronise l'accent (bleu / orange)
+  game.set(g)
   if (g === 'efoot') load()
+  else loadTekken()
 }
 
 onMounted(() => {
   game.set(activeGame.value)
   if (activeGame.value === 'efoot') load()
-  else loading.value = false
+  else loadTekken()
 })
 </script>
 
@@ -186,4 +224,18 @@ onMounted(() => {
 .rank-gold { background: #ca8a04; color: #fff; }
 .rank-silver { background: #94a3b8; color: #fff; }
 .rank-bronze { background: #b45309; color: #fff; }
+
+.tk-table-wrap { border: 1px solid var(--border); border-radius: 14px; background: var(--card); overflow-x: auto; }
+.tk-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.tk-table th, .tk-table td { padding: .65rem .8rem; text-align: left; border-bottom: 1px solid var(--border); }
+.tk-table th { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; font-size: .72rem; letter-spacing: .04em; color: var(--muted); }
+.tk-table tbody tr:last-child td { border-bottom: none; }
+.tk-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.tk-elo { color: var(--accent-l); font-family: var(--font-title); font-weight: 800; }
+.tk-w { color: var(--green, #22c55e); font-weight: 600; }
+.tk-l { color: var(--red, #ef4444); font-weight: 600; }
+.text-muted { color: var(--muted); }
+.rank-medal.gold { background: linear-gradient(135deg, #ffd700, #f0c000); color: #1a1a2e; }
+.rank-medal.silver { background: linear-gradient(135deg, #c0c0c0, #a8a8a8); color: #1a1a2e; }
+.rank-medal.bronze { background: linear-gradient(135deg, #cd7f32, #b8722d); color: #1a1a2e; }
 </style>

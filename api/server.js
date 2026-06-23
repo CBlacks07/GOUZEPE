@@ -302,6 +302,7 @@ const BACKUP_TABLE_ORDER = [
   'tournaments','tournament_participants','tournament_matches',
   'tournament_groups','tournament_participant_stats','tournament_pool_participants',
   'duels','handoff_requests','match_attachments','match_comments','match_games',
+  'tekken_ladder','tekken_duels',
 ];
 
 function escVal(v) {
@@ -874,6 +875,39 @@ async function ensureSchema(){
     PRIMARY KEY (player_id, season_id)
   )`);
   await q(`CREATE INDEX IF NOT EXISTS idx_guest_stats_season ON guest_season_stats(season_id)`);
+
+  /* ── Tekken : ladder ELO + duels ────────────────────────────────── */
+  await q(`CREATE TABLE IF NOT EXISTS tekken_ladder (
+    player_id   TEXT PRIMARY KEY REFERENCES players(player_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    elo         INTEGER NOT NULL DEFAULT 1200,
+    wins        INTEGER NOT NULL DEFAULT 0,
+    losses      INTEGER NOT NULL DEFAULT 0,
+    streak      INTEGER NOT NULL DEFAULT 0,
+    best_streak INTEGER NOT NULL DEFAULT 0,
+    peak_elo    INTEGER NOT NULL DEFAULT 1200,
+    joined_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
+
+  await q(`CREATE TABLE IF NOT EXISTS tekken_duels (
+    id          SERIAL PRIMARY KEY,
+    p1_id       TEXT NOT NULL REFERENCES players(player_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    p2_id       TEXT NOT NULL REFERENCES players(player_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    score_p1    INTEGER NOT NULL,
+    score_p2    INTEGER NOT NULL,
+    best_of     INTEGER NOT NULL DEFAULT 3,
+    winner_id   TEXT REFERENCES players(player_id) ON UPDATE CASCADE ON DELETE SET NULL,
+    elo_p1_before INTEGER,
+    elo_p2_before INTEGER,
+    elo_p1_after  INTEGER,
+    elo_p2_after  INTEGER,
+    played_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    recorded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
+  await q(`CREATE INDEX IF NOT EXISTS idx_tekken_duels_played ON tekken_duels(played_at DESC)`);
+  await q(`CREATE INDEX IF NOT EXISTS idx_tekken_duels_p1 ON tekken_duels(p1_id)`);
+  await q(`CREATE INDEX IF NOT EXISTS idx_tekken_duels_p2 ON tekken_duels(p2_id)`);
 
   /* seed admin (optional) */
   const seedAdmin = process.env.SEED_ADMIN_ON_BOOT === 'true';
@@ -2719,7 +2753,14 @@ app.get('/public/standings', async (req, res) => {
 
     // Pôle Tekken en préparation — pas encore de classement
     if (game === 'tekken') {
-      return ok(res, { game, available: false, season: null, days_count: 0, standings: [] })
+      const ladder = await q(`
+        SELECT tl.player_id, p.name, p.profile_pic_url,
+               tl.elo, tl.wins, tl.losses, tl.streak, tl.best_streak, tl.peak_elo
+        FROM tekken_ladder tl
+        JOIN players p ON p.player_id = tl.player_id
+        ORDER BY tl.elo DESC, tl.wins DESC
+      `);
+      return ok(res, { game, available: true, ladder: ladder.rows })
     }
 
     let season = (await q(`SELECT id, name FROM seasons WHERE is_closed=false ORDER BY id DESC LIMIT 1`)).rows[0]
@@ -2951,6 +2992,159 @@ app.get('/players/:pid', auth, async (req,res)=>{
   const ts = presence.players.get(row.player_id);
   const online = ts && (Date.now()-ts < PRESENCE_TTL_MS);
   ok(res,{ player:{...row, online: !!online} });
+});
+
+/* ====== Tekken : Ladder ELO + Duels ====== */
+
+function computeElo(rA, rB, scoreA, scoreB, K = 32) {
+  const eA = 1 / (1 + Math.pow(10, (rB - rA) / 400));
+  const eB = 1 - eA;
+  const sA = scoreA > scoreB ? 1 : scoreA < scoreB ? 0 : 0.5;
+  const sB = 1 - sA;
+  return {
+    newA: Math.round(rA + K * (sA - eA)),
+    newB: Math.round(rB + K * (sB - eB)),
+  };
+}
+
+app.get('/tekken/ladder', async (_req, res) => {
+  const r = await q(`
+    SELECT tl.player_id, p.name, p.profile_pic_url,
+           tl.elo, tl.wins, tl.losses, tl.streak, tl.best_streak, tl.peak_elo, tl.joined_at
+    FROM tekken_ladder tl
+    JOIN players p ON p.player_id = tl.player_id
+    ORDER BY tl.elo DESC, tl.wins DESC
+  `);
+  ok(res, { ladder: r.rows });
+});
+
+app.get('/tekken/duels', async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  const r = await q(`
+    SELECT d.id, d.p1_id, d.p2_id, d.score_p1, d.score_p2, d.best_of, d.winner_id,
+           d.elo_p1_before, d.elo_p2_before, d.elo_p1_after, d.elo_p2_after, d.played_at,
+           p1.name AS p1_name, p2.name AS p2_name, w.name AS winner_name
+    FROM tekken_duels d
+    JOIN players p1 ON p1.player_id = d.p1_id
+    JOIN players p2 ON p2.player_id = d.p2_id
+    LEFT JOIN players w ON w.player_id = d.winner_id
+    ORDER BY d.played_at DESC
+    LIMIT $1
+  `, [limit]);
+  ok(res, { duels: r.rows });
+});
+
+app.get('/tekken/duels/h2h', async (req, res) => {
+  const { p1, p2 } = req.query;
+  if (!p1 || !p2) return bad(res, 400, 'p1 et p2 requis');
+  const r = await q(`
+    SELECT id, p1_id, p2_id, score_p1, score_p2, best_of, winner_id,
+           elo_p1_before, elo_p2_before, elo_p1_after, elo_p2_after, played_at
+    FROM tekken_duels
+    WHERE (p1_id=$1 AND p2_id=$2) OR (p1_id=$2 AND p2_id=$1)
+    ORDER BY played_at DESC
+  `, [p1, p2]);
+  ok(res, { duels: r.rows });
+});
+
+app.post('/admin/tekken/ladder', auth, adminOnly, async (req, res) => {
+  const { player_id, elo } = req.body || {};
+  if (!player_id) return bad(res, 400, 'player_id requis');
+  const pCheck = await q(`SELECT player_id FROM players WHERE player_id=$1`, [player_id]);
+  if (!pCheck.rowCount) return bad(res, 404, 'Joueur introuvable');
+  const startElo = parseInt(elo) || 1200;
+  await q(`INSERT INTO tekken_ladder(player_id, elo, peak_elo) VALUES($1,$2,$2)
+           ON CONFLICT(player_id) DO NOTHING`, [player_id, startElo]);
+  ok(res, { ok: true });
+});
+
+app.delete('/admin/tekken/ladder/:pid', auth, adminOnly, async (req, res) => {
+  await q(`DELETE FROM tekken_ladder WHERE player_id=$1`, [req.params.pid]);
+  ok(res, { ok: true });
+});
+
+app.put('/admin/tekken/ladder/:pid', auth, adminOnly, async (req, res) => {
+  const { elo } = req.body || {};
+  if (!elo || isNaN(elo)) return bad(res, 400, 'elo requis');
+  const newElo = parseInt(elo);
+  await q(`UPDATE tekken_ladder SET elo=$2, peak_elo=GREATEST(peak_elo,$2), updated_at=now() WHERE player_id=$1`,
+    [req.params.pid, newElo]);
+  ok(res, { ok: true });
+});
+
+app.post('/admin/tekken/duels', auth, adminOnly, async (req, res) => {
+  const { p1_id, p2_id, score_p1, score_p2, best_of, played_at } = req.body || {};
+  if (!p1_id || !p2_id) return bad(res, 400, 'p1_id et p2_id requis');
+  if (p1_id === p2_id) return bad(res, 400, 'joueurs identiques');
+  const s1 = parseInt(score_p1); const s2 = parseInt(score_p2);
+  if (isNaN(s1) || isNaN(s2) || s1 < 0 || s2 < 0) return bad(res, 400, 'scores invalides');
+  const bo = parseInt(best_of) || 3;
+  const winnerId = s1 > s2 ? p1_id : s2 > s1 ? p2_id : null;
+
+  let r1 = await q(`SELECT elo FROM tekken_ladder WHERE player_id=$1`, [p1_id]);
+  if (!r1.rowCount) {
+    await q(`INSERT INTO tekken_ladder(player_id) VALUES($1) ON CONFLICT DO NOTHING`, [p1_id]);
+    r1 = await q(`SELECT elo FROM tekken_ladder WHERE player_id=$1`, [p1_id]);
+  }
+  let r2 = await q(`SELECT elo FROM tekken_ladder WHERE player_id=$1`, [p2_id]);
+  if (!r2.rowCount) {
+    await q(`INSERT INTO tekken_ladder(player_id) VALUES($1) ON CONFLICT DO NOTHING`, [p2_id]);
+    r2 = await q(`SELECT elo FROM tekken_ladder WHERE player_id=$1`, [p2_id]);
+  }
+
+  const eloBefore1 = r1.rows[0].elo;
+  const eloBefore2 = r2.rows[0].elo;
+  const { newA, newB } = computeElo(eloBefore1, eloBefore2, s1, s2);
+
+  const duel = await q(`
+    INSERT INTO tekken_duels(p1_id, p2_id, score_p1, score_p2, best_of, winner_id,
+      elo_p1_before, elo_p2_before, elo_p1_after, elo_p2_after, played_at, recorded_by)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id
+  `, [p1_id, p2_id, s1, s2, bo, winnerId,
+      eloBefore1, eloBefore2, newA, newB,
+      played_at || new Date().toISOString(), req.user.uid]);
+
+  if (winnerId === p1_id) {
+    await q(`UPDATE tekken_ladder SET elo=$2, wins=wins+1, streak=GREATEST(streak+1,1),
+             best_streak=GREATEST(best_streak, GREATEST(streak+1,1)), peak_elo=GREATEST(peak_elo,$2), updated_at=now()
+             WHERE player_id=$1`, [p1_id, newA]);
+    await q(`UPDATE tekken_ladder SET elo=$2, losses=losses+1, streak=LEAST(streak-1,-1), updated_at=now()
+             WHERE player_id=$1`, [p2_id, newB]);
+  } else if (winnerId === p2_id) {
+    await q(`UPDATE tekken_ladder SET elo=$2, losses=losses+1, streak=LEAST(streak-1,-1), updated_at=now()
+             WHERE player_id=$1`, [p1_id, newA]);
+    await q(`UPDATE tekken_ladder SET elo=$2, wins=wins+1, streak=GREATEST(streak+1,1),
+             best_streak=GREATEST(best_streak, GREATEST(streak+1,1)), peak_elo=GREATEST(peak_elo,$2), updated_at=now()
+             WHERE player_id=$1`, [p2_id, newB]);
+  }
+
+  ok(res, {
+    duel_id: duel.rows[0].id,
+    winner_id: winnerId,
+    elo: { p1: { before: eloBefore1, after: newA }, p2: { before: eloBefore2, after: newB } }
+  });
+});
+
+app.delete('/admin/tekken/duels/:id', auth, adminOnly, async (req, res) => {
+  await q(`DELETE FROM tekken_duels WHERE id=$1`, [req.params.id]);
+  ok(res, { ok: true });
+});
+
+app.get('/tekken/player/:pid/stats', async (req, res) => {
+  const { pid } = req.params;
+  const ladder = await q(`SELECT * FROM tekken_ladder WHERE player_id=$1`, [pid]);
+  if (!ladder.rowCount) return bad(res, 404, 'pas dans le ladder');
+  const recent = await q(`
+    SELECT d.id, d.p1_id, d.p2_id, d.score_p1, d.score_p2, d.winner_id,
+           d.elo_p1_before, d.elo_p2_before, d.elo_p1_after, d.elo_p2_after, d.played_at,
+           p1.name AS p1_name, p2.name AS p2_name
+    FROM tekken_duels d
+    JOIN players p1 ON p1.player_id = d.p1_id
+    JOIN players p2 ON p2.player_id = d.p2_id
+    WHERE d.p1_id=$1 OR d.p2_id=$1
+    ORDER BY d.played_at DESC LIMIT 20
+  `, [pid]);
+  ok(res, { ladder: ladder.rows[0], recent_duels: recent.rows });
 });
 
 // Mettre Ã  jour un joueur (admin seulement)

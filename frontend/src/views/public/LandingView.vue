@@ -126,13 +126,36 @@
         <p v-else class="empty">Aucun tournoi pour le moment.</p>
       </template>
 
-      <!-- Tekken : à venir -->
-      <div v-else class="soon-box">
-        <TrophyIcon class="soon-ic" />
-        <h3>Tekken — bientôt</h3>
-        <p>Le ladder, les duels classés et les tournois Tekken arrivent. Le pôle combat du club se prépare.</p>
-        <RouterLink to="/tekken" class="btn-primary cta-lg">Découvrir le pôle Tekken</RouterLink>
-      </div>
+      <!-- Tekken -->
+      <template v-else>
+        <h3 class="comp-sub">Top Ladder</h3>
+        <div v-if="!tkLadder.length" class="empty">Aucun joueur dans le ladder.</div>
+        <div v-else class="mini-boards">
+          <div class="mini-board" style="flex:1">
+            <div class="mini-head">Ladder ELO</div>
+            <div v-for="(p, i) in tkLadder.slice(0, 5)" :key="p.player_id" class="mini-row">
+              <span class="mini-rank">{{ i + 1 }}</span>
+              <span class="mini-name">{{ p.name }}</span>
+              <span class="mini-pts">{{ p.elo }} ELO</span>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="comp-sub" style="margin-top:2.25rem">Derniers duels</h3>
+        <div v-if="tkDuels.length" class="tk-duels-feed">
+          <article v-for="d in tkDuels.slice(0, 6)" :key="d.id" class="tk-duel-row">
+            <span class="tk-duel-date">{{ fmtDateShort(d.played_at) }}</span>
+            <span :class="{ 'tk-duel-winner': d.winner_id === d.p1_id }">{{ d.p1_name }}</span>
+            <span class="tk-duel-score">{{ d.score_p1 }} - {{ d.score_p2 }}</span>
+            <span :class="{ 'tk-duel-winner': d.winner_id === d.p2_id }">{{ d.p2_name }}</span>
+          </article>
+        </div>
+        <p v-else class="empty">Aucun duel enregistre.</p>
+
+        <div style="margin-top:1.5rem">
+          <RouterLink to="/tekken" class="btn-primary cta-lg">Decouvrir le pole Tekken</RouterLink>
+        </div>
+      </template>
     </section>
 
     <!-- ── CTA final ── -->
@@ -175,6 +198,8 @@ const latestDay   = ref(null)
 const topD1       = ref([])
 const topD2       = ref([])
 const stats       = ref({ players: '—', tournaments: '—' })
+const tkLadder    = ref([])
+const tkDuels     = ref([])
 
 const FORMAT_LABELS = {
   single_elimination: 'Élimination',
@@ -189,6 +214,11 @@ function fmtDate(d) {
   try {
     return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
   } catch (_) { return d }
+}
+
+function fmtDateShort(d) {
+  if (!d) return ''
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
 }
 
 async function getJSON(path) {
@@ -209,6 +239,15 @@ onMounted(async () => {
     latestDay.value = data || null
     topD1.value = (data?.d1?.members || []).slice(0, 5)
     topD2.value = (data?.d2?.members || []).slice(0, 5)
+  } catch (_) {}
+
+  try {
+    const [lr, dr] = await Promise.all([
+      getJSON('/tekken/ladder'),
+      getJSON('/tekken/duels?limit=6'),
+    ])
+    tkLadder.value = lr.ladder || []
+    tkDuels.value = dr.duels || []
   } catch (_) {}
 })
 </script>
@@ -330,6 +369,13 @@ onMounted(async () => {
 .tourn-name { font-family: var(--font-title); font-weight: 700; font-size: 1.15rem; letter-spacing: .02em; margin: 0 0 .6rem; }
 .tourn-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: .85rem; }
 .empty { color: var(--muted); }
+
+/* ── Tekken duels feed ── */
+.tk-duels-feed { display: flex; flex-direction: column; gap: .4rem; }
+.tk-duel-row { display: flex; align-items: center; gap: .6rem; padding: .55rem .9rem; background: var(--card); border: 1px solid var(--border); border-radius: 10px; font-size: .88rem; }
+.tk-duel-date { font-size: .7rem; color: var(--muted); min-width: 3rem; }
+.tk-duel-score { font-family: var(--font-title); font-weight: 800; font-size: 1rem; min-width: 3rem; text-align: center; }
+.tk-duel-winner { color: var(--accent-l); font-weight: 700; }
 
 /* ── Join band ── */
 .join-band { text-align: center; }
