@@ -132,6 +132,12 @@ const routes = [
     component: () => import('@/views/TekkenLadderView.vue'),
     meta: { requiresAuth: true, title: 'Tekken - Ladder' },
   },
+  {
+    path: '/tekken-tournois',
+    name: 'TekkenTournois',
+    component: () => import('@/views/TekkenTournoisView.vue'),
+    meta: { requiresAuth: true, title: 'Tekken - Tournois' },
+  },
 
   {
     path: '/admin',
@@ -144,6 +150,12 @@ const routes = [
     name: 'AdminTekken',
     component: () => import('@/views/admin/AdminTekkenView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin - Tekken' },
+  },
+  {
+    path: '/admin/tekken/tournois',
+    name: 'AdminTekkenTournois',
+    component: () => import('@/views/admin/AdminTekkenTournoisView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin - Tournois Tekken' },
   },
   {
     path: '/admin/joueurs',
