@@ -232,7 +232,7 @@ router.beforeEach(async (to, from) => {
   const auth = useAuthStore()
 
   function homeRoute() {
-    return '/profil'
+    return auth.isAdmin ? '/admin' : '/profil'
   }
 
   document.title = to.meta.title
