@@ -121,7 +121,7 @@ const visibleGroups = computed(() => {
       ],
     })
     if (hasBoth.value) groups.push({ title: '', links: [{ to: '/accueil', label: 'eFootball', icon: FootprintsIcon }] })
-  } else {
+  } else if (!route.path.startsWith('/admin')) {
     const poleLinks = []
     if (hasEfoot.value) poleLinks.push({ to: '/accueil', label: 'eFootball', icon: FootprintsIcon })
     if (hasTekken.value) poleLinks.push({ to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon })
