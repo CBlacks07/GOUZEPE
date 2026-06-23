@@ -21,12 +21,6 @@
 
       <!-- Liens -->
       <nav class="flex-1 overflow-y-auto py-3 px-2">
-        <!-- Bouton retour si dans un pole -->
-        <button v-if="activePole" class="drawer-back" @click="goBack">
-          <ArrowLeftIcon class="w-4 h-4" />
-          Retour
-        </button>
-
         <template v-for="group in visibleGroups" :key="group.title || 'main'">
           <div v-if="group.title" class="drawer-group-title">{{ group.title }}</div>
           <RouterLink v-for="link in group.links" :key="link.to"
@@ -73,12 +67,11 @@ import { useThemeStore } from '@/stores/theme'
 import { useMembershipNotif } from '@/composables/useMembershipNotif'
 import {
   HomeIcon, CalendarDaysIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
-  ShieldIcon, SunIcon, MoonIcon, LogOutIcon, XIcon, GamepadIcon,
-  ArrowLeftIcon, FootprintsIcon
+  ShieldIcon, SunIcon, MoonIcon, LogOutIcon, XIcon, GamepadIcon, FootprintsIcon
 } from 'lucide-vue-next'
 
 defineProps({ open: Boolean })
-const emit = defineEmits(['close'])
+defineEmits(['close'])
 
 const auth   = useAuthStore()
 const { pendingCount } = useMembershipNotif()
@@ -86,13 +79,13 @@ const theme  = useThemeStore()
 const router = useRouter()
 const route  = useRoute()
 
-const efootRoutes = ['/journees', '/duel', '/classement', '/tournois']
-const tekkenRoutes = ['/tekken-ladder']
+const efootRoutes = ['/journees', '/duel', '/classement', '/tournois', '/accueil']
+const tekkenRoutes = ['/tekken-ladder', '/accueil-tekken']
 
 const activePole = computed(() => {
   const p = route.path
-  if (efootRoutes.some(r => p.startsWith(r))) return 'efoot'
-  if (tekkenRoutes.some(r => p.startsWith(r))) return 'tekken'
+  if (efootRoutes.some(r => p === r || (r !== '/accueil' && p.startsWith(r)))) return 'efoot'
+  if (tekkenRoutes.some(r => p === r || p.startsWith(r))) return 'tekken'
   return null
 })
 
@@ -104,50 +97,44 @@ const visibleGroups = computed(() => {
     groups.push({
       title: '',
       links: [
-        { to: '/accueil', label: 'Accueil',    icon: HomeIcon },
-        { to: '/profil',  label: 'Mon espace', icon: UserIcon },
+        { to: auth.mainGame === 'tekken' ? '/accueil-tekken' : '/accueil', label: 'Accueil', icon: HomeIcon },
+        { to: '/profil', label: 'Mon espace', icon: UserIcon },
       ],
     })
     groups.push({
       title: 'Poles',
       links: [
-        { to: '/journees',      label: 'eFootball', icon: FootprintsIcon },
-        { to: '/tekken-ladder', label: 'Tekken',    icon: GamepadIcon },
+        { to: '/accueil', label: 'eFootball', icon: FootprintsIcon },
+        { to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon },
       ],
     })
   } else if (pole === 'efoot') {
     groups.push({
       title: 'eFootball',
       links: [
-        { to: '/journees',   label: 'Journees',   icon: CalendarDaysIcon },
-        { to: '/duel',        label: 'Duel',        icon: SwordsIcon },
-        { to: '/classement',  label: 'Classements', icon: BarChart2Icon },
-        { to: '/tournois',    label: 'Tournois',    icon: TrophyIcon },
+        { to: '/accueil', label: 'Accueil', icon: HomeIcon },
+        { to: '/journees', label: 'Journees', icon: CalendarDaysIcon },
+        { to: '/duel', label: 'Duel', icon: SwordsIcon },
+        { to: '/classement', label: 'Classements', icon: BarChart2Icon },
+        { to: '/tournois', label: 'Tournois', icon: TrophyIcon },
       ],
     })
   } else if (pole === 'tekken') {
     groups.push({
       title: 'Tekken',
       links: [
+        { to: '/accueil-tekken', label: 'Accueil', icon: HomeIcon },
         { to: '/tekken-ladder', label: 'Ladder', icon: GamepadIcon },
       ],
     })
   }
 
   if (auth.isAdmin) {
-    groups.push({
-      title: '',
-      links: [{ to: '/admin', label: 'Admin', icon: ShieldIcon }],
-    })
+    groups.push({ title: '', links: [{ to: '/admin', label: 'Admin', icon: ShieldIcon }] })
   }
 
   return groups
 })
-
-function goBack() {
-  router.push('/accueil')
-  emit('close')
-}
 
 async function handleLogout() {
   if (!confirm('Voulez-vous vraiment vous deconnecter ?')) return
@@ -171,13 +158,4 @@ async function handleLogout() {
   font-size: .65rem; font-weight: 800; text-transform: uppercase;
   letter-spacing: .1em; color: var(--muted); padding: .8rem .75rem .3rem;
 }
-.drawer-back {
-  display: flex; align-items: center; gap: .5rem;
-  width: 100%; padding: .55rem .75rem; margin-bottom: .4rem;
-  border-radius: 10px; border: 1px solid var(--border);
-  background: transparent; color: var(--muted);
-  font-size: .82rem; font-weight: 600; cursor: pointer;
-  transition: color .15s, background .15s;
-}
-.drawer-back:hover { color: var(--text); background: color-mix(in srgb, var(--border) 25%, transparent); }
 </style>

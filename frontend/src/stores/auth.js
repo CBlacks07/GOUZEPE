@@ -6,6 +6,7 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('efoot.token') || '')
   const role = ref(localStorage.getItem('efoot.role') || 'member')
   const playerId = ref(localStorage.getItem('efoot.pid') || null)
+  const mainGame = ref(localStorage.getItem('efoot.mainGame') || 'efoot')
   const expAt = ref(Number(localStorage.getItem('efoot.expAt') || 0))
   const hydrated = ref(false)
   const hydrationPromise = ref(null)
@@ -21,6 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('efoot.expAt', String(expAt.value || 0))
     if (playerId.value) localStorage.setItem('efoot.pid', playerId.value)
     else localStorage.removeItem('efoot.pid')
+    localStorage.setItem('efoot.mainGame', mainGame.value || 'efoot')
   }
 
   function login({ token: tok, user, expHours }) {
@@ -58,6 +60,7 @@ export const useAuthStore = defineStore('auth', () => {
         const user = data.user || {}
         role.value = (user.role || role.value || 'member').toLowerCase()
         playerId.value = user.player_id || null
+        mainGame.value = user.main_game || 'efoot'
         hydrated.value = true
         persistSession()
         return true
@@ -103,6 +106,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     role,
     playerId,
+    mainGame,
     expAt,
     hydrated,
     isAdmin,

@@ -11,13 +11,6 @@
 
     <!-- Nav desktop -->
     <nav class="hidden lg:flex items-center gap-0.5 ml-4 flex-1 overflow-x-auto">
-      <!-- Bouton retour quand on est dans un pole -->
-      <button v-if="activePole" class="navlink nav-back" @click="router.push('/accueil')">
-        <ArrowLeftIcon class="w-3.5 h-3.5" />
-        Retour
-      </button>
-      <span v-if="activePole" class="nav-sep" />
-
       <RouterLink v-for="link in visibleNav" :key="link.to"
         :to="link.to"
         class="navlink relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[13px] whitespace-nowrap text-gz-muted
@@ -59,8 +52,7 @@ import { useThemeStore } from '@/stores/theme'
 import { useMembershipNotif } from '@/composables/useMembershipNotif'
 import {
   HomeIcon, CalendarDaysIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
-  ShieldIcon, SunIcon, MoonIcon, LogOutIcon, MenuIcon, GamepadIcon, ArrowLeftIcon,
-  FootprintsIcon
+  ShieldIcon, SunIcon, MoonIcon, LogOutIcon, MenuIcon, GamepadIcon, FootprintsIcon
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -74,52 +66,46 @@ const router = useRouter()
 const route  = useRoute()
 const { pendingCount } = useMembershipNotif()
 
-const efootRoutes = ['/journees', '/duel', '/classement', '/tournois']
-const tekkenRoutes = ['/tekken-ladder']
+const efootRoutes = ['/journees', '/duel', '/classement', '/tournois', '/accueil']
+const tekkenRoutes = ['/tekken-ladder', '/accueil-tekken']
+const neutralRoutes = ['/profil', '/admin']
 
 const activePole = computed(() => {
   const p = route.path
-  if (efootRoutes.some(r => p.startsWith(r))) return 'efoot'
-  if (tekkenRoutes.some(r => p.startsWith(r))) return 'tekken'
+  if (efootRoutes.some(r => p === r || (r !== '/accueil' && p.startsWith(r)))) return 'efoot'
+  if (tekkenRoutes.some(r => p === r || p.startsWith(r))) return 'tekken'
   return null
 })
 
-const generalLinks = [
-  { to: '/accueil',  label: 'Accueil',    icon: HomeIcon },
-  { to: '/profil',   label: 'Mon espace', icon: UserIcon },
-]
-
-const poleEntries = [
-  { to: '/journees',      label: 'eFootball', icon: FootprintsIcon, pole: 'efoot' },
-  { to: '/tekken-ladder', label: 'Tekken',    icon: GamepadIcon,    pole: 'tekken' },
-]
-
-const efootLinks = [
-  { to: '/journees',   label: 'Journees',    icon: CalendarDaysIcon },
-  { to: '/duel',        label: 'Duel',         icon: SwordsIcon },
-  { to: '/classement',  label: 'Classements',  icon: BarChart2Icon },
-  { to: '/tournois',    label: 'Tournois',     icon: TrophyIcon },
-]
-
-const tekkenLinks = [
-  { to: '/tekken-ladder', label: 'Ladder', icon: GamepadIcon },
-]
-
-const adminLink = { to: '/admin', label: 'Admin', icon: ShieldIcon }
+const myHome = computed(() => auth.mainGame === 'tekken' ? '/accueil-tekken' : '/accueil')
 
 const visibleNav = computed(() => {
   const pole = activePole.value
   let links = []
 
   if (!pole) {
-    links = [...generalLinks, ...poleEntries]
+    links = [
+      { to: myHome.value, label: 'Accueil', icon: HomeIcon },
+      { to: '/profil', label: 'Mon espace', icon: UserIcon },
+      { to: '/accueil', label: 'eFootball', icon: FootprintsIcon },
+      { to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon },
+    ]
   } else if (pole === 'efoot') {
-    links = [...efootLinks]
+    links = [
+      { to: '/accueil', label: 'Accueil', icon: HomeIcon },
+      { to: '/journees', label: 'Journees', icon: CalendarDaysIcon },
+      { to: '/duel', label: 'Duel', icon: SwordsIcon },
+      { to: '/classement', label: 'Classements', icon: BarChart2Icon },
+      { to: '/tournois', label: 'Tournois', icon: TrophyIcon },
+    ]
   } else if (pole === 'tekken') {
-    links = [...tekkenLinks]
+    links = [
+      { to: '/accueil-tekken', label: 'Accueil', icon: HomeIcon },
+      { to: '/tekken-ladder', label: 'Ladder', icon: GamepadIcon },
+    ]
   }
 
-  if (auth.isAdmin) links.push(adminLink)
+  if (auth.isAdmin) links.push({ to: '/admin', label: 'Admin', icon: ShieldIcon })
   return links
 })
 
@@ -139,12 +125,4 @@ async function handleLogout() {
   width: 1px; height: 18px; margin: 0 .3rem;
   background: var(--border); flex-shrink: 0;
 }
-.nav-back {
-  display: flex; align-items: center; gap: .35rem;
-  padding: .35rem .7rem; border-radius: 8px;
-  font-size: .78rem; font-weight: 600;
-  color: var(--muted); background: none; border: none; cursor: pointer;
-  transition: color .15s, background .15s;
-}
-.nav-back:hover { color: var(--text); background: color-mix(in srgb, var(--border) 30%, transparent); }
 </style>

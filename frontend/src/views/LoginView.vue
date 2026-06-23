@@ -156,7 +156,7 @@ async function validateExistingSession() {
     return false
   }
 
-  await router.replace(auth.isAdmin ? '/' : '/profil')
+  await router.replace(auth.mainGame === 'tekken' ? '/accueil-tekken' : '/accueil')
   return true
 }
 
@@ -177,7 +177,7 @@ async function submit() {
     auth.login(data)
     await auth.hydrateFromServer(true)
     bootMessage.value = 'Connexion reussie...'
-    await router.replace(auth.isAdmin ? '/' : '/profil')
+    await router.replace(auth.mainGame === 'tekken' ? '/accueil-tekken' : '/accueil')
   } catch (e) {
     error.value = e.response?.data?.error || e.response?.data?.message || 'Identifiants invalides.'
   } finally {

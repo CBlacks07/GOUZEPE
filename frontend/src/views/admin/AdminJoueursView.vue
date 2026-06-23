@@ -21,6 +21,14 @@
               <option value="INVITE">INVITE</option>
             </select>
           </div>
+          <div>
+            <label class="label">Pole</label>
+            <select v-model="newP.main_game" class="input">
+              <option value="efoot">eFootball</option>
+              <option value="tekken">Tekken</option>
+              <option value="both">Les deux</option>
+            </select>
+          </div>
           <button @click="addPlayer" :disabled="adding" class="btn-primary flex items-center gap-1.5">
             <Loader2Icon v-if="adding" class="w-3.5 h-3.5 animate-spin" />
             <PlusIcon v-else class="w-3.5 h-3.5" />
@@ -51,6 +59,7 @@
                 <th>ID</th>
                 <th>Nom</th>
                 <th>Statut</th>
+                <th>Pole</th>
                 <th>Admission</th>
                 <th>Compte</th>
                 <th>Actions</th>
@@ -58,10 +67,10 @@
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="6" class="text-center text-gz-muted py-8">Chargement…</td>
+                <td colspan="7" class="text-center text-gz-muted py-8">Chargement...</td>
               </tr>
               <tr v-else-if="!filtered.length">
-                <td colspan="6" class="text-center text-gz-muted py-8">Aucun joueur.</td>
+                <td colspan="7" class="text-center text-gz-muted py-8">Aucun joueur.</td>
               </tr>
               <tr v-for="p in filtered" :key="p.player_id">
                 <td class="font-mono text-gz-muted text-xs">{{ p.player_id }}</td>
@@ -74,7 +83,8 @@
                     {{ p.role || 'MEMBRE' }}
                   </span>
                 </td>
-                <td class="text-gz-muted text-sm">{{ p.admission_year || '—' }}</td>
+                <td class="text-xs font-semibold" :style="poleColor(p.main_game)">{{ poleLabel(p.main_game) }}</td>
+                <td class="text-gz-muted text-sm">{{ p.admission_year || '--' }}</td>
                 <td class="text-gz-muted text-sm">{{ p.user_email || '—' }}</td>
                 <td>
                   <div class="flex gap-1">
@@ -109,6 +119,14 @@
           <select v-model="form.role" class="input">
             <option value="MEMBRE">MEMBRE</option>
             <option value="INVITE">INVITE</option>
+          </select>
+        </div>
+        <div>
+          <label class="label">Pole principal</label>
+          <select v-model="form.main_game" class="input">
+            <option value="efoot">eFootball</option>
+            <option value="tekken">Tekken</option>
+            <option value="both">Les deux</option>
           </select>
         </div>
         <div>
@@ -188,8 +206,16 @@ const photoMsg  = ref('')
 const photoOk   = ref(true)
 const photoPreview = ref('')
 
-const newP = ref({ player_id: '', name: '', role: 'MEMBRE' })
-const form = ref({ player_id: '', name: '', role: 'MEMBRE', admission_year: new Date().getFullYear(), email: '', password: '', has_user: false })
+const newP = ref({ player_id: '', name: '', role: 'MEMBRE', main_game: 'efoot' })
+const form = ref({ player_id: '', name: '', role: 'MEMBRE', main_game: 'efoot', admission_year: new Date().getFullYear(), email: '', password: '', has_user: false })
+
+const POLE_LABELS = { efoot: 'eFootball', tekken: 'Tekken', both: 'Les deux' }
+function poleLabel(g) { return POLE_LABELS[g] || g || 'eFootball' }
+function poleColor(g) {
+  if (g === 'tekken') return 'color: #ff5a2c'
+  if (g === 'both') return 'color: #a78bfa'
+  return 'color: #3b82f6'
+}
 
 useSessionState('efoot.ui.admin.joueurs.v1', {
   search,
@@ -219,14 +245,14 @@ async function loadPlayers() {
 }
 
 async function addPlayer() {
-  const { player_id, name, role } = newP.value
+  const { player_id, name, role, main_game } = newP.value
   if (!player_id || !name) { createMsg.value = 'ID et Nom requis'; createOk.value = false; return }
   adding.value = true
-  createMsg.value = 'Enregistrement…'
+  createMsg.value = 'Enregistrement...'
   try {
-    await api.post('/admin/players', { player_id, name, role })
-    createMsg.value = 'Joueur créé ✓'; createOk.value = true
-    newP.value = { player_id: '', name: '', role: 'MEMBRE' }
+    await api.post('/admin/players', { player_id, name, role, main_game })
+    createMsg.value = 'Joueur cree'; createOk.value = true
+    newP.value = { player_id: '', name: '', role: 'MEMBRE', main_game: 'efoot' }
     await loadPlayers()
   } catch (e) {
     createMsg.value = e.response?.data?.error || 'Erreur'; createOk.value = false
@@ -278,6 +304,7 @@ function openEdit(p) {
     player_id: p.player_id,
     name:      p.name || '',
     role:      (p.role || 'MEMBRE').toUpperCase(),
+    main_game: p.main_game || 'efoot',
     admission_year: p.admission_year || new Date().getFullYear(),
     profile_pic_url: p.profile_pic_url || '',
     email:     p.user_email || slugifyToEmail(p.name || p.player_id),
@@ -298,7 +325,7 @@ async function saveEdit() {
     const newId  = form.value.player_id.trim()
     if (!newId) { editMsg.value = 'ID requis'; editOk.value = false; saving.value = false; return }
 
-    const body = { name: form.value.name.trim(), role: form.value.role, admission_year: form.value.admission_year }
+    const body = { name: form.value.name.trim(), role: form.value.role, admission_year: form.value.admission_year, main_game: form.value.main_game }
     if (newId !== oldId) {
       if (!confirm(`⚠ Modifier l'ID "${oldId}" → "${newId}" ? Cela affectera toutes les références.`)) {
         saving.value = false; return
