@@ -115,6 +115,23 @@
           <label class="label">Annee d'admission</label>
           <input v-model.number="form.admission_year" type="number" class="input" min="2000" :max="new Date().getFullYear()" placeholder="2025" />
         </div>
+        <div>
+          <label class="label">Photo de profil</label>
+          <div class="flex items-center gap-3">
+            <div v-if="form.profile_pic_url" class="w-12 h-12 rounded-full overflow-hidden bg-gz-panel flex-none">
+              <img :src="photoPreview || resolvePhotoUrl(form.profile_pic_url)" class="w-full h-full object-cover" />
+            </div>
+            <div v-else class="w-12 h-12 rounded-full bg-gz-panel flex-none grid place-items-center text-gz-muted font-bold">
+              {{ initials(form.name) }}
+            </div>
+            <label class="btn py-1.5 px-3 text-xs cursor-pointer flex items-center gap-1">
+              <CameraIcon class="w-3.5 h-3.5" />
+              Changer la photo
+              <input type="file" accept="image/*" class="hidden" @change="uploadPlayerPhoto" />
+            </label>
+            <span v-if="photoMsg" :class="['text-xs', photoOk ? 'text-gz-green' : 'text-gz-red']">{{ photoMsg }}</span>
+          </div>
+        </div>
 
         <hr class="border-gz-border" />
         <p class="text-gz-muted text-xs font-semibold">Compte membre associé (connexion nom@gz)</p>
@@ -151,7 +168,8 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAPI } from '@/composables/useAPI'
 import { useSessionState } from '@/composables/useSessionState'
-import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon, Loader2Icon, UnlinkIcon } from 'lucide-vue-next'
+import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon, Loader2Icon, UnlinkIcon, CameraIcon } from 'lucide-vue-next'
+import { resolveBaseURL } from '@/composables/useAPI'
 
 const api = useAPI()
 
@@ -166,6 +184,9 @@ const createOk  = ref(true)
 const editMsg   = ref('')
 const editOk    = ref(true)
 const editingId = ref('')   // old player_id
+const photoMsg  = ref('')
+const photoOk   = ref(true)
+const photoPreview = ref('')
 
 const newP = ref({ player_id: '', name: '', role: 'MEMBRE' })
 const form = ref({ player_id: '', name: '', role: 'MEMBRE', admission_year: new Date().getFullYear(), email: '', password: '', has_user: false })
@@ -222,6 +243,35 @@ function slugifyToEmail(name) {
   return (loc || 'membre') + '@' + domain
 }
 
+function resolvePhotoUrl(u) {
+  if (!u) return ''
+  if (/^https?:\/\//.test(u)) return u
+  return resolveBaseURL() + (u.startsWith('/') ? u : '/' + u)
+}
+function initials(name) {
+  return String(name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+}
+
+async function uploadPlayerPhoto(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  photoMsg.value = 'Upload...'
+  photoOk.value = true
+  photoPreview.value = URL.createObjectURL(file)
+  try {
+    const fd = new FormData()
+    fd.append('photo', file)
+    const { data } = await api.post('/admin/players/' + encodeURIComponent(editingId.value) + '/photo', fd)
+    form.value.profile_pic_url = data.profile_pic_url
+    photoMsg.value = 'Photo enregistree'
+    photoOk.value = true
+    await loadPlayers()
+  } catch (err) {
+    photoMsg.value = err.response?.data?.error || 'Erreur upload'
+    photoOk.value = false
+  }
+}
+
 function openEdit(p) {
   editingId.value = p.player_id
   form.value = {
@@ -229,10 +279,13 @@ function openEdit(p) {
     name:      p.name || '',
     role:      (p.role || 'MEMBRE').toUpperCase(),
     admission_year: p.admission_year || new Date().getFullYear(),
+    profile_pic_url: p.profile_pic_url || '',
     email:     p.user_email || slugifyToEmail(p.name || p.player_id),
     password:  '',
     has_user:  !!p.user_email,
   }
+  photoMsg.value = ''
+  photoPreview.value = ''
   editMsg.value = '—'
   modal.value = true
 }
