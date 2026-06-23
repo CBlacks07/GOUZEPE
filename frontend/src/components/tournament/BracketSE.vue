@@ -22,9 +22,12 @@
       <div
         v-for="(round, roundIndex) in rounds"
         :key="round.no"
-        class="round-col"
+        :class="['round-col', round.isFinalRound && 'round-col--final']"
       >
-        <div class="round-title">{{ round.label }}</div>
+        <div class="round-title">
+          <span class="round-title-label">{{ round.label }}</span>
+          <span class="round-title-count">{{ round.matches.length }}</span>
+        </div>
         <div
           v-for="(match, matchIndex) in round.matches"
           :key="match.id"
@@ -35,9 +38,9 @@
           <MatchCard
             :match="match"
             :admin-mode="adminMode"
+            :is-final="!!match._isFinal"
             density="bracket"
             @score-saved="$emit('score-saved', $event)"
-            class="animate-winner-in"
           />
         </div>
       </div>
@@ -100,12 +103,15 @@ const rounds = computed(() => {
 
     const multiplier = Math.pow(2, idx) // 1, 2, 4, 8…
     const sortedMatches = byRound[no].sort((a, b) => (a.slot_no || 0) - (b.slot_no || 0))
+    const isFinalRound = idx === totalRounds - 1 && sortedMatches.length === 1
 
     return {
       no,
       label,
+      isFinalRound,
       matches: sortedMatches.map((m, matchIdx) => ({
         ...m,
+        _isFinal: isFinalRound,
         // 1er match : centré entre ses 2 sources du tour précédent
         // Matchs suivants : espacement doublé entre eux (mais CSS gap déjà inclus)
         offset: matchIdx === 0
@@ -237,14 +243,34 @@ function rebuildPaths() {
     if (!source || !target) continue
 
     const fromX = source.right
-    const idealJoinX = fromX + 14
-    const joinX = Math.min(idealJoinX, target.left - 6)
-    const safeJoinX = Math.max(joinX, fromX + 5)
-
-    paths.push(`M ${source.right} ${source.cy} H ${safeJoinX} V ${target.cy} H ${target.left}`)
+    const gap = target.left - fromX
+    const midX = fromX + Math.max(10, Math.min(gap * 0.5, 24))
+    paths.push(roundedConnector(source.right, source.cy, target.left, target.cy, midX))
   }
 
   bracketPaths.value = paths
+}
+
+// Connecteur orthogonal à coudes arrondis (style esports pro)
+function roundedConnector(x1, y1, x2, y2, midX) {
+  const safeMid = Math.max(x1 + 4, Math.min(midX, x2 - 4))
+  const dy = y2 - y1
+  if (Math.abs(dy) < 1.5) {
+    return `M ${x1} ${y1} L ${x2} ${y2}`
+  }
+  const r = Math.min(9, Math.abs(dy) / 2, safeMid - x1, x2 - safeMid)
+  if (r < 2) {
+    return `M ${x1} ${y1} H ${safeMid} V ${y2} H ${x2}`
+  }
+  const dir = dy > 0 ? 1 : -1
+  return [
+    `M ${x1} ${y1}`,
+    `H ${safeMid - r}`,
+    `Q ${safeMid} ${y1} ${safeMid} ${y1 + dir * r}`,
+    `V ${y2 - dir * r}`,
+    `Q ${safeMid} ${y2} ${safeMid + r} ${y2}`,
+    `H ${x2}`,
+  ].join(' ')
 }
 
 onMounted(() => {
@@ -339,18 +365,18 @@ watch(laneStorageKey, () => {
 
 .branch-path {
   fill: none;
-  stroke: color-mix(in srgb, var(--blue) 58%, var(--border));
-  stroke-width: 1.2;
+  stroke: color-mix(in srgb, var(--accent) 72%, transparent);
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.96;
+  opacity: 1;
 }
 
 .round-col {
-  min-width: 174px;
+  min-width: 206px;
   display: flex;
   flex-direction: column;
-  gap: 0.48rem;
+  gap: 0.55rem;
   padding: 0;
   position: relative;
   scroll-snap-align: start;
@@ -358,13 +384,48 @@ watch(laneStorageKey, () => {
 }
 
 .round-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
   font-size: 0.64rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   color: var(--muted);
-  text-align: left;
-  padding: 0 0.1rem 0.2rem;
+  padding: 0.28rem 0.55rem;
+  margin-bottom: 0.15rem;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--panel) 65%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
+.round-title-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 0.25rem;
+  font-size: 0.58rem;
+  font-weight: 800;
+  border-radius: 999px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--card) 85%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.round-col--final .round-title {
+  color: #b8860b;
+  border-left-color: #f59e0b;
+  background: color-mix(in srgb, #fbbf24 12%, transparent);
+  border-color: color-mix(in srgb, #fbbf24 35%, transparent);
+}
+.round-col--final .round-title-count {
+  color: #b8860b;
+  background: color-mix(in srgb, #fbbf24 16%, transparent);
+  border-color: color-mix(in srgb, #fbbf24 40%, transparent);
 }
 
 .match-slot {
@@ -380,8 +441,8 @@ watch(laneStorageKey, () => {
   }
 
   .round-col {
-    min-width: 160px;
-    gap: 0.4rem;
+    min-width: 188px;
+    gap: 0.45rem;
   }
 
   .bracket-svg {

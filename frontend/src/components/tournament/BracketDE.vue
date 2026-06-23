@@ -36,9 +36,9 @@
               <MatchCard
                 :match="m"
                 :admin-mode="adminMode"
+                :is-final="round.side === 'GF'"
                 density="bracket"
                 @score-saved="$emit('score-saved', $event)"
-                class="animate-winner-in"
               />
             </div>
           </div>
@@ -84,7 +84,6 @@
               :admin-mode="adminMode"
               density="bracket"
               @score-saved="$emit('score-saved', $event)"
-              class="animate-winner-in"
             />
           </div>
         </div>
@@ -121,35 +120,119 @@ const props = defineProps({
 
 defineEmits(['score-saved'])
 
-function groupRounds(list, cardH = 52) {
-  const CARD_G = 8
-  const unit = cardH + CARD_G
+// Connecteur orthogonal à coudes arrondis (style esports pro)
+function roundedConnector(x1, y1, x2, y2, midX) {
+  const safeMid = Math.max(x1 + 4, Math.min(midX, x2 - 4))
+  const dy = y2 - y1
+  if (Math.abs(dy) < 1.5) {
+    return `M ${x1} ${y1} L ${x2} ${y2}`
+  }
+  const r = Math.min(9, Math.abs(dy) / 2, safeMid - x1, x2 - safeMid)
+  if (r < 2) {
+    return `M ${x1} ${y1} H ${safeMid} V ${y2} H ${x2}`
+  }
+  const dir = dy > 0 ? 1 : -1
+  return [
+    `M ${x1} ${y1}`,
+    `H ${safeMid - r}`,
+    `Q ${safeMid} ${y1} ${safeMid} ${y1 + dir * r}`,
+    `V ${y2 - dir * r}`,
+    `Q ${safeMid} ${y2} ${safeMid + r} ${y2}`,
+    `H ${x2}`,
+  ].join(' ')
+}
+
+// Construit les tours bruts (triés, sans offset) à partir d'une liste de matchs.
+function buildRawRounds(list, labelFn) {
   const byRound = {}
   for (const m of list) {
     if (!isDisplayableMatch(m)) continue
     if (!byRound[m.round_no]) byRound[m.round_no] = []
     byRound[m.round_no].push(m)
   }
-
   return Object.keys(byRound)
     .map(Number)
     .sort((a, b) => a - b)
-    .map((no, idx, arr) => {
-      const multiplier = Math.pow(2, idx)
-      return {
-        no,
-        label: idx === arr.length - 1 ? 'Finale LB' : `LB Round ${no}`,
-        matches: byRound[no]
-          .sort((a, b) => (a.slot_no || 0) - (b.slot_no || 0))
-          .map((m, matchIdx) => ({
-            ...m,
-            offset: matchIdx === 0
-              ? Math.max(0, Math.round(unit * (multiplier - 1) / 2))
-              : Math.max(0, Math.round(unit * (multiplier - 1))),
-          })),
-      }
-    })
+    .map((no, idx, arr) => ({
+      no,
+      label: labelFn(idx, arr, no),
+      matches: byRound[no].slice().sort((a, b) => (a.slot_no || 0) - (b.slot_no || 0)),
+    }))
     .filter((round) => round.matches.length > 0)
+}
+
+// Aligne chaque match à la hauteur moyenne (centroïde) de ses matchs sources
+// réels (suivi de next_match_id). Évite le zig-zag dans les brackets irréguliers.
+function assignCentroidOffsets(rounds, allMatches, cardH = 52) {
+  const G = 8
+  const unit = cardH + G
+  const allById = new Map((allMatches || []).map((m) => [Number(m.id), m]))
+  const topById = new Map()
+
+  function resolveTargetId(sourceMatch, targetIds) {
+    let tId = Number(sourceMatch?.next_match_id || 0)
+    const seen = new Set()
+    while (tId && !seen.has(tId)) {
+      seen.add(tId)
+      if (targetIds.has(tId)) return tId
+      const t = allById.get(tId)
+      if (!t) break
+      tId = Number(t.next_match_id || 0)
+    }
+    return 0
+  }
+
+  rounds.forEach((round, r) => {
+    if (r === 0) {
+      round.matches.forEach((m, i) => topById.set(Number(m.id), i * unit))
+      return
+    }
+    const prev = rounds[r - 1].matches
+    const curIds = new Set(round.matches.map((m) => Number(m.id)))
+    const sources = new Map()
+    for (const sm of prev) {
+      const tId = resolveTargetId(sm, curIds)
+      if (!tId) continue
+      const st = topById.get(Number(sm.id))
+      if (st == null) continue
+      if (!sources.has(tId)) sources.set(tId, [])
+      sources.get(tId).push(st)
+    }
+    let prevTop = -Infinity
+    round.matches.forEach((m, i) => {
+      const id = Number(m.id)
+      const src = sources.get(id)
+      let top
+      if (src && src.length) {
+        top = src.reduce((a, b) => a + b, 0) / src.length
+      } else {
+        const prevSibling = i > 0 ? topById.get(Number(round.matches[i - 1].id)) : null
+        top = prevSibling != null ? prevSibling + unit : i * unit
+      }
+      if (top < prevTop + unit) top = prevTop + unit
+      topById.set(id, top)
+      prevTop = top
+    })
+  })
+
+  // Convertit les hauteurs absolues en marges (marginTop) cumulables.
+  return rounds.map((round) => {
+    let cursor = 0
+    return {
+      ...round,
+      matches: round.matches.map((m, i) => {
+        const top = topById.get(Number(m.id)) ?? 0
+        const offset = i === 0 ? top : top - cursor
+        cursor = top + unit
+        return { ...m, offset: Math.max(0, Math.round(offset)) }
+      }),
+    }
+  })
+}
+
+function groupRounds(list, cardH = 52) {
+  const raw = buildRawRounds(list, (idx, arr, no) => (idx === arr.length - 1 ? 'Finale LB' : `LB Round ${no}`))
+  return assignCentroidOffsets(raw, list, cardH)
 }
 
 function hasScoreValue(v) {
@@ -170,35 +253,10 @@ const wbCardH = ref(52)
 const lbCardH = ref(52)
 
 const wbRounds = computed(() => {
-  const CARD_G = 8
-  const unit = wbCardH.value + CARD_G
   const wb = props.matches.filter((m) => m.bracket_side === 'W')
-  const byRound = {}
-  wb.forEach((m) => {
-    if (!isDisplayableMatch(m)) return
-    if (!byRound[m.round_no]) byRound[m.round_no] = []
-    byRound[m.round_no].push(m)
-  })
-
-  const nos = Object.keys(byRound)
-    .map(Number)
-    .sort((a, b) => a - b)
-
-  return nos.map((no, idx) => {
-    const multiplier = Math.pow(2, idx)
-    return {
-      no,
-      label: idx === nos.length - 1 ? 'Finale WB' : idx === nos.length - 2 ? 'Demies WB' : `WB Round ${no}`,
-      matches: byRound[no]
-        .sort((a, b) => (a.slot_no || 0) - (b.slot_no || 0))
-        .map((m, matchIdx) => ({
-          ...m,
-          offset: matchIdx === 0
-            ? Math.max(0, Math.round(unit * (multiplier - 1) / 2))
-            : Math.max(0, Math.round(unit * (multiplier - 1))),
-        })),
-    }
-  }).filter((round) => round.matches.length > 0)
+  const raw = buildRawRounds(wb, (idx, arr, no) =>
+    idx === arr.length - 1 ? 'Finale WB' : idx === arr.length - 2 ? 'Demies WB' : `WB Round ${no}`)
+  return assignCentroidOffsets(raw, wb, wbCardH.value)
 })
 
 const lbRounds = computed(() => groupRounds(props.matches.filter((m) => m.bracket_side === 'L'), lbCardH.value))
@@ -387,10 +445,8 @@ function useLaneConnectors(roundsRef, sideKey, allMatchesRef, cardHRef) {
         const fromX = source.right
         const gap = target.left - fromX
         if (gap <= 0) continue
-        const joinX = fromX + Math.max(10, Math.min(26, gap * 0.52))
-        const safeJoinX = Math.min(target.left - 8, joinX)
-
-        paths.push(`M ${source.right} ${source.cy} H ${safeJoinX} V ${target.cy} H ${target.left}`)
+        const midX = fromX + Math.max(10, Math.min(26, gap * 0.52))
+        paths.push(roundedConnector(source.right, source.cy, target.left, target.cy, midX))
       }
     }
 
@@ -526,8 +582,8 @@ function rebuildBridgePaths() {
       // WB -> GF is already drawn in WB lane.
       // Only draw LB -> GF bridge here to avoid oversized trunk rectangles.
       if (gfPoint.left > lbPoint.right + 8) {
-        const joinX = Math.min(lbPoint.right + 22, gfPoint.left - 10)
-        paths.push(`M ${lbPoint.right} ${lbPoint.cy} H ${joinX} V ${gfPoint.cy} H ${gfPoint.left}`)
+        const midX = Math.min(lbPoint.right + 22, gfPoint.left - 10)
+        paths.push(roundedConnector(lbPoint.right, lbPoint.cy, gfPoint.left, gfPoint.cy, midX))
       }
       bridgePaths.value = paths
       return
@@ -665,12 +721,26 @@ watch(() => props.matches, () => {
 }
 
 .lane-heading {
-  font-size: 0.65rem;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.66rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  margin-bottom: 0.4rem;
+  letter-spacing: 0.07em;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+  padding: 0.24rem 0.6rem 0.24rem 0.5rem;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+.lane-heading::before {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
 .lane-scroll {
@@ -696,24 +766,25 @@ watch(() => props.matches, () => {
 
 .branch-path {
   fill: none;
-  stroke: color-mix(in srgb, var(--blue) 72%, #9fb8ff);
-  stroke-width: 1.35;
+  stroke: color-mix(in srgb, var(--accent) 72%, transparent);
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.98;
+  opacity: 1;
 }
 
 .branch-path--bridge {
-  stroke: color-mix(in srgb, #99b6ff 72%, var(--blue));
-  stroke-width: 1.5;
-  opacity: 0.96;
+  stroke: #f59e0b;
+  stroke-width: 2;
+  opacity: 0.95;
+  stroke-dasharray: 5 3;
 }
 
 .round-col {
-  min-width: 174px;
+  min-width: 206px;
   display: flex;
   flex-direction: column;
-  gap: 0.48rem;
+  gap: 0.55rem;
   padding: 0;
   scroll-snap-align: start;
   position: relative;
@@ -732,13 +803,18 @@ watch(() => props.matches, () => {
 }
 
 .round-title {
-  font-size: 0.64rem;
-  font-weight: 700;
+  font-size: 0.62rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   color: var(--muted);
   text-align: left;
-  padding: 0 0.1rem 0.2rem;
+  padding: 0.26rem 0.55rem;
+  margin-bottom: 0.15rem;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--panel) 65%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 55%, var(--border));
 }
 
 @media (max-width: 768px) {
@@ -748,8 +824,8 @@ watch(() => props.matches, () => {
   }
 
   .round-col {
-    min-width: 160px;
-    gap: 0.4rem;
+    min-width: 188px;
+    gap: 0.45rem;
   }
 
   .bracket-svg {

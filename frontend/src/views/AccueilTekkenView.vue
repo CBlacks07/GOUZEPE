@@ -63,12 +63,30 @@
         </div>
       </section>
 
+      <!-- Tournoi en cours -->
+      <section v-if="liveTournament" class="card reveal delay-2">
+        <div class="mini-head">
+          <h3 class="font-semibold">Tournoi en cours</h3>
+          <router-link to="/tekken-tournois" class="text-xs font-semibold" style="color:var(--accent-l)">Voir tout</router-link>
+        </div>
+        <router-link to="/tekken-tournois" class="live-tournament-banner">
+          <span class="live-dot-sm"></span>
+          <span class="font-semibold">{{ liveTournament.name }}</span>
+          <span class="text-xs" style="color:var(--muted)">{{ liveTournament.participants_count || 0 }} participants</span>
+        </router-link>
+      </section>
+
       <!-- Quick links -->
-      <div class="grid grid-cols-2 gap-4 reveal delay-2">
+      <div class="grid grid-cols-3 gap-4 reveal delay-2">
         <router-link to="/tekken-ladder" class="quick-card quick-card--tekken">
           <BarChart2Icon class="quick-card-icon-svg" />
           <span class="quick-card-label">Ladder</span>
           <span class="quick-card-desc">Classement ELO</span>
+        </router-link>
+        <router-link to="/tekken-tournois" class="quick-card quick-card--tekken">
+          <TrophyIcon class="quick-card-icon-svg" />
+          <span class="quick-card-label">Tournois</span>
+          <span class="quick-card-desc">Brackets et scores</span>
         </router-link>
         <router-link to="/profil" class="quick-card quick-card--profil">
           <UserIcon class="quick-card-icon-svg" />
@@ -87,7 +105,7 @@ import { ref, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAPI, resolveBaseURL } from '@/composables/useAPI'
 import { useGameStore } from '@/stores/game'
-import { BarChart2Icon, UserIcon } from 'lucide-vue-next'
+import { BarChart2Icon, UserIcon, TrophyIcon } from 'lucide-vue-next'
 
 const api = useAPI()
 const game = useGameStore()
@@ -95,6 +113,7 @@ const game = useGameStore()
 const myLadder = ref(null)
 const duels = ref([])
 const loadingDuels = ref(true)
+const liveTournament = ref(null)
 
 function fmtDate(d) {
   if (!d) return ''
@@ -128,6 +147,12 @@ onMounted(async () => {
     }
   } catch (_) {}
   loadingDuels.value = false
+
+  try {
+    const { data } = await api.get('/tekken/tournaments')
+    const live = (data.tournaments || []).find((t) => t.status === 'live')
+    if (live) liveTournament.value = live
+  } catch (_) {}
 })
 </script>
 
@@ -186,6 +211,16 @@ onMounted(async () => {
 .quick-card-icon-svg { width: 1.5rem; height: 1.5rem; color: var(--accent); }
 .quick-card-label { font-family: var(--font-title); font-weight: 700; font-size: 1rem; text-transform: uppercase; letter-spacing: .03em; }
 .quick-card-desc { font-size: .75rem; color: var(--muted); }
+
+.live-tournament-banner {
+  display: flex; align-items: center; gap: .6rem; padding: .7rem 1rem;
+  border-radius: 10px; border: 1px solid rgba(255,90,44,.2);
+  background: rgba(255,90,44,.05); text-decoration: none; color: var(--text);
+  transition: border-color .2s, background .2s;
+}
+.live-tournament-banner:hover { border-color: rgba(255,90,44,.4); background: rgba(255,90,44,.08); }
+.live-dot-sm { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
 .reveal { animation: riseIn .4s ease both; }
 .delay-1 { animation-delay: 80ms; }
