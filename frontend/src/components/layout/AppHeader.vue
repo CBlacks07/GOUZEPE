@@ -57,7 +57,7 @@ import { useMembershipNotif } from '@/composables/useMembershipNotif'
 import {
   HomeIcon, CalendarDaysIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
   UsersIcon, ShieldIcon, DatabaseIcon, SunIcon, MoonIcon,
-  LogOutIcon, MenuIcon, PaletteIcon
+  LogOutIcon, MenuIcon, PaletteIcon, GamepadIcon
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -77,6 +77,7 @@ const allLinks = [
   { to: '/classement',         label: 'Classements',      icon: BarChart2Icon, adminOnly: false },
   { to: '/profil',             label: 'Mon espace',       icon: UserIcon,     adminOnly: false },
   { to: '/tournois',           label: 'Tournois',         icon: TrophyIcon,   adminOnly: false },
+  { to: '/tekken-ladder',      label: 'Tekken',           icon: GamepadIcon,  adminOnly: false },
   { to: '/admin',              label: 'Admin',            icon: ShieldIcon,   adminOnly: true },
 ]
 

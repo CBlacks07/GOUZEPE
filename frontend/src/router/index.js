@@ -121,6 +121,13 @@ const routes = [
   },
 
   {
+    path: '/tekken-ladder',
+    name: 'TekkenLadder',
+    component: () => import('@/views/TekkenLadderView.vue'),
+    meta: { requiresAuth: true, title: 'Tekken - Ladder' },
+  },
+
+  {
     path: '/admin',
     name: 'AdminConsole',
     component: () => import('@/views/admin/AdminConsoleView.vue'),
