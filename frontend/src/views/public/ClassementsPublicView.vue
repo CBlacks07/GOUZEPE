@@ -53,9 +53,9 @@
             <tbody>
               <tr v-for="(r, i) in classed" :key="r.id">
                 <td class="text-center">
-                  <span v-if="i === 0">🥇</span>
-                  <span v-else-if="i === 1">🥈</span>
-                  <span v-else-if="i === 2">🥉</span>
+                  <span v-if="i === 0" class="rank-medal rank-gold">1</span>
+                  <span v-else-if="i === 1" class="rank-medal rank-silver">2</span>
+                  <span v-else-if="i === 2" class="rank-medal rank-bronze">3</span>
                   <span v-else style="color:var(--muted)">{{ i + 1 }}</span>
                 </td>
                 <td>
@@ -181,4 +181,9 @@ onMounted(() => {
 .join-band h2 { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: clamp(1.6rem, 4vw, 2.2rem); margin: 0 0 .6rem; }
 .join-band p { color: var(--muted); margin: 0 0 1.5rem; }
 .cta-lg { padding: .8rem 1.6rem; font-size: 1rem; border-radius: .7rem; }
+
+.rank-medal { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 800; }
+.rank-gold { background: #ca8a04; color: #fff; }
+.rank-silver { background: #94a3b8; color: #fff; }
+.rank-bronze { background: #b45309; color: #fff; }
 </style>

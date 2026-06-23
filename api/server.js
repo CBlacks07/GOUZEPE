@@ -3621,6 +3621,14 @@ app.put('/me/password', auth, async (req,res)=>{
   await q(`UPDATE users SET password_hash=$2 WHERE id=$1`,[req.user.uid,newHash]);
   ok(res,{ ok:true });
 });
+app.put('/me/email', auth, async (req,res)=>{
+  const { email } = req.body||{};
+  if(!email || !email.includes('@')) return bad(res,400,'email invalide');
+  const dup = await q(`SELECT id FROM users WHERE LOWER(email)=LOWER($1) AND id!=$2`,[email.trim(), req.user.uid]);
+  if(dup.rowCount) return bad(res,409,'cet email est déjà utilisé');
+  await q(`UPDATE users SET email=$2 WHERE id=$1`,[req.user.uid, email.trim().toLowerCase()]);
+  ok(res,{ ok:true, email: email.trim().toLowerCase() });
+});
 app.post('/me/photo', auth, upload.single('photo'), async (req,res)=>{
   const pid = await getLinkedPlayerId(req.user.uid);
   if(!pid) return bad(res,404,'player not linked');

@@ -32,7 +32,7 @@
 
       <div v-if="champions.length" class="champ-row">
         <div v-for="c in champions" :key="c.div" class="champ-card">
-          <span class="champ-crown">🏆</span>
+          <TrophyIcon class="champ-crown-icon" />
           <div><span class="champ-div">Champion {{ c.div }}</span><strong>{{ c.id }}</strong></div>
         </div>
       </div>
@@ -62,7 +62,7 @@
           <h3 class="tourn-name">{{ t.name }}</h3>
           <div class="tourn-meta">
             <span>{{ t.participants_count }} joueurs</span>
-            <span v-if="t.winner_name">🏆 {{ t.winner_name }}</span>
+            <span v-if="t.winner_name"><TrophyIcon class="w-3 h-3 inline" style="color:#eab308" /> {{ t.winner_name }}</span>
           </div>
         </article>
       </div>
@@ -87,6 +87,7 @@ import PublicFooter from '@/components/public/PublicFooter.vue'
 import { useGameStore } from '@/stores/game'
 import { useSiteSettings } from '@/stores/siteSettings'
 import { resolveBaseURL, mediaUrl } from '@/composables/useAPI'
+import { TrophyIcon } from 'lucide-vue-next'
 
 const game = useGameStore()
 const site = useSiteSettings()
@@ -142,6 +143,7 @@ onMounted(async () => {
 .champ-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
 .champ-card { display: flex; align-items: center; gap: .8rem; padding: .9rem 1.2rem; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
 .champ-crown { font-size: 1.5rem; }
+.champ-crown-icon { width: 1.5rem; height: 1.5rem; color: #eab308; }
 .champ-div { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
 .champ-card strong { font-family: var(--font-title); font-size: 1.15rem; }
 
