@@ -4428,16 +4428,8 @@ app.get('/season/guest-stats', auth, async (req, res) => {
     if (!sRes.rowCount) return ok(res, { guests: [] })
     seasonId = sRes.rows[0].id
   }
-  const r = await q(`
-    SELECT g.player_id, p.name, g.journees, g.pts, g.wins, g.draws, g.losses,
-           g.bp, g.bc, g.last_date, g.last_div, g.last_rank, g.last_total, g.updated_at,
-           CASE WHEN g.journees > 0 THEN ROUND(g.pts::numeric / g.journees, 2) ELSE 0 END AS avg_pts
-    FROM guest_season_stats g
-    JOIN players p ON p.player_id = g.player_id
-    WHERE g.season_id = $1
-    ORDER BY avg_pts DESC, g.pts DESC, g.journees DESC
-  `, [seasonId])
-  ok(res, { season_id: seasonId, guests: r.rows })
+  const guests = await computeGuestStandings(seasonId)
+  ok(res, { season_id: seasonId, guests, min_apps: GUEST_MIN_APPS })
 })
 
 app.post('/admin/season/guest-stats/rebuild', auth, adminOnly, async (req, res) => {
@@ -4526,6 +4518,100 @@ async function rebuildGuestStats(seasonId) {
     `, [playerId, seasonId, s.journees, s.pts, s.v, s.n, s.d, s.bp, s.bc,
         s.last_date, s.last_div, s.last_rank, s.last_total])
   }
+}
+
+// Seuil minimum de participations (journées + tournois) pour être classé.
+const GUEST_MIN_APPS = 5
+
+// Classement des invités calculé EN DIRECT : journées + tournois membres
+// terminés (hors archivés). 1 tournoi = 1 participation. pts = 3*V + N.
+async function computeGuestStandings(seasonId) {
+  const inviteRoles = await q(`SELECT player_id, name FROM players WHERE UPPER(role)='INVITE'`)
+  const inviteIds = new Set(inviteRoles.rows.map(r => r.player_id))
+  const nameById = new Map(inviteRoles.rows.map(r => [r.player_id, r.name]))
+  if (!inviteIds.size) return []
+
+  const stats = new Map()
+  const ensure = id => {
+    if (!stats.has(id)) stats.set(id, {
+      player_id: id, name: nameById.get(id) || id,
+      journees: 0, pts: 0, wins: 0, draws: 0, losses: 0, bp: 0, bc: 0,
+      last_date: null, last_div: null, last_rank: null, last_total: null,
+    })
+    return stats.get(id)
+  }
+
+  // 1) Journées (matchdays)
+  const days = await q(`SELECT day, payload FROM matchday WHERE season_id=$1 ORDER BY day ASC`, [seasonId])
+  for (const row of days.rows) {
+    const day = dayjs(row.day).format('YYYY-MM-DD')
+    const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
+    for (const divKey of ['d1', 'd2']) {
+      const matches = payload[divKey] || []
+      const agg = new Map()
+      const e2 = id => { if (!agg.has(id)) agg.set(id, { v: 0, n: 0, d: 0, bp: 0, bc: 0 }); return agg.get(id) }
+      for (const m of matches) {
+        const a1 = m.a1 != null && m.a1 !== '' ? +m.a1 : null
+        const a2 = m.a2 != null && m.a2 !== '' ? +m.a2 : null
+        const r1 = m.r1 != null && m.r1 !== '' ? +m.r1 : null
+        const r2 = m.r2 != null && m.r2 !== '' ? +m.r2 : null
+        if (a1 !== null && a2 !== null) {
+          const A = e2(m.p1), B = e2(m.p2)
+          A.bp += a1; A.bc += a2; B.bp += a2; B.bc += a1
+          if (a1 > a2) { A.v++; B.d++ } else if (a1 < a2) { B.v++; A.d++ } else { A.n++; B.n++ }
+        }
+        if (r1 !== null && r2 !== null) {
+          const A = e2(m.p2), B = e2(m.p1)
+          A.bp += r2; A.bc += r1; B.bp += r1; B.bc += r2
+          if (r2 > r1) { A.v++; B.d++ } else if (r2 < r1) { B.v++; A.d++ } else { A.n++; B.n++ }
+        }
+      }
+      const ranked = [...agg.entries()]
+        .map(([id, s]) => ({ id, pts: s.v * 3 + s.n, ...s }))
+        .sort((a, b) => b.pts - a.pts || (b.bp - b.bc) - (a.bp - a.bc) || b.bp - a.bp)
+      ranked.forEach((rr, idx) => {
+        if (!inviteIds.has(rr.id)) return
+        const s = ensure(rr.id)
+        s.journees += 1; s.pts += rr.pts; s.wins += rr.v; s.draws += rr.n; s.losses += rr.d; s.bp += rr.bp; s.bc += rr.bc
+        if (!s.last_date || day > s.last_date) { s.last_date = day; s.last_div = divKey.toUpperCase(); s.last_rank = idx + 1; s.last_total = ranked.length }
+      })
+    }
+  }
+
+  // 2) Tournois membres TERMINÉS (hors archivés) — 1 tournoi = 1 participation
+  const tmatches = await q(`
+    SELECT m.tournament_id, p1.player_id AS pid1, p2.player_id AS pid2, m.score_p1 AS s1, m.score_p2 AS s2
+    FROM tournament_matches m
+    JOIN tournaments t ON t.id = m.tournament_id
+    JOIN tournament_participants p1 ON p1.id = m.p1_participant_id
+    JOIN tournament_participants p2 ON p2.id = m.p2_participant_id
+    WHERE t.season_id=$1 AND t.member_tournament=true AND t.status='completed'
+      AND m.status='completed' AND m.score_p1 IS NOT NULL AND m.score_p2 IS NOT NULL
+  `, [seasonId])
+  const perTour = new Map() // tid|pid -> agg
+  const addLeg = (tid, pid, gf, ga) => {
+    if (!inviteIds.has(pid)) return
+    const k = `${tid}|${pid}`
+    if (!perTour.has(k)) perTour.set(k, { pid, v: 0, n: 0, d: 0, bp: 0, bc: 0 })
+    const o = perTour.get(k)
+    o.bp += gf; o.bc += ga
+    if (gf > ga) o.v++; else if (gf < ga) o.d++; else o.n++
+  }
+  for (const r of tmatches.rows) {
+    addLeg(r.tournament_id, r.pid1, +r.s1, +r.s2)
+    addLeg(r.tournament_id, r.pid2, +r.s2, +r.s1)
+  }
+  for (const o of perTour.values()) {
+    const s = ensure(o.pid)
+    s.journees += 1
+    s.pts += o.v * 3 + o.n
+    s.wins += o.v; s.draws += o.n; s.losses += o.d; s.bp += o.bp; s.bc += o.bc
+  }
+
+  return [...stats.values()]
+    .filter(s => s.journees >= GUEST_MIN_APPS)
+    .map(s => ({ ...s, avg_pts: s.journees > 0 ? +(s.pts / s.journees).toFixed(2) : 0 }))
+    .sort((a, b) => b.avg_pts - a.avg_pts || b.pts - a.pts || b.journees - a.journees)
 }
 
 /* ====== Face-Ã -face ====== */
