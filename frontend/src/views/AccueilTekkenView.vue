@@ -7,19 +7,50 @@
       <section class="hero-section reveal">
         <div class="hero-club">
           <span class="hero-club-name">GOUZEPE</span>
-          <span class="hero-club-label">Pole Combat</span>
+          <span class="hero-club-label">{{ hero.eyebrow }}</span>
+        </div>
+
+        <!-- Bande photos defilante (si configuree) -->
+        <div v-if="strip.length" class="hero-photos-track-wrap" aria-hidden="true">
+          <div class="hero-photos-track">
+            <div
+              v-for="(src, i) in [...strip, ...strip]"
+              :key="src + i"
+              class="hero-photo-frame"
+              :style="{ '--fi': i % strip.length }"
+            >
+              <div class="hero-photo-clip">
+                <img :src="src" alt="" class="hero-photo-img" loading="lazy" />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="hero-body">
           <div class="hero-left">
             <h2 class="hero-title">
-              Bienvenue dans l'arene
-              <span class="hero-accent">Tekken</span>
+              {{ hero.title }}
+              <span v-if="hero.titleAccent" class="hero-accent">{{ hero.titleAccent }}</span>
             </h2>
-            <p class="hero-sub reveal delay-1">Ladder ELO, duels classes entre membres et tournois a elimination.</p>
+            <p class="hero-sub reveal delay-1">{{ hero.lead }}</p>
             <div class="flex flex-wrap gap-2 reveal delay-2">
-              <router-link to="/tekken-ladder" class="btn-primary">Voir le ladder</router-link>
+              <router-link to="/tekken-ladder" class="btn-primary">{{ hero.ctaPrimary }}</router-link>
               <router-link to="/profil" class="btn-ghost">Mon espace</router-link>
+            </div>
+          </div>
+
+          <!-- Visuel rotatif (si configure) -->
+          <div v-if="heroSlides.length" class="hero-visual" aria-hidden="true">
+            <div class="hero-ring hero-ring-outer"></div>
+            <div class="hero-ring hero-ring-inner"></div>
+            <div class="hero-glow"></div>
+            <Transition name="hero-img" mode="out-in">
+              <div v-if="heroSlides[heroSlideIndex]" :key="heroSlideIndex" :class="['hero-img-wrap', heroSlides[heroSlideIndex].anim]">
+                <img :src="heroSlides[heroSlideIndex].src" :alt="heroSlides[heroSlideIndex].alt" class="hero-slide-img" />
+              </div>
+            </Transition>
+            <div class="hero-dots">
+              <span v-for="(_, i) in heroSlides" :key="i" :class="['hero-dot', { active: i === heroSlideIndex }]" />
             </div>
           </div>
         </div>
@@ -101,19 +132,30 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { useAPI, resolveBaseURL } from '@/composables/useAPI'
+import { useAPI, resolveBaseURL, mediaUrl } from '@/composables/useAPI'
 import { useGameStore } from '@/stores/game'
+import { useSiteSettings, DEFAULTS } from '@/stores/siteSettings'
 import { BarChart2Icon, UserIcon, TrophyIcon } from 'lucide-vue-next'
 
 const api = useAPI()
 const game = useGameStore()
+const site = useSiteSettings()
 
 const myLadder = ref(null)
 const duels = ref([])
 const loadingDuels = ref(true)
 const liveTournament = ref(null)
+
+// Reglages d'apparence de l'accueil Tekken (avec valeurs par defaut)
+const hero = computed(() => ({ ...DEFAULTS.tekkenHome, ...(site.settings.tekkenHome || {}) }))
+const strip = computed(() => (site.settings.tekkenHome?.slides || []).filter(Boolean).map(mediaUrl))
+
+const HERO_ANIMS = ['slide-float', 'slide-zoom', 'slide-spin', 'slide-drift']
+const heroSlides = ref([])
+const heroSlideIndex = ref(0)
+let heroSlideTimer = null
 
 function fmtDate(d) {
   if (!d) return ''
@@ -122,6 +164,14 @@ function fmtDate(d) {
 
 onMounted(async () => {
   game.set('tekken')
+
+  const cmsHero = (site.settings.tekkenHome?.hero || []).filter(Boolean)
+  heroSlides.value = cmsHero.map((src, i) => ({ src: mediaUrl(src), alt: `Tekken ${i + 1}`, anim: HERO_ANIMS[i % HERO_ANIMS.length] }))
+  if (heroSlides.value.length > 1) {
+    heroSlideTimer = setInterval(() => {
+      heroSlideIndex.value = (heroSlideIndex.value + 1) % heroSlides.value.length
+    }, 3600)
+  }
 
   try {
     const { data } = await api.get('/me/player')
@@ -154,6 +204,10 @@ onMounted(async () => {
     if (live) liveTournament.value = live
   } catch (_) {}
 })
+
+onUnmounted(() => {
+  if (heroSlideTimer) clearInterval(heroSlideTimer)
+})
 </script>
 
 <style scoped>
@@ -173,6 +227,83 @@ onMounted(async () => {
 .hero-title { font-family: var(--font-title); font-weight: 800; font-size: clamp(1.6rem, 4vw, 2.4rem); line-height: 1.15; text-transform: uppercase; letter-spacing: .02em; margin: 0 0 .8rem; }
 .hero-accent { color: var(--accent-l); display: block; }
 .hero-sub { color: var(--muted); font-size: clamp(.88rem, 2vw, 1rem); line-height: 1.5; margin: 0 0 1.25rem; }
+
+/* === Bande photos defilante === */
+.hero-photos-track-wrap {
+  overflow: hidden; padding: 10px 0; margin-bottom: 1.25rem;
+  mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+}
+.hero-photos-track-wrap:hover .hero-photos-track { animation-play-state: paused; }
+.hero-photos-track { display: flex; gap: 14px; width: max-content; animation: photo-scroll 28s linear infinite; }
+@keyframes photo-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+.hero-photo-frame {
+  flex: 0 0 clamp(90px, 10vw, 130px); height: clamp(90px, 10vw, 130px);
+  animation: photo-float calc(3s + var(--fi, 0) * 0.4s) ease-in-out infinite alternate;
+  animation-delay: calc(var(--fi, 0) * -0.35s); will-change: transform; z-index: 1;
+}
+.hero-photo-frame:hover { animation-play-state: paused; z-index: 5; }
+.hero-photo-frame:hover .hero-photo-clip {
+  box-shadow: 0 10px 32px color-mix(in srgb, var(--accent) 40%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent); transform: scale(1.1);
+}
+.hero-photo-clip {
+  width: 100%; height: 100%; border-radius: 12px; overflow: hidden;
+  border: 2px solid rgba(255,255,255,.07); box-shadow: 0 6px 20px rgba(0,0,0,.45);
+  transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+  background: #fff; display: flex; align-items: center; justify-content: center;
+}
+@keyframes photo-float {
+  0% { transform: translateY(-5px) rotate(-1.5deg); }
+  50% { transform: translateY(2px) rotate(.5deg); }
+  100% { transform: translateY(6px) rotate(1.8deg); }
+}
+.hero-photo-img { width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; background: #fff; }
+
+/* === Visuel rotatif === */
+.hero-visual {
+  flex: 0 0 clamp(160px, 26vw, 300px); height: clamp(160px, 26vw, 300px);
+  position: relative; display: flex; align-items: center; justify-content: center;
+}
+.hero-ring { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid transparent; pointer-events: none; }
+.hero-ring-outer {
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  animation: ring-cw 12s linear infinite; box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.hero-ring-outer::before {
+  content: ''; position: absolute; top: -4px; left: 40%; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 10px 3px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.hero-ring-inner { inset: 18px; border-color: color-mix(in srgb, var(--accent) 18%, transparent); animation: ring-ccw 9s linear infinite; }
+.hero-glow {
+  position: absolute; inset: 15%; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent) 0%, transparent 72%);
+  animation: glow-pulse 3.5s ease-in-out infinite; pointer-events: none;
+}
+.hero-img-wrap {
+  position: relative; z-index: 2; width: calc(100% - 44px); height: calc(100% - 44px);
+  border-radius: 50%; overflow: hidden; box-shadow: 0 0 32px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.hero-slide-img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+.slide-float .hero-slide-img { animation: float-anim 4s ease-in-out infinite; }
+.slide-zoom .hero-slide-img { animation: zoom-pulse 3.5s ease-in-out infinite; }
+.slide-spin .hero-slide-img { animation: spin-float 7s ease-in-out infinite; }
+.slide-drift .hero-slide-img { animation: drift-anim 5s ease-in-out infinite; }
+.hero-dots { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 3; }
+.hero-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(148,163,184,.4); transition: background .3s, transform .3s; }
+.hero-dot.active { background: var(--accent); transform: scale(1.35); box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent); }
+.hero-img-enter-active { animation: img-in .65s cubic-bezier(.22,1,.36,1) both; }
+.hero-img-leave-active { animation: img-out .4s ease both; }
+@keyframes ring-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes ring-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+@keyframes glow-pulse { 0%,100% { opacity: .6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.12); } }
+@keyframes float-anim { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+@keyframes zoom-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+@keyframes spin-float { 0% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-8px) rotate(5deg); } 50% { transform: translateY(-14px) rotate(0); } 75% { transform: translateY(-6px) rotate(-5deg); } 100% { transform: translateY(0) rotate(0); } }
+@keyframes drift-anim { 0%,100% { transform: translateX(0); } 50% { transform: translateX(10px); } }
+@keyframes img-in { from { opacity: 0; transform: scale(.88) translateY(14px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes img-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.06) translateY(-10px); } }
+@media (max-width: 540px) { .hero-visual { display: none; } }
 
 .mini-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .8rem; }
 
