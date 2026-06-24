@@ -159,6 +159,60 @@
           </div>
         </section>
 
+        <!-- Accueil Tekken (hero) -->
+        <section class="card">
+          <h2 class="sec-title">Accueil Tekken (hero)</h2>
+          <div><label class="label">Eyebrow</label><input v-model="form.tekkenHome.eyebrow" class="input" /></div>
+          <div class="grid2 mt-3">
+            <div><label class="label">Titre</label><input v-model="form.tekkenHome.title" class="input" /></div>
+            <div><label class="label">Mot accentué</label><input v-model="form.tekkenHome.titleAccent" class="input" /></div>
+          </div>
+          <div class="mt-3"><label class="label">Texte</label><textarea v-model="form.tekkenHome.lead" class="input" rows="2" style="resize:vertical" /></div>
+          <div class="mt-3"><label class="label">Bouton principal</label><input v-model="form.tekkenHome.ctaPrimary" class="input" /></div>
+        </section>
+
+        <!-- Bande photos de l'accueil Tekken -->
+        <section class="card">
+          <h2 class="sec-title">Bande photos — accueil Tekken</h2>
+          <p class="text-xs mb-3" style="color:var(--muted)">
+            La bande de photos qui défile en haut de l'accueil Tekken. Laisse vide pour masquer.
+            Tu peux coller des <strong>URLs</strong> (ex. Cloudinary) ou uploader.
+          </p>
+          <div v-for="(slide, i) in form.tekkenHome.slides" :key="i" class="media-row mt-2">
+            <img :src="resolveUrl(form.tekkenHome.slides[i])" alt="" class="media-prev" />
+            <input v-model="form.tekkenHome.slides[i]" class="input" placeholder="https://res.cloudinary.com/..." />
+            <button class="btn" @click="removeAt(form.tekkenHome.slides, i)" title="Retirer"><XIcon class="w-4 h-4" /></button>
+          </div>
+          <div class="flex gap-2 mt-3 flex-wrap">
+            <button class="btn" @click="addUrl(form.tekkenHome.slides)"><PlusIcon class="w-4 h-4" /> Ajouter une URL</button>
+            <label class="btn upload-btn">
+              <UploadIcon class="w-4 h-4" /> Uploader une image
+              <input type="file" accept="image/*" hidden @change="onUpload($event, v => form.tekkenHome.slides.push(v))" />
+            </label>
+          </div>
+        </section>
+
+        <!-- Images du hero de l'accueil Tekken -->
+        <section class="card">
+          <h2 class="sec-title">Images du hero — accueil Tekken</h2>
+          <p class="text-xs mb-3" style="color:var(--muted)">
+            Le visuel rotatif du hero (à droite du titre). Laisse vide pour masquer.
+            <strong>URLs</strong> Cloudinary ou upload.
+          </p>
+          <div v-for="(img, i) in form.tekkenHome.hero" :key="i" class="media-row mt-2">
+            <img :src="resolveUrl(form.tekkenHome.hero[i])" alt="" class="media-prev" />
+            <input v-model="form.tekkenHome.hero[i]" class="input" placeholder="https://res.cloudinary.com/..." />
+            <button class="btn" @click="removeAt(form.tekkenHome.hero, i)" title="Retirer"><XIcon class="w-4 h-4" /></button>
+          </div>
+          <div class="flex gap-2 mt-3 flex-wrap">
+            <button class="btn" @click="addUrl(form.tekkenHome.hero)"><PlusIcon class="w-4 h-4" /> Ajouter une URL</button>
+            <label class="btn upload-btn">
+              <UploadIcon class="w-4 h-4" /> Uploader une image
+              <input type="file" accept="image/*" hidden @change="onUpload($event, v => form.tekkenHome.hero.push(v))" />
+            </label>
+          </div>
+        </section>
+
       </div>
 
       <p v-if="uploading" class="mt-3 text-sm" style="color:var(--muted)">
