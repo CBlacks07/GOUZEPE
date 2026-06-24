@@ -28,6 +28,16 @@ export const DEFAULTS = {
     slides: [], // bande photos défilante (haut de l'accueil)
     hero: [],   // image(s) du hero (visuel rotatif)
   },
+  // Accueil membre Tekken — hero personnalisable + médias
+  tekkenHome: {
+    eyebrow: 'Pôle Combat',
+    title: "Bienvenue dans l'arène",
+    titleAccent: 'Tekken',
+    lead: 'Ladder ELO, duels classés entre membres et tournois à élimination.',
+    ctaPrimary: 'Voir le ladder',
+    slides: [], // bande photos défilante (haut de l'accueil Tekken)
+    hero: [],   // image(s) du hero (visuel rotatif)
+  },
 }
 
 function isObj(v) { return v && typeof v === 'object' && !Array.isArray(v) }

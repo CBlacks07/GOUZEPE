@@ -109,25 +109,102 @@
               </div>
               <button v-if="nextFixtureDay" @click="goToDay(nextFixtureDay)" class="btn text-sm" title="Ouvrir cette journée">Voir</button>
             </div>
-
-            <p class="text-xs" style="color:var(--muted)">Pronostics</p>
-            <Transition name="insight-fade" mode="out-in">
-              <div v-if="currentNextInsight" :key="'next-' + nextInsightIndex" class="insight-box insight-box--alt">
-                <span class="insight-tag insight-tag--alt">{{ currentNextInsight.tag }}</span>
-                <p class="insight-text">{{ currentNextInsight.text }}</p>
-              </div>
-            </Transition>
-            <div v-if="nextInsights.length > 1" class="insight-dots" aria-hidden="true">
-              <span
-                v-for="(_, i) in nextInsights"
-                :key="'dot-' + i"
-                class="insight-dot"
-                :class="{ active: i === nextInsightIndex }"
-              />
-            </div>
           </div>
         </div>
       </div>
+
+      <!-- Pronostics -->
+      <section v-if="hasPronostics" class="card pronos-card reveal delay-1">
+        <div class="pronos-head">
+          <h3 class="font-semibold">Pronostics</h3>
+          <span class="pronos-sub">Estimations · prochaine journée</span>
+        </div>
+
+        <div class="pronos-grid">
+          <!-- Course au titre -->
+          <div v-if="titleRace.length" class="pronos-block">
+            <div class="pronos-block-head">
+              <span class="pronos-block-title">Course au titre</span>
+              <span v-if="titleConfidence" class="pronos-chip" :class="`tone-${titleConfidence.tone}`">{{ titleConfidence.label }}</span>
+            </div>
+            <div class="title-race">
+              <div v-for="row in titleRace" :key="row.id" class="tr-row" :class="{ leader: row.rank === 1 }">
+                <span class="tr-rank">{{ row.rank }}</span>
+                <span class="tr-name">{{ row.id }}</span>
+                <span class="tr-moy">{{ row.moyenne.toFixed(2) }}</span>
+                <span class="tr-gap">{{ row.rank === 1 ? 'leader' : '−' + row.gap.toFixed(2) }}</span>
+              </div>
+            </div>
+            <p v-if="formPlayer" class="pronos-form-line">
+              <span class="dot" /> En forme : <strong>{{ formPlayer.name }}</strong>
+              <span class="muted">{{ formPlayer.pts }} pts · {{ formPlayer.bp }} buts (2 dern. J)</span>
+            </p>
+
+            <!-- Invités en vue (sous la course au titre) -->
+            <div v-if="hasGuests" class="guests-inline">
+              <div class="pronos-block-head">
+                <span class="pronos-block-title">Invités en vue</span>
+                <span class="pronos-count">{{ featuredGuests.length }} classé(s) · ≥5 sorties</span>
+              </div>
+
+              <div v-if="topGuest" class="guest-hero">
+                <div class="guest-hero-id">
+                  <span class="guest-avatar">{{ guestInitials(topGuest) }}</span>
+                  <div class="min-w-0">
+                    <div class="guest-hero-name">{{ topGuest.id }}</div>
+                    <div class="guest-hero-sub">
+                      {{ topGuest.apps }} sortie(s) · journées + tournois
+                      <template v-if="topGuest.lastRank"> · dernière journée {{ rankLabel(topGuest.lastRank) }} en {{ topGuest.lastDivision || 'D?' }}</template>
+                    </div>
+                  </div>
+                  <span class="guest-badge">Top invité</span>
+                </div>
+                <div v-if="topGuestStats" class="guest-hero-stats">
+                  <div class="ghs"><span class="ghs-v">{{ topGuestStats.pts }}</span><span class="ghs-l">pts/J</span></div>
+                  <div class="ghs"><span class="ghs-v">{{ topGuestStats.bp }}</span><span class="ghs-l">BP/J</span></div>
+                  <div class="ghs"><span class="ghs-v">{{ topGuestStats.bc }}</span><span class="ghs-l">BC/J</span></div>
+                  <div class="ghs"><span class="ghs-v" :class="topGuestStats.diffPos ? 'pos' : 'neg'">{{ topGuestStats.diff }}</span><span class="ghs-l">Diff/J</span></div>
+                </div>
+              </div>
+
+              <div v-if="featuredGuests.length > 1" class="guest-list">
+                <div v-for="(g, i) in featuredGuests.slice(1, 5)" :key="g.id" class="guest-row">
+                  <span class="guest-rank">{{ i + 2 }}</span>
+                  <span class="guest-name">{{ g.id }}</span>
+                  <span class="guest-meta">{{ g.apps }} sorties · {{ diffPerJLabel(g) }} diff</span>
+                  <span class="guest-avg">{{ g.avg.toFixed(1) }}<small> pts/J</small></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Affiches de la journée -->
+          <div class="pronos-block">
+            <div class="pronos-block-head">
+              <span class="pronos-block-title">Affiches de la journée</span>
+              <span v-if="matchPredictions.length" class="pronos-count">{{ matchPredictions.length }}</span>
+            </div>
+            <div v-if="matchPredictions.length" class="pred-list">
+              <div v-for="p in matchPredictions" :key="p.key" class="pred-row">
+                <div class="pred-top">
+                  <span class="pred-side" :class="{ fav: !p.close && p.favorite === p.p1 }">{{ p.p1 }}</span>
+                  <span class="pred-div">{{ p.div }}</span>
+                  <span class="pred-side right" :class="{ fav: !p.close && p.favorite === p.p2 }">{{ p.p2 }}</span>
+                </div>
+                <div class="pred-bar"><div class="pred-bar-fill" :style="{ width: p.prob1 + '%' }" /></div>
+                <div class="pred-foot">
+                  <span class="pred-pct">{{ p.prob1 }}%</span>
+                  <span class="pred-verdict">
+                    {{ p.unknown ? 'Incertain' : (p.close ? 'Match serré' : 'Favori : ' + p.favorite + ' · ' + p.favProb + '%') }}
+                  </span>
+                  <span class="pred-pct">{{ 100 - p.prob1 }}%</span>
+                </div>
+              </div>
+            </div>
+            <p v-else class="pronos-empty">Aucune affiche programmée pour l'instant. Les pronostics s'afficheront dès que la grille sera composée.</p>
+          </div>
+        </div>
+      </section>
 
       <!-- Quick-link cards -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 reveal delay-2">
@@ -194,6 +271,11 @@ const nextInsights      = ref([])
 const nextInsightIndex  = ref(0)
 const featuredInvite    = ref([])   // tableau trié avg desc
 const guestStatsLoaded  = ref(false)
+
+// Pronostics
+const seasonStandings   = ref([])   // classement saison complet (moyenne par joueur)
+const nextPayloadRef    = ref(null) // payload de la prochaine journée
+const knownDaysCount    = ref(0)    // nb de journées connues (pour le seuil de classement)
 let realtimeOffSeasonChanged = null
 let realtimeOffTournamentChanged = null
 let realtimeOffDayConfirmed = null
@@ -281,6 +363,147 @@ const headlineLastPublishedLabel = computed(() => {
   const d = recentConfirmedDays.value[0]?.date
   return d ? fmtDate(d) : ''
 })
+
+/* ====== Pronostics : course au titre + prédictions journée + forme ====== */
+const nameById = computed(() => {
+  const m = new Map()
+  for (const p of allPlayers.value) if (p?.player_id) m.set(String(p.player_id), p.name || p.player_id)
+  for (const r of seasonStandings.value) if (r?.id && !m.has(String(r.id))) m.set(String(r.id), r.name || r.id)
+  return m
+})
+// On affiche l'identifiant du joueur (player_id), pas le nom.
+function labelOf(token) {
+  return String(token || '')
+}
+const moyenneById = computed(() => {
+  const m = new Map()
+  for (const r of seasonStandings.value) m.set(String(r.id), Number(r.moyenne) || 0)
+  return m
+})
+const titleThreshold = computed(() => (knownDaysCount.value ? Math.ceil(knownDaysCount.value * 0.25) : 0))
+
+const titleRace = computed(() => {
+  const classed = seasonStandings.value
+    .filter(r => Number(r.participations || 0) >= titleThreshold.value)
+    .slice()
+    .sort((a, b) => Number(b.moyenne || 0) - Number(a.moyenne || 0) || Number(b.total || 0) - Number(a.total || 0))
+  const leader = classed[0]
+  return classed.slice(0, 3).map((r, i) => ({
+    rank: i + 1,
+    id: r.id,
+    name: r.name || r.id,
+    moyenne: Number(r.moyenne || 0),
+    gap: leader ? +(Number(leader.moyenne || 0) - Number(r.moyenne || 0)).toFixed(2) : 0,
+  }))
+})
+
+const titleConfidence = computed(() => {
+  const r = titleRace.value
+  if (r.length < 2) return r.length === 1 ? { label: 'Seul classé', tone: 'open' } : null
+  const lead = r[1].gap // écart du 2e au leader = avance du leader
+  if (lead >= 1.2) return { label: 'Quasi assuré', tone: 'strong' }
+  if (lead >= 0.5) return { label: 'Favori', tone: 'mid' }
+  return { label: 'Course ouverte', tone: 'open' }
+})
+
+const PRED_K = 2.2 // sensibilité moyenne -> probabilité (logistique)
+const matchPredictions = computed(() => {
+  const p = nextPayloadRef.value
+  if (!p) return []
+  const out = []
+  for (const div of ['d1', 'd2']) {
+    for (const m of (p[div] || [])) {
+      if (!m?.p1 || !m?.p2) continue
+      const r1 = moyenneById.value.get(String(m.p1))
+      const r2 = moyenneById.value.get(String(m.p2))
+      const has1 = r1 != null && r1 > 0
+      const has2 = r2 != null && r2 > 0
+      let prob1
+      if (!has1 && !has2) {
+        prob1 = 0.5
+      } else {
+        const a = has1 ? r1 : Math.max(1, (r2 || 6) - 2)
+        const b = has2 ? r2 : Math.max(1, (r1 || 6) - 2)
+        prob1 = 1 / (1 + Math.exp(-(a - b) / PRED_K))
+      }
+      const favIsP1 = prob1 >= 0.5
+      out.push({
+        key: `${div}-${m.p1}-${m.p2}`,
+        div: div.toUpperCase(),
+        p1: labelOf(m.p1),
+        p2: labelOf(m.p2),
+        prob1: Math.round(prob1 * 100),
+        favorite: favIsP1 ? labelOf(m.p1) : labelOf(m.p2),
+        favProb: Math.round((favIsP1 ? prob1 : 1 - prob1) * 100),
+        close: Math.abs(prob1 - 0.5) < 0.06,
+        unknown: !has1 && !has2,
+      })
+    }
+  }
+  return out
+})
+
+const formPlayer = computed(() => {
+  const days = recentConfirmedDays.value.slice(0, 2)
+  if (!days.length) return null
+  const rows = [...collectDivisionForm(days, 'd1'), ...collectDivisionForm(days, 'd2')]
+    .filter(r => inferRoleForPlayer(r.id) !== 'INVITE')
+  if (!rows.length) return null
+  rows.sort((a, b) => averagePtsPerMatch(b) - averagePtsPerMatch(a) || Number(b.PTS || 0) - Number(a.PTS || 0))
+  const t = rows[0]
+  return { id: t.id, name: labelOf(t.id), pts: Number(t.PTS || 0), bp: Number(t.BP || 0) }
+})
+
+const hasPronostics = computed(() => titleRace.value.length > 0 || matchPredictions.value.length > 0)
+
+async function loadStandings() {
+  try {
+    const { data } = await api.get('/standings')
+    seasonStandings.value = Array.isArray(data.standings) ? data.standings : []
+  } catch (_) {
+    seasonStandings.value = []
+  }
+}
+
+/* ====== Invités en vue ====== */
+const featuredGuests = computed(() =>
+  (featuredInvite.value || [])
+    .filter(g => Number(g.apps || 0) > 0)
+    .slice()
+    .sort((a, b) => Number(b.avg || 0) - Number(a.avg || 0) || Number(b.pts || 0) - Number(a.pts || 0))
+)
+const topGuest = computed(() => featuredGuests.value[0] || null)
+const hasGuests = computed(() => featuredGuests.value.length > 0)
+
+// Stats du top invité, exprimées en moyenne par journée (équitable entre invités)
+const topGuestStats = computed(() => {
+  const g = topGuest.value
+  if (!g || !g.apps) return null
+  const bpj = g.bp / g.apps
+  const bcj = g.bc / g.apps
+  const diffj = g.diff / g.apps
+  return {
+    pts: g.avg.toFixed(1),
+    bp: bpj.toFixed(1),
+    bc: bcj.toFixed(1),
+    diff: (diffj > 0 ? '+' : '') + diffj.toFixed(1),
+    diffPos: diffj >= 0,
+  }
+})
+
+function perJ(value, apps) {
+  const a = Number(apps || 0)
+  return a > 0 ? Number(value || 0) / a : 0
+}
+function diffPerJLabel(g) {
+  const v = perJ(g.diff, g.apps)
+  return (v > 0 ? '+' : '') + v.toFixed(1)
+}
+
+function guestInitials(g) {
+  const s = String(g?.id || g?.name || '').replace(/[^A-Za-z0-9]/g, '')
+  return (s.slice(0, 2) || '?').toUpperCase()
+}
 
 /* ====== Helpers ====== */
 function fmtDate(d) {
@@ -482,7 +705,7 @@ function unbindRealtimeListeners() {
 
 /* ====== Lifecycle ====== */
 onMounted(async () => {
-  await Promise.all([loadSeason(), loadPlayers()])
+  await Promise.all([loadSeason(), loadPlayers(), loadStandings()])
   bindRealtimeListeners()
   await loadHeadline()
   await loadNextFixture()
@@ -597,25 +820,59 @@ async function loadGuestStats() {
   } catch (_) {}
 }
 
+// Temps forts de la dernière journée publiée (récap "À la une").
 function buildHeadlineFlashes(recentDays) {
-  if (!featuredInvite.value || !featuredInvite.value.length) {
-    return [{
-      tag: 'Invité en vue',
-      text: 'Aucun invité actif détecté sur la saison en cours.'
-    }]
+  const latest = (recentDays || [])[0]
+  const p = latest?.payload
+  if (!p) return [{ tag: 'À la une', text: 'Publie une journée pour afficher les temps forts.' }]
+
+  const flashes = []
+  const allMatches = [...(p.d1 || []), ...(p.d2 || [])].filter(m => m?.p1 && m?.p2)
+
+  // Carton du jour : plus large écart sur une manche
+  let best = null
+  for (const m of allMatches) {
+    const legs = [
+      { a: sc(m.a1), b: sc(m.a2) },
+      { a: sc(m.r1), b: sc(m.r2) },
+    ]
+    for (const leg of legs) {
+      if (leg.a === null || leg.b === null) continue
+      const margin = Math.abs(leg.a - leg.b)
+      if (margin <= 0) continue
+      if (!best || margin > best.margin) {
+        const p1Win = leg.a > leg.b
+        best = {
+          margin,
+          winner: p1Win ? m.p1 : m.p2,
+          loser: p1Win ? m.p2 : m.p1,
+          wScore: Math.max(leg.a, leg.b),
+          lScore: Math.min(leg.a, leg.b),
+        }
+      }
+    }
+  }
+  if (best) {
+    flashes.push({ tag: 'Carton du jour', text: `${labelOf(best.winner)} s'impose ${best.wScore}–${best.lScore} face à ${labelOf(best.loser)}.` })
   }
 
-  const inv = featuredInvite.value[0]
-  const avgBP = inv.apps ? (inv.bp / inv.apps).toFixed(1) : '0'
-  const avgBC = inv.apps ? (inv.bc / inv.apps).toFixed(1) : '0'
-  return [{
-    tag: 'Invité en vue',
-    text: pickRandom([
-      `${inv.id} domine les invités avec ${inv.avg.toFixed(1)} pts/journée sur les dernières journées (${inv.V}V, ${inv.bp}BP). ${rankLabel(inv.lastRank)} en ${inv.lastDivision || 'D?'} lors de sa dernière sortie.`,
-      `${inv.id} s'impose comme l'invité le plus performant récemment — ${inv.pts} pts en ${inv.apps} journée(s), ${avgBP} buts/journée. Capable de bousculer la hiérarchie.`,
-      `${inv.id} fait parler sur les dernières journées : ${inv.V} victoire(s), ${inv.diff > 0 ? '+' : ''}${inv.diff} de diff. Un invité qui pèse en ${inv.lastDivision || 'D?'}.`
-    ])
-  }]
+  // Buteur & patron du jour (membres uniquement, pour ne pas doublonner les invités)
+  const agg = [...computeStandingsSimple(p.d1 || []), ...computeStandingsSimple(p.d2 || [])]
+    .filter(r => inferRoleForPlayer(r.id) !== 'INVITE')
+  if (agg.length) {
+    const scorer = agg.slice().sort((a, b) => Number(b.BP || 0) - Number(a.BP || 0))[0]
+    if (scorer && Number(scorer.BP || 0) > 0) {
+      flashes.push({ tag: 'Buteur du jour', text: `${labelOf(scorer.id)} a fait trembler les filets : ${scorer.BP} but(s) sur la journée.` })
+    }
+    const boss = agg.slice().sort((a, b) =>
+      Number(b.V || 0) - Number(a.V || 0) || (Number(b.BP || 0) - Number(b.BC || 0)) - (Number(a.BP || 0) - Number(a.BC || 0)))[0]
+    if (boss && Number(boss.V || 0) > 0) {
+      flashes.push({ tag: 'En patron', text: `${labelOf(boss.id)} a dominé sa journée (${boss.V} victoire(s)).` })
+    }
+  }
+
+  if (!flashes.length) flashes.push({ tag: 'À la une', text: 'Journée publiée — temps forts à venir.' })
+  return flashes
 }
 
 function buildNextInsights(recentDays, nextPayload) {
@@ -883,7 +1140,7 @@ async function loadHeadline() {
   try {
     if (!currentSeason.value?.id) {
       newsItems.value = [{ title: 'À la une', meta: 'Aucune saison active' }]
-      headlineFlashes.value = [{ tag: 'Invité en vue', text: 'Active une saison pour générer les tendances.' }]
+      headlineFlashes.value = [{ tag: 'À la une', text: 'Active une saison pour générer les tendances.' }]
       return
     }
 
@@ -891,7 +1148,7 @@ async function loadHeadline() {
     const days = (daysData.days || []).sort()
     if (!days.length) {
       newsItems.value = [{ title: 'À la une', meta: 'Aucune journée planifiée' }]
-      headlineFlashes.value = [{ tag: 'Invité en vue', text: 'Ajoute une première journée pour alimenter les highlights.' }]
+      headlineFlashes.value = [{ tag: 'À la une', text: 'Ajoute une première journée pour alimenter les highlights.' }]
       return
     }
 
@@ -899,7 +1156,7 @@ async function loadHeadline() {
     const latest = recentConfirmedDays.value[0]
     if (!latest?.payload) {
       newsItems.value = [{ title: 'À la une', meta: 'Aucune journée publiée' }]
-      headlineFlashes.value = [{ tag: 'Invité en vue', text: 'Publie la prochaine journée pour afficher les tendances.' }]
+      headlineFlashes.value = [{ tag: 'À la une', text: 'Publie la prochaine journée pour afficher les tendances.' }]
       return
     }
 
@@ -925,7 +1182,7 @@ async function loadHeadline() {
     headlineFlashIndex.value = 0
   } catch (_) {
     newsItems.value = [{ title: 'À la une', meta: 'Erreur de chargement' }]
-    headlineFlashes.value = [{ tag: 'Invité en vue', text: 'Impossible de calculer les highlights pour le moment.' }]
+    headlineFlashes.value = [{ tag: 'À la une', text: 'Impossible de calculer les highlights pour le moment.' }]
   } finally {
     loadingNews.value = false
     restartCardInsightsTicker()
@@ -978,6 +1235,7 @@ async function loadNextFixture() {
       try {
         const { data: daysData } = await api.get(`/seasons/${currentSeason.value.id}/matchdays`)
         knownDays = daysData.days || []
+        knownDaysCount.value = knownDays.length
         if (!recentConfirmedDays.value.length) {
           recentConfirmedDays.value = await fetchRecentConfirmedDays([...knownDays].sort(), knownDays.length)
         }
@@ -1027,6 +1285,7 @@ async function loadNextFixture() {
     } else {
       nextFixtureMeta.value = 'Aucune confrontation enregistrée pour le moment'
     }
+    nextPayloadRef.value = payload
     nextInsights.value = buildNextInsights(recentConfirmedDays.value, payload)
     nextInsightIndex.value = 0
   } catch (_) {
@@ -1050,6 +1309,8 @@ async function loadNextFixture() {
   position: relative;
   z-index: 1;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding: clamp(14px, 2.2vw, 30px);
 }
 
@@ -1669,5 +1930,140 @@ async function loadNextFixture() {
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* ====== Pronostics ====== */
+/* Contention : empêcher tout débordement horizontal (min-width:0 sur la chaîne flex/grid) */
+.pronos-card, .guests-card { margin-bottom: 16px; overflow: hidden; min-width: 0; max-width: 100%; }
+.pronos-grid, .pronos-block, .guests-inline, .title-race, .pred-list,
+.guest-hero, .guest-hero-id, .guest-hero-stats, .pred-row, .pred-top, .tr-row, .guest-row { min-width: 0; max-width: 100%; }
+.pronos-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; margin-bottom: 1rem; }
+.pronos-sub { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+.pronos-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
+@media (min-width: 900px) { .pronos-grid { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); } }
+
+.pronos-block-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .6rem; }
+.pronos-block-title { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.pronos-count { font-size: .68rem; font-weight: 700; color: var(--muted); background: color-mix(in srgb, var(--panel) 70%, transparent); border: 1px solid var(--border); border-radius: 999px; padding: .05rem .45rem; }
+
+.pronos-chip { font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: .12rem .5rem; border-radius: 999px; }
+.pronos-chip.tone-strong { color: #22c55e; background: color-mix(in srgb, #22c55e 16%, transparent); border: 1px solid color-mix(in srgb, #22c55e 35%, transparent); }
+.pronos-chip.tone-mid { color: var(--accent-l, var(--accent)); background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent); }
+.pronos-chip.tone-open { color: #f59e0b; background: color-mix(in srgb, #f59e0b 14%, transparent); border: 1px solid color-mix(in srgb, #f59e0b 32%, transparent); }
+
+/* Course au titre */
+.title-race { display: flex; flex-direction: column; gap: .3rem; }
+.tr-row { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto auto; align-items: center; gap: .55rem; padding: .4rem .55rem; border-radius: 9px; border: 1px solid color-mix(in srgb, var(--border) 55%, transparent); background: color-mix(in srgb, var(--panel) 55%, transparent); }
+.tr-row.leader { border-color: color-mix(in srgb, #22c55e 40%, var(--border)); background: color-mix(in srgb, #22c55e 8%, transparent); }
+.tr-rank { font-weight: 800; font-size: .8rem; color: var(--muted); text-align: center; }
+.tr-row.leader .tr-rank { color: #22c55e; }
+.tr-name { font-weight: 600; font-size: .88rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-moy { font-family: var(--font-title); font-weight: 800; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.tr-gap { font-size: .7rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 3.2rem; text-align: right; }
+.tr-row.leader .tr-gap { color: #22c55e; font-weight: 700; }
+
+.pronos-form-line { margin-top: .65rem; font-size: .78rem; display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.pronos-form-line .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+.pronos-form-line .muted { color: var(--muted); }
+
+/* Affiches */
+.pred-list { display: flex; flex-direction: column; gap: .6rem; max-height: 360px; overflow-y: auto; padding-right: .35rem; scrollbar-width: thin; }
+.pred-list::-webkit-scrollbar { width: 7px; }
+.pred-list::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--muted) 35%, transparent); border-radius: 999px; }
+.pred-list::-webkit-scrollbar-track { background: transparent; }
+.pred-row { padding: .55rem .6rem; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--border) 55%, transparent); background: color-mix(in srgb, var(--panel) 50%, transparent); }
+.pred-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: .5rem; margin-bottom: .4rem; }
+.pred-side { font-size: .85rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pred-side.right { text-align: right; }
+.pred-side.fav { color: var(--accent-l, var(--accent)); font-weight: 800; }
+.pred-div { font-size: .58rem; font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: .04rem .4rem; }
+.pred-bar { height: 7px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--muted) 22%, transparent); }
+.pred-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-l, var(--accent))); transition: width .4s ease; }
+.pred-foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .32rem; }
+.pred-pct { font-size: .72rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); }
+.pred-verdict { font-size: .72rem; color: var(--muted); text-align: center; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.pronos-empty { font-size: .82rem; color: var(--muted); line-height: 1.5; padding: .4rem 0; }
+
+/* ====== Invités en vue ====== */
+.guests-card { margin-bottom: 16px; }
+.guests-inline { margin-top: 1.1rem; padding-top: .9rem; border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.guests-inline .pronos-block-head { margin-bottom: .6rem; }
+.guests-inline .guest-hero-stats { gap: .85rem; }
+.guest-hero {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  padding: .85rem 1rem; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.guest-hero-id { display: flex; align-items: center; gap: .7rem; min-width: 0; flex: 1; }
+.guest-avatar {
+  flex: none; width: 2.4rem; height: 2.4rem; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-weight: 800; font-size: .85rem; color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-l, var(--accent)));
+}
+.guest-hero-name { font-weight: 800; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guest-hero-sub { font-size: .72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guest-badge {
+  flex: none; font-size: .58rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--accent-l, var(--accent)); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 999px; padding: .12rem .5rem;
+}
+.guest-hero-stats { display: flex; gap: 1.1rem; flex-wrap: wrap; }
+.ghs { display: flex; flex-direction: column; align-items: center; }
+.ghs-v { font-family: var(--font-title); font-weight: 900; font-size: 1.15rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.ghs-v.pos { color: #22c55e; }
+.ghs-v.neg { color: var(--red, #ef4444); }
+.ghs-l { font-size: .58rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-top: .15rem; }
+
+.guest-list { display: flex; flex-direction: column; gap: .25rem; margin-top: .7rem; }
+.guest-row {
+  display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto auto; align-items: center; gap: .55rem;
+  padding: .4rem .55rem; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+}
+.guest-rank { font-weight: 800; font-size: .78rem; color: var(--muted); text-align: center; }
+.guest-name { font-weight: 600; font-size: .86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guest-meta { font-size: .72rem; color: var(--muted); }
+.guest-avg { font-family: var(--font-title); font-weight: 800; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.guest-avg small { font-size: .58rem; font-weight: 600; color: var(--muted); }
+
+/* ====== Responsive mobile — Pronostics & Invités ====== */
+@media (max-width: 640px) {
+  .pronos-grid { gap: .9rem; }
+  .pronos-head { flex-wrap: wrap; gap: .15rem; }
+  .pronos-block-head { flex-wrap: wrap; gap: .25rem; }
+
+  /* Course au titre */
+  .tr-row { grid-template-columns: 1.3rem minmax(0, 1fr) auto auto; gap: .45rem; padding: .4rem .5rem; }
+  .tr-name { font-size: .82rem; }
+  .tr-moy { font-size: .85rem; }
+  .tr-gap { min-width: 2.8rem; font-size: .66rem; }
+
+  /* Affiches : verdict sur sa propre ligne (plus de troncature) */
+  .pred-list { max-height: 46vh; }
+  .pred-row { padding: .55rem; }
+  .pred-side { font-size: .82rem; }
+  .pred-foot { flex-wrap: wrap; row-gap: .15rem; }
+  .pred-verdict { order: 3; flex: 1 0 100%; white-space: normal; text-align: center; line-height: 1.3; margin-top: .15rem; }
+
+  /* Invité vedette : stats réparties sur toute la largeur */
+  .guest-hero { gap: .7rem; padding: .75rem .85rem; }
+  .guest-hero-id { width: 100%; }
+  .guest-hero-stats { width: 100%; justify-content: space-between; gap: .4rem; }
+  .ghs-v { font-size: 1.05rem; }
+  .ghs-l { font-size: .54rem; }
+
+  /* Liste des invités */
+  .guest-row { grid-template-columns: 1.3rem minmax(0, 1fr) auto; gap: .45rem; }
+  .guest-meta { display: none; }
+  .guest-avg { font-size: .85rem; }
+}
+
+@media (max-width: 380px) {
+  .guest-badge { display: none; }
+  .guest-hero-stats { gap: .25rem; }
+  .ghs-v { font-size: .95rem; }
+  .pred-div { display: none; }
 }
 </style>
