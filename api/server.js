@@ -859,7 +859,10 @@ async function ensureSchema(){
   )`);
   await q(`INSERT INTO site_settings (id, data) VALUES (1, '{}'::jsonb) ON CONFLICT (id) DO NOTHING`);
 
-  /* table stats invités */
+  /* table stats invités — VESTIGIALE : le classement invités est désormais
+     calculé en direct (computeGuestStandings). Conservée volontairement (plus
+     écrite ni lue par l'app) pour ne pas casser la restauration d'anciens
+     backups qui la référencent (cf. BACKUP_TABLE_ORDER). Ne pas dropper. */
   await q(`CREATE TABLE IF NOT EXISTS guest_season_stats (
     player_id  TEXT NOT NULL,
     season_id  INTEGER NOT NULL,
@@ -1983,7 +1986,7 @@ function listTournamentsHandler(gameType) {
       const rows = await q(`
         SELECT
           t.id, t.slug, t.name, t.format, t.status, t.starts_at, t.ended_at,
-          t.winner_name, t.member_tournament, t.counts_for_title, t.day_comment, t.season_id,
+          t.winner_name, t.winner_player_id, t.member_tournament, t.counts_for_title, t.day_comment, t.season_id,
           t.rr_match_mode, t.rr_standings_mode,
           t.created_at, t.updated_at,
           (SELECT COUNT(*)::int FROM tournament_participants tp WHERE tp.tournament_id=t.id) AS participants_count
