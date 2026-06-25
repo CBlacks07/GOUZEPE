@@ -33,6 +33,7 @@
             type="button"
             class="icon-btn"
             :title="theme.mode === 'dark' ? 'Mode clair' : 'Mode sombre'"
+            :aria-label="theme.mode === 'dark' ? 'Activer le mode clair' : 'Activer le mode sombre'"
             @click="theme.toggle()"
           >
             <SunIcon v-if="theme.mode === 'dark'" class="w-4 h-4" />
@@ -74,6 +75,8 @@
               type="button"
               class="field-btn"
               :title="showPwd ? 'Masquer' : 'Afficher'"
+              :aria-label="showPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+              :aria-pressed="showPwd"
               @click="showPwd = !showPwd"
             >
               <EyeOffIcon v-if="showPwd" class="w-4 h-4" />
