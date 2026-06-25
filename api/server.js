@@ -4435,6 +4435,88 @@ app.get('/season/guest-stats', auth, async (req, res) => {
   ok(res, { season_id: seasonId, guests, min_apps: GUEST_MIN_APPS })
 })
 
+// Détail d'un invité : timeline chronologique des sorties (journées + tournois)
+app.get('/season/guest/:playerId', auth, async (req, res) => {
+  try {
+    const playerId = String(req.params.playerId || '')
+    const seasonId = await resolveSeasonId(req.query.season)
+    const pr = await q(`SELECT player_id, name, role FROM players WHERE player_id=$1`, [playerId])
+    if (!pr.rowCount) return bad(res, 404, 'joueur inconnu')
+    const player = pr.rows[0]
+
+    const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) ? null : Number(v)
+    const sorties = []
+
+    // Journées (matchdays)
+    const days = await q(`SELECT day, payload FROM matchday WHERE season_id=$1 ORDER BY day ASC`, [seasonId])
+    for (const row of days.rows) {
+      const day = dayjs(row.day).format('YYYY-MM-DD')
+      const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
+      for (const div of ['d1', 'd2']) {
+        const agg = { v: 0, n: 0, d: 0, bp: 0, bc: 0, played: false }
+        for (const m of (payload[div] || [])) {
+          const legs = []
+          const a1 = num(m.a1), a2 = num(m.a2), r1 = num(m.r1), r2 = num(m.r2)
+          if (a1 !== null && a2 !== null) { legs.push([m.p1, a1, a2], [m.p2, a2, a1]) }
+          if (r1 !== null && r2 !== null) { legs.push([m.p1, r1, r2], [m.p2, r2, r1]) }
+          for (const [pid, gf, ga] of legs) {
+            if (String(pid) !== playerId) continue
+            agg.played = true; agg.bp += gf; agg.bc += ga
+            if (gf > ga) agg.v++; else if (gf < ga) agg.d++; else agg.n++
+          }
+        }
+        if (agg.played) {
+          sorties.push({ type: 'journee', date: day, label: `Journée ${div.toUpperCase()}`, div: div.toUpperCase(), v: agg.v, n: agg.n, d: agg.d, bp: agg.bp, bc: agg.bc, pts: agg.v * 3 + agg.n })
+        }
+      }
+    }
+
+    // Tournois membres terminés (hors archivés)
+    const tm = await q(`
+      SELECT t.id, t.name, COALESCE(t.ended_at, t.updated_at, t.created_at) AS dt,
+             p1.player_id AS pid1, p2.player_id AS pid2, m.score_p1 AS s1, m.score_p2 AS s2
+      FROM tournament_matches m
+      JOIN tournaments t ON t.id = m.tournament_id
+      JOIN tournament_participants p1 ON p1.id = m.p1_participant_id
+      JOIN tournament_participants p2 ON p2.id = m.p2_participant_id
+      WHERE t.season_id=$1 AND t.member_tournament=true AND t.status='completed'
+        AND m.status='completed' AND m.score_p1 IS NOT NULL AND m.score_p2 IS NOT NULL
+        AND (p1.player_id=$2 OR p2.player_id=$2)
+    `, [seasonId, playerId])
+    const byT = new Map()
+    for (const r of tm.rows) {
+      const isP1 = String(r.pid1) === playerId
+      const gf = isP1 ? Number(r.s1) : Number(r.s2)
+      const ga = isP1 ? Number(r.s2) : Number(r.s1)
+      if (!byT.has(r.id)) byT.set(r.id, { type: 'tournoi', date: dayjs(r.dt).format('YYYY-MM-DD'), label: r.name, v: 0, n: 0, d: 0, bp: 0, bc: 0 })
+      const o = byT.get(r.id)
+      o.bp += gf; o.bc += ga
+      if (gf > ga) o.v++; else if (gf < ga) o.d++; else o.n++
+    }
+    for (const o of byT.values()) { o.pts = o.v * 3 + o.n; sorties.push(o) }
+
+    sorties.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+
+    const summary = sorties.reduce((s, x) => ({
+      sorties: s.sorties + 1, pts: s.pts + x.pts, v: s.v + x.v, n: s.n + x.n, d: s.d + x.d, bp: s.bp + x.bp, bc: s.bc + x.bc,
+    }), { sorties: 0, pts: 0, v: 0, n: 0, d: 0, bp: 0, bc: 0 })
+    summary.diff = summary.bp - summary.bc
+    summary.moy = summary.sorties ? +(summary.pts / summary.sorties).toFixed(2) : 0
+
+    ok(res, {
+      season_id: seasonId,
+      player_id: player.player_id,
+      name: player.name,
+      is_invite: String(player.role || '').toUpperCase() === 'INVITE',
+      summary,
+      sorties,
+    })
+  } catch (e) {
+    console.error('GET /season/guest/:playerId', e)
+    bad(res, 500, 'Impossible de charger le détail invité')
+  }
+})
+
 
 // Seuil minimum de participations (journées + tournois) pour être classé.
 const GUEST_MIN_APPS = 5

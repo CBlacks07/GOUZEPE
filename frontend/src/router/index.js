@@ -125,6 +125,12 @@ const routes = [
     component: () => import('@/views/TournoisView.vue'),
     meta: { requiresAuth: true, title: 'Tournois' },
   },
+  {
+    path: '/invite/:id',
+    name: 'GuestDetail',
+    component: () => import('@/views/GuestDetailView.vue'),
+    meta: { requiresAuth: true, title: 'Profil invité' },
+  },
 
   {
     path: '/tekken-ladder',
