@@ -31,12 +31,12 @@
     </nav>
 
     <div class="ml-auto flex items-center gap-2">
-      <button @click="theme.toggle()" class="btn-ghost p-2" :title="theme.mode === 'dark' ? 'Mode clair' : 'Mode sombre'">
+      <button @click="theme.toggle()" class="btn-ghost p-2" :title="theme.mode === 'dark' ? 'Mode clair' : 'Mode sombre'" :aria-label="theme.mode === 'dark' ? 'Activer le mode clair' : 'Activer le mode sombre'">
         <SunIcon v-if="theme.mode === 'dark'" class="w-4 h-4" />
         <MoonIcon v-else class="w-4 h-4" />
       </button>
 
-      <button @click="handleLogout" class="btn-ghost p-2 hidden lg:flex text-gz-muted hover:text-gz-red" title="Se deconnecter">
+      <button @click="handleLogout" class="btn-ghost p-2 hidden lg:flex text-gz-muted hover:text-gz-red" title="Se deconnecter" aria-label="Se déconnecter">
         <LogOutIcon class="w-4 h-4" />
       </button>
 
