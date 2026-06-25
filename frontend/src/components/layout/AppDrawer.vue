@@ -14,7 +14,7 @@
       <!-- Header drawer -->
       <div class="flex items-center justify-between px-4 h-14 border-b border-gz-border">
         <span class="text-sm font-bold text-gz-text" style="font-family:var(--font-title);letter-spacing:.06em">GOUZEPE <span style="color:var(--muted);font-weight:600">GAMING CLUB</span></span>
-        <button @click="$emit('close')" class="btn-ghost p-2">
+        <button @click="$emit('close')" class="btn-ghost p-2" aria-label="Fermer le menu">
           <XIcon class="w-5 h-5" />
         </button>
       </div>
