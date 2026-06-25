@@ -5,7 +5,7 @@
     <!-- Hero -->
     <section class="hub-hero">
       <div class="hub-hero-bg" aria-hidden="true">
-        <video class="hub-hero-video" :key="heroVideo" :src="heroVideo" autoplay muted loop playsinline preload="metadata"></video>
+        <video ref="heroVideoEl" class="hub-hero-video" :key="heroVideo" :src="heroVideo" autoplay muted loop playsinline preload="none"></video>
         <div class="hub-hero-tint"></div>
       </div>
       <div class="hub-hero-content">
@@ -109,6 +109,10 @@ import PublicFooter from '@/components/public/PublicFooter.vue'
 import { useGameStore } from '@/stores/game'
 import { useSiteSettings } from '@/stores/siteSettings'
 import { mediaUrl, resolveBaseURL } from '@/composables/useAPI'
+import { useHeroVideo } from '@/composables/useHeroVideo'
+
+const heroVideoEl = ref(null)
+useHeroVideo(heroVideoEl)
 
 const game = useGameStore()
 const site = useSiteSettings()
