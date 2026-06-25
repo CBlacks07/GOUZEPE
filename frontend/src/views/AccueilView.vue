@@ -147,7 +147,7 @@
                 <span class="pronos-count">{{ featuredGuests.length }} classé(s) · ≥5 sorties</span>
               </div>
 
-              <div v-if="topGuest" class="guest-hero">
+              <RouterLink v-if="topGuest" :to="`/invite/${topGuest.id}`" class="guest-hero guest-hero--link" :title="`Voir le profil de ${topGuest.id}`">
                 <div class="guest-hero-id">
                   <span class="guest-avatar">{{ guestInitials(topGuest) }}</span>
                   <div class="min-w-0">
@@ -165,15 +165,15 @@
                   <div class="ghs"><span class="ghs-v">{{ topGuestStats.bc }}</span><span class="ghs-l">BC/J</span></div>
                   <div class="ghs"><span class="ghs-v" :class="topGuestStats.diffPos ? 'pos' : 'neg'">{{ topGuestStats.diff }}</span><span class="ghs-l">Diff/J</span></div>
                 </div>
-              </div>
+              </RouterLink>
 
               <div v-if="featuredGuests.length > 1" class="guest-list">
-                <div v-for="(g, i) in featuredGuests.slice(1, 5)" :key="g.id" class="guest-row">
+                <RouterLink v-for="(g, i) in featuredGuests.slice(1, 5)" :key="g.id" :to="`/invite/${g.id}`" class="guest-row guest-row--link">
                   <span class="guest-rank">{{ i + 2 }}</span>
                   <span class="guest-name">{{ g.id }}</span>
                   <span class="guest-meta">{{ g.apps }} sorties · {{ diffPerJLabel(g) }} diff</span>
                   <span class="guest-avg">{{ g.avg.toFixed(1) }}<small> pts/J</small></span>
-                </div>
+                </RouterLink>
               </div>
             </div>
           </div>
@@ -1767,6 +1767,9 @@ async function loadNextFixture() {
 .guest-meta { font-size: .72rem; color: var(--muted); }
 .guest-avg { font-family: var(--font-title); font-weight: 800; font-size: .9rem; font-variant-numeric: tabular-nums; }
 .guest-avg small { font-size: .58rem; font-weight: 600; color: var(--muted); }
+.guest-hero--link, .guest-row--link { text-decoration: none; color: inherit; cursor: pointer; transition: border-color .15s, background .15s, transform .15s; }
+.guest-hero--link:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.guest-row--link:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); background: color-mix(in srgb, var(--accent) 7%, transparent); }
 
 /* ====== Responsive mobile — Pronostics & Invités ====== */
 @media (max-width: 640px) {
