@@ -8,6 +8,11 @@
   <!-- Drawer -->
   <Transition name="slide-right">
     <aside v-if="open"
+      id="app-drawer"
+      ref="panelEl"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menu de navigation"
       class="fixed top-0 right-0 h-full w-72 z-50 bg-gz-panel border-l border-gz-border
              flex flex-col shadow-2xl lg:hidden"
     >
@@ -60,7 +65,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
@@ -70,8 +75,42 @@ import {
   ShieldIcon, SunIcon, MoonIcon, LogOutIcon, XIcon, GamepadIcon, FootprintsIcon
 } from 'lucide-vue-next'
 
-defineProps({ open: Boolean })
-defineEmits(['close'])
+const props = defineProps({ open: Boolean })
+const emit = defineEmits(['close'])
+
+/* Accessibilité : dialogue modal — Échap pour fermer, focus piégé, focus restauré */
+const panelEl = ref(null)
+let lastFocused = null
+
+function focusables() {
+  const root = panelEl.value
+  if (!root) return []
+  return [...root.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+    .filter((el) => el.offsetParent !== null)
+}
+function onKeydown(e) {
+  if (e.key === 'Escape') { emit('close'); return }
+  if (e.key !== 'Tab') return
+  const f = focusables()
+  if (!f.length) return
+  const first = f[0]
+  const last = f[f.length - 1]
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+}
+watch(() => props.open, async (open) => {
+  if (open) {
+    lastFocused = document.activeElement
+    document.addEventListener('keydown', onKeydown)
+    await nextTick()
+    focusables()[0]?.focus()
+  } else {
+    document.removeEventListener('keydown', onKeydown)
+    if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus()
+    lastFocused = null
+  }
+})
+onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 
 const auth   = useAuthStore()
 const { pendingCount } = useMembershipNotif()
