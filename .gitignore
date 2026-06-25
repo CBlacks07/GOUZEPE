@@ -48,3 +48,12 @@ dump_*.sql
 /image.png
 /create_tournaments.py
 /insert_scores.py
+
+# Backups SQL exportes (donnees reelles)
+manual_*.sql
+*.dump.sql
+
+# Scripts de dev ponctuels
+force-create-tables.js
+fix-tournaments-tables.js
+test-*.js
