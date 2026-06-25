@@ -186,17 +186,18 @@
             </div>
             <div v-if="matchPredictions.length" class="pred-list">
               <div v-for="p in matchPredictions" :key="p.key" class="pred-row">
-                <div class="pred-top">
-                  <span class="pred-side" :class="{ fav: !p.close && p.favorite === p.p1 }">{{ p.p1 }}</span>
+                <div class="pred-rowtop">
                   <span class="pred-div">{{ p.div }}</span>
-                  <span class="pred-side right" :class="{ fav: !p.close && p.favorite === p.p2 }">{{ p.p2 }}</span>
+                  <span v-if="p.unknown" class="pred-tag tag-unknown">Incertain</span>
+                  <span v-else-if="p.close" class="pred-tag tag-close">Serré</span>
+                </div>
+                <div class="pred-player" :class="{ fav: !p.close && p.favorite === p.p1 }">
+                  <span class="pred-pname">{{ p.p1 }}</span>
+                  <span class="pred-pct">{{ p.prob1 }}%</span>
                 </div>
                 <div class="pred-bar"><div class="pred-bar-fill" :style="{ width: p.prob1 + '%' }" /></div>
-                <div class="pred-foot">
-                  <span class="pred-pct">{{ p.prob1 }}%</span>
-                  <span class="pred-verdict">
-                    {{ p.unknown ? 'Incertain' : (p.close ? 'Match serré' : 'Favori : ' + p.favorite + ' · ' + p.favProb + '%') }}
-                  </span>
+                <div class="pred-player" :class="{ fav: !p.close && p.favorite === p.p2 }">
+                  <span class="pred-pname">{{ p.p2 }}</span>
                   <span class="pred-pct">{{ 100 - p.prob1 }}%</span>
                 </div>
               </div>
@@ -1617,7 +1618,7 @@ async function loadNextFixture() {
 /* Contention : empêcher tout débordement horizontal (min-width:0 sur la chaîne flex/grid) */
 .pronos-card, .guests-card { margin-bottom: 16px; overflow: hidden; min-width: 0; max-width: 100%; }
 .pronos-grid, .pronos-block, .guests-inline, .title-race, .pred-list,
-.guest-hero, .guest-hero-id, .guest-hero-stats, .pred-row, .pred-top, .tr-row, .guest-row { min-width: 0; max-width: 100%; }
+.guest-hero, .guest-hero-id, .guest-hero-stats, .pred-row, .pred-player, .tr-row, .guest-row { min-width: 0; max-width: 100%; }
 .pronos-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; margin-bottom: 1rem; }
 .pronos-sub { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
 .pronos-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
@@ -1652,17 +1653,19 @@ async function loadNextFixture() {
 .pred-list::-webkit-scrollbar { width: 7px; }
 .pred-list::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--muted) 35%, transparent); border-radius: 999px; }
 .pred-list::-webkit-scrollbar-track { background: transparent; }
-.pred-row { padding: .55rem .6rem; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--border) 55%, transparent); background: color-mix(in srgb, var(--panel) 50%, transparent); }
-.pred-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: .5rem; margin-bottom: .4rem; }
-.pred-side { font-size: .85rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pred-side.right { text-align: right; }
-.pred-side.fav { color: var(--accent-l, var(--accent)); font-weight: 800; }
-.pred-div { font-size: .58rem; font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: .04rem .4rem; }
-.pred-bar { height: 7px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--muted) 22%, transparent); }
+.pred-row { padding: .65rem .75rem; border-radius: 11px; border: 1px solid color-mix(in srgb, var(--border) 55%, transparent); background: color-mix(in srgb, var(--panel) 50%, transparent); }
+.pred-rowtop { display: flex; align-items: center; gap: .4rem; margin-bottom: .35rem; }
+.pred-div { font-size: .56rem; font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: .04rem .42rem; }
+.pred-tag { margin-left: auto; font-size: .56rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: .06rem .42rem; border-radius: 999px; }
+.tag-close { color: #f59e0b; background: color-mix(in srgb, #f59e0b 15%, transparent); }
+.tag-unknown { color: var(--muted); background: color-mix(in srgb, var(--muted) 15%, transparent); }
+.pred-player { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .12rem 0; }
+.pred-pname { font-size: .9rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.pred-pct { font-size: .85rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); flex: none; }
+.pred-player.fav .pred-pname { color: var(--accent-l, var(--accent)); font-weight: 800; }
+.pred-player.fav .pred-pct { color: var(--accent-l, var(--accent)); }
+.pred-bar { height: 6px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--muted) 22%, transparent); margin: .3rem 0; }
 .pred-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-l, var(--accent))); transition: width .4s ease; }
-.pred-foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .32rem; }
-.pred-pct { font-size: .72rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); }
-.pred-verdict { font-size: .72rem; color: var(--muted); text-align: center; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .pronos-empty { font-size: .82rem; color: var(--muted); line-height: 1.5; padding: .4rem 0; }
 
@@ -1721,12 +1724,10 @@ async function loadNextFixture() {
   .tr-moy { font-size: .85rem; }
   .tr-gap { min-width: 2.8rem; font-size: .66rem; }
 
-  /* Affiches : verdict sur sa propre ligne (plus de troncature) */
-  .pred-list { max-height: 46vh; }
-  .pred-row { padding: .55rem; }
-  .pred-side { font-size: .82rem; }
-  .pred-foot { flex-wrap: wrap; row-gap: .15rem; }
-  .pred-verdict { order: 3; flex: 1 0 100%; white-space: normal; text-align: center; line-height: 1.3; margin-top: .15rem; }
+  /* Affiches (un joueur par ligne) */
+  .pred-list { max-height: 50vh; }
+  .pred-row { padding: .6rem .65rem; }
+  .pred-pname { font-size: .86rem; }
 
   /* Invité vedette : stats réparties sur toute la largeur */
   .guest-hero { gap: .7rem; padding: .75rem .85rem; }
@@ -1745,6 +1746,5 @@ async function loadNextFixture() {
   .guest-badge { display: none; }
   .guest-hero-stats { gap: .25rem; }
   .ghs-v { font-size: .95rem; }
-  .pred-div { display: none; }
 }
 </style>
