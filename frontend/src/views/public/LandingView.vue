@@ -11,7 +11,12 @@
       </div>
 
       <div class="hero-content">
-        <span class="hero-eyebrow">{{ s.home.eyebrow }}</span>
+        <div class="hero-badges">
+          <span class="hero-eyebrow">{{ s.home.eyebrow }}</span>
+          <a v-if="liveTournament" href="#resultats" class="hero-live" @click="setFeed(liveTournament.game_type === 'tekken' ? 'tekken' : 'efoot')">
+            <span class="hero-live-dot"></span> En direct · {{ liveTournament.name }}
+          </a>
+        </div>
         <h1 class="hero-title">{{ s.home.title }}</h1>
         <p class="hero-lead">{{ s.home.lead }}</p>
         <div class="hero-cta">
@@ -194,6 +199,7 @@ function setFeed(g) {
 }
 
 const tournaments = ref([])
+const liveTournament = computed(() => (tournaments.value || []).find(t => t.status === 'live') || null)
 const latestDay   = ref(null)
 const topD1       = ref([])
 const topD2       = ref([])
@@ -296,7 +302,18 @@ onMounted(async () => {
     linear-gradient(180deg, rgba(3,8,22,.55), rgba(3,8,22,.9));
 }
 .hero-content { position: relative; z-index: 1; max-width: none; width: 100%; padding: 4rem clamp(1.25rem, 4vw, 4rem); }
-.hero-eyebrow { display: inline-block; font-family: var(--font-title); font-weight: 700; letter-spacing: .28em; text-transform: uppercase; font-size: .72rem; color: var(--accent-l); padding: .3rem .8rem; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 999px; margin-bottom: 1.25rem; }
+.hero-badges { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.hero-eyebrow { display: inline-block; font-family: var(--font-title); font-weight: 700; letter-spacing: .28em; text-transform: uppercase; font-size: .72rem; color: var(--accent-l); padding: .3rem .8rem; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 999px; }
+.hero-live {
+  display: inline-flex; align-items: center; gap: .45rem; text-decoration: none;
+  font-family: var(--font-title); font-weight: 700; font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
+  color: #fff; padding: .3rem .75rem; border-radius: 999px;
+  background: linear-gradient(90deg, #ef4444, #f97316);
+  box-shadow: 0 4px 14px rgba(239,68,68,.35);
+  max-width: 60vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hero-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #fff; flex: none; animation: live-pulse 1.4s infinite; }
+@keyframes live-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
 .hero-title { font-family: var(--font-title); font-weight: 700; font-size: clamp(2.8rem, 8vw, 6rem); line-height: .96; letter-spacing: .02em; margin: 0 0 1.25rem; text-transform: uppercase; }
 .hero-lead { max-width: 38rem; color: var(--muted); font-size: clamp(1rem, 2.2vw, 1.2rem); line-height: 1.6; margin: 0 0 2rem; }
 .hero-lead strong { color: var(--text); }
