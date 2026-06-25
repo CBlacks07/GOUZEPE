@@ -40,7 +40,7 @@
         <LogOutIcon class="w-4 h-4" />
       </button>
 
-      <button @click="$emit('open-drawer')" class="btn-ghost p-2 lg:hidden" aria-label="Menu">
+      <button @click="$emit('open-drawer')" class="btn-ghost p-2 lg:hidden" aria-label="Ouvrir le menu" aria-controls="app-drawer" :aria-expanded="String(drawerOpen)">
         <MenuIcon class="w-5 h-5" />
       </button>
     </div>
@@ -59,7 +59,8 @@ import {
 } from 'lucide-vue-next'
 
 const props = defineProps({
-  seasonLabel: { type: String, default: 'Saison' }
+  seasonLabel: { type: String, default: 'Saison' },
+  drawerOpen: { type: Boolean, default: false }
 })
 defineEmits(['open-drawer'])
 

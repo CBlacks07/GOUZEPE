@@ -1,8 +1,9 @@
 <template>
   <div class="min-h-dvh flex flex-col">
-    <AppHeader :season-label="seasonLabel" @open-drawer="drawerOpen = true" />
+    <a href="#main-content" class="skip-link">Aller au contenu</a>
+    <AppHeader :season-label="seasonLabel" :drawer-open="drawerOpen" @open-drawer="drawerOpen = true" />
     <AppDrawer :open="drawerOpen" @close="drawerOpen = false" />
-    <main class="flex-1">
+    <main id="main-content" tabindex="-1" class="flex-1">
       <slot />
     </main>
     <footer class="text-center text-xs text-gz-muted py-4 border-t border-gz-border/50">
