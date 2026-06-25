@@ -40,6 +40,12 @@
           </button>
         </div>
 
+        <!-- Marque compacte (mobile uniquement, le panneau latéral étant masqué) -->
+        <div class="auth-mobi-brand">
+          <img src="/assets/icons/apple-touch-icon.png" alt="GOUZEPE" />
+          <div><strong>GOUZEPE</strong><span>GAMING CLUB</span></div>
+        </div>
+
         <form class="auth-form" @submit.prevent="submit">
           <h2 class="auth-h2">Connexion</h2>
           <p class="auth-hint">Ravi de te revoir. Entre tes identifiants.</p>
@@ -260,6 +266,7 @@ onMounted(async () => {
     var(--bg);
 }
 .auth-card {
+  position: relative;
   width: min(440px, 96vw);
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -267,6 +274,16 @@ onMounted(async () => {
   box-shadow: var(--shadow);
   overflow: hidden;
 }
+.auth-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-l, var(--accent)));
+}
+
+/* Marque compacte (mobile) */
+.auth-mobi-brand { display: flex; align-items: center; gap: .6rem; padding: 1.1rem 1.25rem 0; }
+.auth-mobi-brand img { width: 38px; height: 38px; border-radius: 9px; object-fit: cover; flex: none; }
+.auth-mobi-brand strong { display: block; font-family: var(--font-title); font-weight: 700; letter-spacing: .06em; line-height: 1; }
+.auth-mobi-brand span { font-size: .56rem; color: var(--muted); letter-spacing: .22em; }
 .auth-top {
   display: flex; align-items: center; justify-content: space-between;
   padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
@@ -306,8 +323,11 @@ onMounted(async () => {
 @media (min-width: 880px) {
   .auth { grid-template-columns: 1.05fr .95fr; }
   .auth-brand { display: block; }
+  .auth-mobi-brand { display: none; }
 }
 @media (max-width: 520px) {
   .api-row { flex-direction: column; }
+  .auth-main { padding: 1rem .85rem; }
+  .auth-form { padding: 1.25rem 1rem 1rem; }
 }
 </style>
