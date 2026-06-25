@@ -211,3 +211,15 @@ textarea:focus-visible,
 }
 /* Ne pas afficher l'anneau au clic souris (uniquement au clavier) */
 :focus:not(:focus-visible) { outline: none; }
+
+/* ── Accessibilité : lien d'évitement (skip link) ───────────────────────── */
+.skip-link {
+  position: fixed; top: 8px; left: 8px; z-index: 100;
+  transform: translateY(-220%);
+  background: var(--accent); color: #fff;
+  padding: .55rem .95rem; border-radius: 8px;
+  font-weight: 600; text-decoration: none;
+  box-shadow: 0 6px 18px rgba(0,0,0,.3);
+  transition: transform .15s ease;
+}
+.skip-link:focus { transform: translateY(0); outline: 2px solid #fff; outline-offset: 2px; }
