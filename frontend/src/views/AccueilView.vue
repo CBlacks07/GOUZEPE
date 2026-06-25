@@ -182,14 +182,14 @@
           <div class="pronos-block">
             <div class="pronos-block-head">
               <span class="pronos-block-title">Affiches de la journée</span>
-              <span v-if="matchPredictions.length" class="pronos-count">{{ matchPredictions.length }}</span>
+              <span v-if="matchPredictions.length" class="pronos-count">{{ matchPredictions.length }} · serrées en tête</span>
             </div>
             <div v-if="matchPredictions.length" class="pred-list">
               <div v-for="p in matchPredictions" :key="p.key" class="pred-row">
                 <div class="pred-rowtop">
                   <span class="pred-div">{{ p.div }}</span>
                   <span v-if="p.unknown" class="pred-tag tag-unknown">Incertain</span>
-                  <span v-else-if="p.close" class="pred-tag tag-close">Serré</span>
+                  <span v-else class="pred-tag" :class="'tag-' + p.gapTone">{{ p.gapTier }}</span>
                 </div>
                 <div class="pred-player" :class="{ fav: !p.close && p.favorite === p.p1 }">
                   <span class="pred-pname">{{ p.p1 }}</span>
@@ -404,7 +404,56 @@ const titleConfidence = computed(() => {
   return { label: 'Course ouverte', tone: 'open' }
 })
 
-const PRED_K = 2.2 // sensibilité moyenne -> probabilité (logistique)
+// Forme récente : points/match moyens sur les 4 dernières journées (échelle 0-3)
+const formRatingById = computed(() => {
+  const map = new Map()
+  const days = recentConfirmedDays.value.slice(0, 4)
+  if (!days.length) return map
+  for (const r of [...collectDivisionForm(days, 'd1'), ...collectDivisionForm(days, 'd2')]) {
+    map.set(String(r.id), averagePtsPerMatch(r))
+  }
+  return map
+})
+
+// Plages min/max pour normaliser saison et forme sur une échelle 0-1
+const ratingRanges = computed(() => {
+  const range = (arr) => {
+    const vals = arr.filter((v) => Number.isFinite(v))
+    if (!vals.length) return null
+    const mn = Math.min(...vals)
+    const mx = Math.max(...vals)
+    return { mn, span: Math.max(1e-6, mx - mn) }
+  }
+  return {
+    season: range(seasonStandings.value.map((r) => Number(r.moyenne) || 0).filter((v) => v > 0)),
+    form: range([...formRatingById.value.values()]),
+  }
+})
+
+// Force d'un joueur : 60% moyenne saison normalisée + 40% forme récente normalisée
+function strengthOf(id) {
+  const sR = ratingRanges.value.season
+  const fR = ratingRanges.value.form
+  const sVal = moyenneById.value.get(String(id))
+  const fVal = formRatingById.value.get(String(id))
+  const hasS = sVal != null && sVal > 0 && sR
+  const hasF = fVal != null && fR
+  if (!hasS && !hasF) return null
+  const sNorm = hasS ? (sVal - sR.mn) / sR.span : null
+  const fNorm = hasF ? (fVal - fR.mn) / fR.span : null
+  if (sNorm != null && fNorm != null) return 0.6 * sNorm + 0.4 * fNorm
+  return sNorm != null ? sNorm : fNorm
+}
+
+const PRED_K = 0.34 // sensibilité (force 0-1) -> probabilité
+
+function gapInfo(favProb) {
+  if (favProb < 56) return { tier: 'Équilibré', tone: 'close' }
+  if (favProb < 65) return { tier: 'Léger avantage', tone: 'mid' }
+  if (favProb < 78) return { tier: 'Favori net', tone: 'strong' }
+  return { tier: 'Large favori', tone: 'strong' }
+}
+
 const matchPredictions = computed(() => {
   const p = nextPayloadRef.value
   if (!p) return []
@@ -412,19 +461,20 @@ const matchPredictions = computed(() => {
   for (const div of ['d1', 'd2']) {
     for (const m of (p[div] || [])) {
       if (!m?.p1 || !m?.p2) continue
-      const r1 = moyenneById.value.get(String(m.p1))
-      const r2 = moyenneById.value.get(String(m.p2))
-      const has1 = r1 != null && r1 > 0
-      const has2 = r2 != null && r2 > 0
+      const s1 = strengthOf(m.p1)
+      const s2 = strengthOf(m.p2)
+      const unknown = s1 == null && s2 == null
       let prob1
-      if (!has1 && !has2) {
+      if (unknown) {
         prob1 = 0.5
       } else {
-        const a = has1 ? r1 : Math.max(1, (r2 || 6) - 2)
-        const b = has2 ? r2 : Math.max(1, (r1 || 6) - 2)
+        const a = s1 != null ? s1 : Math.max(0, (s2 ?? 0.5) - 0.25)
+        const b = s2 != null ? s2 : Math.max(0, (s1 ?? 0.5) - 0.25)
         prob1 = 1 / (1 + Math.exp(-(a - b) / PRED_K))
       }
       const favIsP1 = prob1 >= 0.5
+      const favProb = Math.round((favIsP1 ? prob1 : 1 - prob1) * 100)
+      const gap = gapInfo(favProb)
       out.push({
         key: `${div}-${m.p1}-${m.p2}`,
         div: div.toUpperCase(),
@@ -432,13 +482,17 @@ const matchPredictions = computed(() => {
         p2: labelOf(m.p2),
         prob1: Math.round(prob1 * 100),
         favorite: favIsP1 ? labelOf(m.p1) : labelOf(m.p2),
-        favProb: Math.round((favIsP1 ? prob1 : 1 - prob1) * 100),
-        close: Math.abs(prob1 - 0.5) < 0.06,
-        unknown: !has1 && !has2,
+        favProb,
+        close: favProb < 56,
+        unknown,
+        gapTier: gap.tier,
+        gapTone: gap.tone,
+        _interest: unknown ? 999 : favProb, // plus c'est serré, plus c'est intéressant
       })
     }
   }
-  return out
+  // Affiches serrées en tête, incertaines en fin
+  return out.sort((a, b) => a._interest - b._interest)
 })
 
 const formPlayer = computed(() => {
@@ -1658,6 +1712,8 @@ async function loadNextFixture() {
 .pred-div { font-size: .56rem; font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: .04rem .42rem; }
 .pred-tag { margin-left: auto; font-size: .56rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: .06rem .42rem; border-radius: 999px; }
 .tag-close { color: #f59e0b; background: color-mix(in srgb, #f59e0b 15%, transparent); }
+.tag-mid { color: var(--accent-l, var(--accent)); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.tag-strong { color: #22c55e; background: color-mix(in srgb, #22c55e 15%, transparent); }
 .tag-unknown { color: var(--muted); background: color-mix(in srgb, var(--muted) 15%, transparent); }
 .pred-player { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .12rem 0; }
 .pred-pname { font-size: .9rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
