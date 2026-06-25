@@ -32,6 +32,12 @@
           <RouterLink to="/login" class="reg-link">Déjà membre ?</RouterLink>
         </div>
 
+        <!-- Marque compacte (mobile uniquement) -->
+        <div class="reg-mobi-brand">
+          <img src="/assets/icons/apple-touch-icon.png" alt="GOUZEPE" />
+          <div><strong>GOUZEPE</strong><span>GAMING CLUB</span></div>
+        </div>
+
         <template v-if="!submitted">
           <div class="reg-head">
             <h2 class="reg-h2">Demande de membre</h2>
@@ -232,7 +238,14 @@ async function submit() {
   display: grid; place-items: start center; padding: 1.5rem;
   background: radial-gradient(900px 600px at 80% 0%, rgba(var(--accent-rgb), .1), transparent 45%), var(--bg);
 }
-.reg-card { width: min(560px, 96vw); border: 1px solid var(--border); border-radius: 18px; background: var(--panel); box-shadow: var(--shadow); padding: 1.25rem 1.5rem 1.75rem; }
+.reg-card { position: relative; width: min(560px, 96vw); border: 1px solid var(--border); border-radius: 18px; background: var(--panel); box-shadow: var(--shadow); padding: 1.25rem 1.5rem 1.75rem; overflow: hidden; }
+.reg-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent-l, var(--accent))); }
+
+/* Marque compacte (mobile) */
+.reg-mobi-brand { display: flex; align-items: center; gap: .6rem; margin-bottom: 1.25rem; }
+.reg-mobi-brand img { width: 38px; height: 38px; border-radius: 9px; object-fit: cover; flex: none; }
+.reg-mobi-brand strong { display: block; font-family: var(--font-title); font-weight: 700; letter-spacing: .06em; line-height: 1; }
+.reg-mobi-brand span { font-size: .56rem; color: var(--muted); letter-spacing: .22em; }
 
 .reg-top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 1rem; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; }
 .reg-back { display: inline-flex; align-items: center; gap: .35rem; color: var(--muted); text-decoration: none; font-size: .85rem; font-weight: 600; }
@@ -280,6 +293,12 @@ async function submit() {
   .reg { grid-template-columns: 1fr 1fr; }
   .reg-brand { display: block; }
   .reg-main { align-items: center; }
+  .reg-mobi-brand { display: none; }
 }
-@media (max-width: 480px) { .row-2, .game-pick { grid-template-columns: 1fr; } }
+@media (max-width: 480px) {
+  .row-2, .game-pick { grid-template-columns: 1fr; }
+  .reg-main { padding: 1rem .85rem; }
+  .reg-card { padding: 1.1rem 1rem 1.5rem; }
+  .fg { padding: .85rem; }
+}
 </style>
