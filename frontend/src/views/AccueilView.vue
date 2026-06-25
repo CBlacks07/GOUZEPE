@@ -267,8 +267,6 @@ const nextFixtureTournaments = ref([])
 const recentConfirmedDays = ref([])
 const headlineFlashes   = ref([])
 const headlineFlashIndex = ref(0)
-const nextInsights      = ref([])
-const nextInsightIndex  = ref(0)
 const featuredInvite    = ref([])   // tableau trié avg desc
 const guestStatsLoaded  = ref(false)
 
@@ -358,7 +356,6 @@ let heroSlideTimer = null
 let cardsInsightsTimer = null
 
 const currentHeadlineFlash = computed(() => headlineFlashes.value[headlineFlashIndex.value] || null)
-const currentNextInsight = computed(() => nextInsights.value[nextInsightIndex.value] || null)
 const headlineLastPublishedLabel = computed(() => {
   const d = recentConfirmedDays.value[0]?.date
   return d ? fmtDate(d) : ''
@@ -559,62 +556,15 @@ function tournamentStatusLabel(status) {
   }[status] || String(status || '').trim() || '—'
 }
 
-function pickRandom(arr) {
-  if (!Array.isArray(arr) || !arr.length) return ''
-  return arr[Math.floor(Math.random() * arr.length)] || ''
-}
-
-function maybe(probability = 0.5) {
-  return Math.random() < Math.max(0, Math.min(1, Number(probability) || 0))
-}
-
-function randomBetween(min, max) {
-  const lo = Math.ceil(Number(min) || 0)
-  const hi = Math.floor(Number(max) || 0)
-  if (hi <= lo) return lo
-  return lo + Math.floor(Math.random() * (hi - lo + 1))
-}
-
-function shuffleArray(arr) {
-  const copy = [...arr]
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[copy[i], copy[j]] = [copy[j], copy[i]]
-  }
-  return copy
-}
-
-function takeRandom(arr, count) {
-  return shuffleArray(arr).slice(0, Math.max(0, Math.min(arr.length, count)))
-}
-
 function averagePtsPerMatch(row) {
   const j = Number(row?.J || 0)
   if (!j) return 0
   return Number(row?.PTS || 0) / j
 }
 
-function formatAverage(value) {
-  const n = Number(value || 0)
-  return n.toFixed(2).replace('.', ',')
-}
-
 function rankLabel(rank) {
   if (!rank) return '—'
   return rank === 1 ? '1er' : `${rank}e`
-}
-
-function pickWeightedFromTop(sortedRows, topN = 5) {
-  if (!Array.isArray(sortedRows) || !sortedRows.length) return null
-  const cap = Math.max(1, Math.min(topN, sortedRows.length))
-  const pool = sortedRows.slice(0, cap)
-  const totalWeight = pool.reduce((sum, _, idx) => sum + (cap - idx), 0)
-  let roll = Math.random() * totalWeight
-  for (let idx = 0; idx < pool.length; idx++) {
-    roll -= (cap - idx)
-    if (roll <= 0) return pool[idx]
-  }
-  return pool[0]
 }
 
 function addLegToForm(agg, homeId, awayId, homeGoals, awayGoals) {
@@ -774,13 +724,6 @@ function restartCardInsightsTicker() {
       }
       headlineFlashIndex.value = nextIdx
     }
-    if (nextInsights.value.length > 1) {
-      let nextIdx = Math.floor(Math.random() * nextInsights.value.length)
-      if (nextIdx === nextInsightIndex.value) {
-        nextIdx = (nextIdx + 1) % nextInsights.value.length
-      }
-      nextInsightIndex.value = nextIdx
-    }
   }, 3600)
 }
 
@@ -873,265 +816,6 @@ function buildHeadlineFlashes(recentDays) {
 
   if (!flashes.length) flashes.push({ tag: 'À la une', text: 'Journée publiée — temps forts à venir.' })
   return flashes
-}
-
-function buildNextInsights(recentDays, nextPayload) {
-  const tournamentPicks = []
-  const nextTournaments = nextFixtureTournaments.value || []
-  if (nextTournaments.length) {
-    const sortedTournaments = [...nextTournaments].sort((a, b) =>
-      new Date(a?.tournament?.starts_at || 0).getTime() - new Date(b?.tournament?.starts_at || 0).getTime()
-    )
-    const lead = sortedTournaments[0]?.tournament
-    if (lead) {
-      const participants = Number(lead.participants_count || 0) || 0
-      const at = lead.starts_at ? ` • ${formatTournamentDateTime(lead.starts_at)}` : ''
-      tournamentPicks.push({
-        tag: 'Tournoi',
-        text: `${lead.name} (${tournamentFormatLabel(lead.format)}) • ${tournamentStatusLabel(lead.status)}${participants ? ` • ${participants} participant(s)` : ''}${at}.`
-      })
-      const comment = String(lead.day_comment || '').trim()
-      if (comment) {
-        tournamentPicks.push({
-          tag: 'Commentaire tournoi',
-          text: comment
-        })
-      }
-    }
-    if (sortedTournaments.length > 1) {
-      tournamentPicks.push({
-        tag: 'Programme tournoi',
-        text: `${sortedTournaments.length} tournoi(s) membre sont programmés sur cette date.`
-      })
-    }
-  }
-
-  const historyDays = Array.isArray(recentDays) ? recentDays : []
-  const lastTwoDays = historyDays.slice(0, 2)
-  const lastFourDays = historyDays.slice(0, 4)
-
-  // Build a complete set of invite IDs across ALL recent days
-  const allInviteIds = new Set()
-  for (const day of historyDays) {
-    for (const g of day.payload?.tempGuests || []) allInviteIds.add(String(g.player_id))
-    for (const divKey of ['d1', 'd2']) {
-      for (const m of day.payload?.[divKey] || []) {
-        for (const pid of [m.p1, m.p2]) {
-          if (pid && String(pid).startsWith('G_')) allInviteIds.add(String(pid))
-        }
-      }
-    }
-  }
-  const isInviteId = (id) => allInviteIds.has(String(id)) || String(id).startsWith('G_') || inferRoleForPlayer(id) === 'INVITE'
-
-  const form2D1 = collectDivisionForm(lastTwoDays, 'd1').filter(r => !isInviteId(r.id))
-  const form2D2 = collectDivisionForm(lastTwoDays, 'd2').filter(r => !isInviteId(r.id))
-  const form4D1 = collectDivisionForm(lastFourDays, 'd1').filter(r => !isInviteId(r.id))
-  const form4D2 = collectDivisionForm(lastFourDays, 'd2').filter(r => !isInviteId(r.id))
-
-  const picks = []
-  const nextPlayers = new Set(
-    [...(nextPayload?.d1 || []), ...(nextPayload?.d2 || [])]
-      .flatMap(m => [m?.p1, m?.p2])
-      .filter(Boolean)
-      .map(v => String(v))
-  )
-  const focusRows = (rows) => {
-    if (!nextPlayers.size) return rows
-    const filtered = rows.filter(r => nextPlayers.has(String(r.id)))
-    return filtered.length ? filtered : rows
-  }
-
-  const buildTopPick = (rows, metric = 'ppm') => {
-    const pool = rows.slice()
-    if (!pool.length) return null
-    if (metric === 'attack') {
-      pool.sort((a, b) => Number(b.BP || 0) - Number(a.BP || 0) || String(a.id).localeCompare(String(b.id)))
-    } else if (metric === 'defense') {
-      pool.sort((a, b) => Number(a.BC || 0) - Number(b.BC || 0) || Number(b.J || 0) - Number(a.J || 0))
-    } else if (metric === 'draw') {
-      pool.sort((a, b) => Number(b.N || 0) - Number(a.N || 0) || String(a.id).localeCompare(String(b.id)))
-    } else {
-      pool.sort((a, b) => averagePtsPerMatch(b) - averagePtsPerMatch(a) || Number(b.PTS || 0) - Number(a.PTS || 0))
-    }
-    return pickWeightedFromTop(pool, Math.min(5, pool.length))
-  }
-
-  if (form2D1[0] && maybe(0.95)) {
-    picks.push({
-      tag: 'Dynamique D1',
-      text: pickRandom([
-        `${form2D1[0].id} est en forme sur les 2 dernières journées (${form2D1[0].PTS} pts).`,
-        `${form2D1[0].id} accélère en D1 sur les 2 dernières journées.`,
-        `${form2D1[0].id} garde un rythme élevé récemment en D1.`
-      ])
-    })
-  }
-  if (form2D2[0] && maybe(0.95)) {
-    picks.push({
-      tag: 'Dynamique D2',
-      text: pickRandom([
-        `${form2D2[0].id} monte en puissance en D2 sur les 2 dernières journées.`,
-        `${form2D2[0].id} imprime le rythme D2 récemment (${form2D2[0].PTS} pts).`,
-        `${form2D2[0].id} enchaîne les bonnes sorties en D2.`
-      ])
-    })
-  }
-
-  const topD1Two = buildTopPick(focusRows(form2D1), 'ppm')
-  if (topD1Two && maybe(0.95)) {
-    const d1Moy = formatAverage(averagePtsPerMatch(topD1Two))
-    picks.push({
-      tag: 'Forme 2J D1',
-      text: pickRandom([
-        `${topD1Two.id} ressort sur 2 journées en D1 (moyenne ${d1Moy}).`,
-        `${topD1Two.id} se détache en D1 sur les 2 dernières journées (${d1Moy} de moyenne).`
-      ])
-    })
-  }
-
-  const topD2Two = buildTopPick(focusRows(form2D2), 'ppm')
-  if (topD2Two && maybe(0.95)) {
-    const d2Moy = formatAverage(averagePtsPerMatch(topD2Two))
-    picks.push({
-      tag: 'Forme 2J D2',
-      text: pickRandom([
-        `${topD2Two.id} ressort sur 2 journées en D2 (moyenne ${d2Moy}).`,
-        `${topD2Two.id} se détache en D2 sur les 2 dernières journées (${d2Moy} de moyenne).`
-      ])
-    })
-  }
-
-  const topD1Four = buildTopPick(focusRows(form4D1), 'ppm')
-  if (topD1Four && maybe(0.9)) {
-    const d1Moy4 = formatAverage(averagePtsPerMatch(topD1Four))
-    picks.push({
-      tag: 'Tendance 4J D1',
-      text: pickRandom([
-        `${topD1Four.id} tient une bonne cadence sur 4 journées en D1 (moyenne ${d1Moy4}).`,
-        `${topD1Four.id} reste régulier sur le dernier mois D1 (${d1Moy4} de moyenne).`
-      ])
-    })
-  }
-
-  const topD2Four = buildTopPick(focusRows(form4D2), 'ppm')
-  if (topD2Four && maybe(0.9)) {
-    const d2Moy4 = formatAverage(averagePtsPerMatch(topD2Four))
-    picks.push({
-      tag: 'Tendance 4J D2',
-      text: pickRandom([
-        `${topD2Four.id} tient une bonne cadence sur 4 journées en D2 (moyenne ${d2Moy4}).`,
-        `${topD2Four.id} reste régulier sur le dernier mois D2 (${d2Moy4} de moyenne).`
-      ])
-    })
-  }
-
-  const pool2 = focusRows([...form2D1, ...form2D2])
-  const pool4 = focusRows([...form4D1, ...form4D2])
-
-  const topAttack2 = buildTopPick(pool2, 'attack')
-  if (topAttack2 && maybe(0.85)) {
-    picks.push({
-      tag: 'Attaque 2J',
-      text: pickRandom([
-        `${topAttack2.id} pourrait faire des différences offensives (2J: ${topAttack2.BP} buts marqués).`,
-        `${topAttack2.id} arrive avec une attaque en forme sur 2 journées (${topAttack2.BP} buts).`
-      ])
-    })
-  }
-
-  const topAttack4 = buildTopPick(pool4, 'attack')
-  if (topAttack4 && maybe(0.8)) {
-    picks.push({
-      tag: 'Attaque 4J',
-      text: pickRandom([
-        `${topAttack4.id} reste l'un des profils offensifs les plus actifs du dernier mois (${topAttack4.BP} buts).`,
-        `${topAttack4.id} maintient un rythme élevé sur 4 journées (${topAttack4.BP} buts).`
-      ])
-    })
-  }
-
-  const bestDefense2 = buildTopPick(pool2.filter(r => Number(r.J || 0) > 0), 'defense')
-  if (bestDefense2 && maybe(0.85)) {
-    picks.push({
-      tag: 'Défense 2J',
-      text: pickRandom([
-        `${bestDefense2.id} montre un profil défensif solide sur 2 journées (${bestDefense2.BC} but(s) concédé(s)).`,
-        `${bestDefense2.id} peut fermer le jeu cette journée (2J: ${bestDefense2.BC} but(s) concédé(s)).`
-      ])
-    })
-  }
-
-  const bestDefense4 = buildTopPick(pool4.filter(r => Number(r.J || 0) > 0), 'defense')
-  if (bestDefense4 && maybe(0.8)) {
-    picks.push({
-      tag: 'Défense 4J',
-      text: pickRandom([
-        `${bestDefense4.id} reste fiable défensivement sur 4 journées (${bestDefense4.BC} but(s) concédé(s)).`,
-        `${bestDefense4.id} garde un bloc solide sur le dernier mois (${bestDefense4.BC} but(s) concédé(s)).`
-      ])
-    })
-  }
-
-  const drawMaster2 = buildTopPick(pool2, 'draw')
-  if (drawMaster2 && Number(drawMaster2.N || 0) > 0 && maybe(0.75)) {
-    picks.push({
-      tag: 'Équilibre 2J',
-      text: pickRandom([
-        `${drawMaster2.id} gère bien les matchs serrés sur 2 journées (${drawMaster2.N} nul(s)).`,
-        `${drawMaster2.id} est souvent dans des scénarios fermés récemment (${drawMaster2.N} nul(s)).`
-      ])
-    })
-  }
-
-  const drawMaster4 = buildTopPick(pool4, 'draw')
-  if (drawMaster4 && Number(drawMaster4.N || 0) > 0 && maybe(0.7)) {
-    picks.push({
-      tag: 'Équilibre 4J',
-      text: pickRandom([
-        `${drawMaster4.id} a souvent été accroché sur 4 journées (${drawMaster4.N} nul(s)).`,
-        `${drawMaster4.id} maîtrise bien les matchs fermés sur le dernier mois (${drawMaster4.N} nul(s)).`
-      ])
-    })
-  }
-
-  if (featuredInvite.value?.length && maybe(0.65)) {
-    const top = featuredInvite.value[0]
-    picks.push({
-      tag: 'Invité en vue',
-      text: `${top.id} est l'invité le plus en forme récemment (${top.pts} pts, ${top.V}V sur ${top.apps} journée(s)).`
-    })
-  }
-
-  if (nextPayload) {
-    const matchCount = (nextPayload.d1?.length || 0) + (nextPayload.d2?.length || 0)
-    picks.push({ tag: 'Programme', text: `${matchCount} confrontation(s) sont déjà en place pour cette journée.` })
-
-    const allNextMatches = [...(nextPayload.d1 || []), ...(nextPayload.d2 || [])]
-      .filter(m => m?.p1 && m?.p2)
-    const matchKey = pickRandom(allNextMatches)
-    if (matchKey) {
-      picks.push({
-        tag: 'Match clé',
-        text: pickRandom([
-          `${matchKey.p1} vs ${matchKey.p2} peut clairement peser sur la journée.`,
-          `${matchKey.p1} vs ${matchKey.p2} semble être l'affiche la plus ouverte de la journée.`,
-          `${matchKey.p1} vs ${matchKey.p2} devrait compter dans la hiérarchie du week-end.`
-        ])
-      })
-    }
-  } else {
-    picks.push({ tag: 'Planning', text: 'La grille est ouverte : compose les affiches pour lancer les pronostics du week-end.' })
-  }
-
-  if (!picks.length) {
-    picks.push({ tag: 'Focus', text: 'Données insuffisantes sur les 2 et 4 dernières journées pour générer des pronostics.' })
-  }
-  const upperBound = Math.min(14, picks.length)
-  const lowerBound = Math.min(8, upperBound)
-  const targetCount = randomBetween(lowerBound, upperBound)
-  const mixed = takeRandom(picks, targetCount)
-  return [...shuffleArray(tournamentPicks), ...mixed].slice(0, 10)
 }
 
 /* ====== News (À la une) ====== */
@@ -1286,10 +970,7 @@ async function loadNextFixture() {
       nextFixtureMeta.value = 'Aucune confrontation enregistrée pour le moment'
     }
     nextPayloadRef.value = payload
-    nextInsights.value = buildNextInsights(recentConfirmedDays.value, payload)
-    nextInsightIndex.value = 0
   } catch (_) {
-    nextInsights.value = [{ tag: 'Info', text: 'Pronostics indisponibles temporairement.' }]
   } finally {
     loadingNextFixture.value = false
     restartCardInsightsTicker()
