@@ -38,7 +38,7 @@ const pgOpts = process.env.DATABASE_URL
       port: +(process.env.PGPORT || 5432),
       database: process.env.PGDATABASE || 'EFOOTBALL',
       user: process.env.PGUSER || 'postgres',
-      password: process.env.PGPASSWORD || 'Admin123',
+      password: process.env.PGPASSWORD || undefined,
       ssl: useSSL ? { rejectUnauthorized:false } : false,
     };
 
