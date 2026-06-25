@@ -44,6 +44,13 @@
             <p class="reg-hint">Tous les champs marqués * sont obligatoires.</p>
           </div>
 
+          <!-- Étapes (mobile uniquement, reprises du panneau latéral) -->
+          <ol class="reg-steps-mobi">
+            <li><span class="sm-n">1</span> Formulaire</li>
+            <li><span class="sm-n">2</span> Validation</li>
+            <li><span class="sm-n">3</span> En piste</li>
+          </ol>
+
           <form @submit.prevent="submit" class="reg-form">
 
             <!-- Jeux pratiqués -->
@@ -253,6 +260,22 @@ async function submit() {
 .reg-link { color: var(--accent-l); text-decoration: none; font-size: .85rem; font-weight: 600; }
 .reg-link:hover { text-decoration: underline; }
 
+/* Étapes compactes (mobile) */
+.reg-steps-mobi {
+  display: flex; align-items: center; gap: .5rem; list-style: none; padding: 0;
+  margin: 0 0 1.25rem; flex-wrap: wrap;
+}
+.reg-steps-mobi li {
+  display: inline-flex; align-items: center; gap: .35rem; flex: 1 1 0; min-width: 0;
+  justify-content: center; font-size: .72rem; font-weight: 600; color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  border: 1px solid var(--border); border-radius: 999px; padding: .3rem .5rem; white-space: nowrap;
+}
+.reg-steps-mobi .sm-n {
+  flex: none; width: 1.05rem; height: 1.05rem; display: grid; place-items: center;
+  border-radius: 50%; background: var(--accent); color: #fff; font-size: .62rem; font-weight: 800;
+}
+
 .reg-head { margin-bottom: 1.25rem; }
 .reg-h2 { margin: 0; font-family: var(--font-title); font-weight: 700; font-size: 1.6rem; text-transform: uppercase; letter-spacing: .04em; }
 .reg-hint { margin: .25rem 0 0; color: var(--muted); font-size: .9rem; }
@@ -294,6 +317,7 @@ async function submit() {
   .reg-brand { display: block; }
   .reg-main { align-items: center; }
   .reg-mobi-brand { display: none; }
+  .reg-steps-mobi { display: none; }
 }
 @media (max-width: 480px) {
   .row-2, .game-pick { grid-template-columns: 1fr; }

@@ -35,7 +35,7 @@
                   ]">{{ statusLabel(t.status) }}</span>
                   <span class="text-[10px] text-gz-muted">{{ formatLabel(t.format) }}</span>
                   <span v-if="t.winner_name && t.status === 'completed'" class="text-[10px] text-gz-amber font-semibold ml-auto">
-                    <TrophyIcon class="w-3 h-3 inline" /> {{ t.winner_name }}
+                    <TrophyIcon class="w-3 h-3 inline" /> {{ t.member_tournament !== false ? (t.winner_player_id || t.winner_name) : t.winner_name }}
                   </span>
                 </div>
               </button>
