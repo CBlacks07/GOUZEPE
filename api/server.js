@@ -4404,8 +4404,26 @@ app.get('/season/ids', auth, async (_req,res)=>{
 app.post('/seasons', auth, adminOnly, async (req,res)=>{
   const { name } = req.body||{};
   if(!name || !name.trim()) return bad(res,400,'nom requis');
-  const r=await q(`INSERT INTO seasons(name,is_closed) VALUES ($1,false) RETURNING id,name,is_closed,started_at,ended_at`,[name.trim()]);
-  ok(res,{ season:r.rows[0] });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Démarrer une nouvelle saison clôture la/les saison(s) encore ouverte(s)
+    // (sinon plusieurs saisons restent "ouvertes" et la "saison précédente"
+    //  n'est jamais résolue).
+    const closed = await client.query(`UPDATE seasons SET is_closed=true, ended_at=now() WHERE is_closed=false RETURNING id`);
+    const r = await client.query(
+      `INSERT INTO seasons(name,is_closed) VALUES ($1,false) RETURNING id,name,is_closed,started_at,ended_at`,
+      [name.trim()]
+    );
+    await client.query('COMMIT');
+    ok(res,{ season:r.rows[0], closed_previous: closed.rowCount });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('POST /seasons', e);
+    bad(res, 500, 'Création de saison impossible');
+  } finally {
+    client.release();
+  }
 });
 app.get('/season/current', auth, async (_req,res)=>{
   const r=await q(`SELECT id,name FROM seasons WHERE is_closed=false ORDER BY id DESC LIMIT 1`);
