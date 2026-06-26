@@ -494,6 +494,9 @@
       <div>
         <label class="label">Nom de la saison</label>
         <input v-model="newSeasonName" type="text" class="input" placeholder="ex: Saison 1 — 2025" />
+        <p class="text-xs mt-2" style="color:var(--amber,#f59e0b)">
+          Démarrer une nouvelle saison <strong>clôture la saison en cours</strong> (elle reste consultable, mais ses journées ne sont plus modifiables comme « courante »).
+        </p>
       </div>
       <template #footer>
         <button @click="newSeasonModal = false" class="btn">Annuler</button>
