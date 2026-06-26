@@ -56,7 +56,10 @@
                 </span>
                 <div class="min-w-0">
                   <div class="gd-label">{{ s.label }}</div>
-                  <div class="gd-date">{{ fmtDate(s.date) }}</div>
+                  <div class="gd-date">
+                    {{ fmtDate(s.date) }}
+                    <template v-if="s.rank"> · <span class="gd-rank">{{ s.rank }}<sup>{{ s.rank === 1 ? 'er' : 'e' }}</sup>/{{ s.total }}</span></template>
+                  </div>
                 </div>
               </div>
               <div class="gd-row-right">
@@ -197,6 +200,8 @@ watch(() => route.params.id, load)
 .t-tournoi { color: #f59e0b; background: color-mix(in srgb, #f59e0b 14%, transparent); }
 .gd-label { font-weight: 600; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gd-date { font-size: .72rem; color: var(--muted); }
+.gd-rank { font-weight: 700; color: var(--accent-l, var(--accent)); }
+.gd-rank sup { font-size: .6em; }
 .gd-row-right { display: flex; align-items: center; gap: .8rem; flex: none; }
 .gd-vnd { font-size: .76rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .gd-diff { font-size: .78rem; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 2.2rem; text-align: right; }

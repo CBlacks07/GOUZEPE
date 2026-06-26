@@ -4431,8 +4431,13 @@ app.get('/season/guest-stats', auth, async (req, res) => {
     if (!sRes.rowCount) return ok(res, { guests: [] })
     seasonId = sRes.rows[0].id
   }
-  const guests = await computeGuestStandings(seasonId)
-  ok(res, { season_id: seasonId, guests, min_apps: GUEST_MIN_APPS })
+  try {
+    const guests = await computeGuestStandings(seasonId)
+    ok(res, { season_id: seasonId, guests, min_apps: GUEST_MIN_APPS })
+  } catch (e) {
+    console.error('GET /season/guest-stats', e)
+    ok(res, { season_id: seasonId, guests: [], min_apps: GUEST_MIN_APPS })
+  }
 })
 
 // Détail d'un invité : timeline chronologique des sorties (journées + tournois)
@@ -4447,53 +4452,67 @@ app.get('/season/guest/:playerId', auth, async (req, res) => {
     const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) ? null : Number(v)
     const sorties = []
 
-    // Journées (matchdays)
+    // Journées (matchdays) — points au classement de la journée (barème membre)
     const days = await q(`SELECT day, payload FROM matchday WHERE season_id=$1 ORDER BY day ASC`, [seasonId])
     for (const row of days.rows) {
       const day = dayjs(row.day).format('YYYY-MM-DD')
       const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
       for (const div of ['d1', 'd2']) {
-        const agg = { v: 0, n: 0, d: 0, bp: 0, bc: 0, played: false }
+        const agg = new Map()
+        const e2 = id => { if (!agg.has(id)) agg.set(id, { v: 0, n: 0, d: 0, bp: 0, bc: 0 }); return agg.get(id) }
         for (const m of (payload[div] || [])) {
-          const legs = []
           const a1 = num(m.a1), a2 = num(m.a2), r1 = num(m.r1), r2 = num(m.r2)
-          if (a1 !== null && a2 !== null) { legs.push([m.p1, a1, a2], [m.p2, a2, a1]) }
-          if (r1 !== null && r2 !== null) { legs.push([m.p1, r1, r2], [m.p2, r2, r1]) }
-          for (const [pid, gf, ga] of legs) {
-            if (String(pid) !== playerId) continue
-            agg.played = true; agg.bp += gf; agg.bc += ga
-            if (gf > ga) agg.v++; else if (gf < ga) agg.d++; else agg.n++
-          }
+          if (a1 !== null && a2 !== null) { const A = e2(m.p1), B = e2(m.p2); A.bp += a1; A.bc += a2; B.bp += a2; B.bc += a1; if (a1 > a2) { A.v++; B.d++ } else if (a1 < a2) { B.v++; A.d++ } else { A.n++; B.n++ } }
+          if (r1 !== null && r2 !== null) { const A = e2(m.p2), B = e2(m.p1); A.bp += r2; A.bc += r1; B.bp += r1; B.bc += r2; if (r2 > r1) { A.v++; B.d++ } else if (r2 < r1) { B.v++; A.d++ } else { A.n++; B.n++ } }
         }
-        if (agg.played) {
-          sorties.push({ type: 'journee', date: day, label: `Journée ${div.toUpperCase()}`, div: div.toUpperCase(), v: agg.v, n: agg.n, d: agg.d, bp: agg.bp, bc: agg.bc, pts: agg.v * 3 + agg.n })
-        }
+        if (!agg.has(playerId)) continue
+        const ranked = [...agg.entries()].map(([id, s]) => ({ id, mp: s.v * 3 + s.n, ...s }))
+          .sort((a, b) => b.mp - a.mp || (b.bp - b.bc) - (a.bp - a.bc) || b.bp - a.bp)
+        const idx = ranked.findIndex(r => String(r.id) === playerId)
+        if (idx < 0) continue
+        const g = ranked[idx]
+        const isD1 = div === 'd1'
+        sorties.push({
+          type: 'journee', date: day, label: `Journée ${div.toUpperCase()}`, div: div.toUpperCase(),
+          rank: idx + 1, total: ranked.length, v: g.v, n: g.n, d: g.d, bp: g.bp, bc: g.bc,
+          pts: isD1 ? pointsD1(ranked.length, idx + 1) : pointsD2(idx + 1),
+        })
       }
     }
 
-    // Tournois membres terminés (hors archivés)
-    const tm = await q(`
-      SELECT t.id, t.name, COALESCE(t.ended_at, t.updated_at, t.created_at) AS dt,
-             p1.player_id AS pid1, p2.player_id AS pid2, m.score_p1 AS s1, m.score_p2 AS s2
-      FROM tournament_matches m
-      JOIN tournaments t ON t.id = m.tournament_id
-      JOIN tournament_participants p1 ON p1.id = m.p1_participant_id
-      JOIN tournament_participants p2 ON p2.id = m.p2_participant_id
+    // Tournois membres terminés (hors archivés) — points au classement final
+    const tlist = await q(`
+      SELECT DISTINCT t.id, t.name, t.format, t.rr_standings_mode, t.winner_name,
+             COALESCE(t.ended_at, t.updated_at, t.created_at) AS dt
+      FROM tournaments t
+      JOIN tournament_participants tp ON tp.tournament_id = t.id
       WHERE t.season_id=$1 AND t.member_tournament=true AND t.status='completed'
-        AND m.status='completed' AND m.score_p1 IS NOT NULL AND m.score_p2 IS NOT NULL
-        AND (p1.player_id=$2 OR p2.player_id=$2)
+        AND t.counts_for_title=true AND tp.player_id=$2
     `, [seasonId, playerId])
-    const byT = new Map()
-    for (const r of tm.rows) {
-      const isP1 = String(r.pid1) === playerId
-      const gf = isP1 ? Number(r.s1) : Number(r.s2)
-      const ga = isP1 ? Number(r.s2) : Number(r.s1)
-      if (!byT.has(r.id)) byT.set(r.id, { type: 'tournoi', date: dayjs(r.dt).format('YYYY-MM-DD'), label: r.name, v: 0, n: 0, d: 0, bp: 0, bc: 0 })
-      const o = byT.get(r.id)
-      o.bp += gf; o.bc += ga
-      if (gf > ga) o.v++; else if (gf < ga) o.d++; else o.n++
+    for (const t of tlist.rows) {
+      const parts = await q(`SELECT id, player_id, display_name, seed FROM tournament_participants WHERE tournament_id=$1 ORDER BY seed ASC NULLS LAST, id ASC`, [t.id])
+      const matchesT = await q(`SELECT id, round_no, slot_no, bracket_side, group_no, status, next_match_id, p1_participant_id, p2_participant_id, winner_participant_id, score_p1, score_p2 FROM tournament_matches WHERE tournament_id=$1 ORDER BY round_no ASC, slot_no ASC`, [t.id])
+      let ranking = rankTournamentParticipants(t, parts.rows, matchesT.rows)
+      ranking = await attachPlayerIdsByDisplayName(ranking)
+      const n = ranking.length
+      const idx = ranking.findIndex(r => String(r.player_id) === playerId)
+      if (idx < 0 || !n) continue
+      const pidByPart = new Map(parts.rows.map(p => [p.id, p.player_id]))
+      let v = 0, nn = 0, d = 0, bp = 0, bc = 0
+      for (const m of matchesT.rows) {
+        if (m.status !== 'completed' || m.score_p1 == null || m.score_p2 == null) continue
+        const p1 = pidByPart.get(m.p1_participant_id), p2 = pidByPart.get(m.p2_participant_id)
+        if (p1 !== playerId && p2 !== playerId) continue
+        const isP1 = p1 === playerId
+        const gf = isP1 ? Number(m.score_p1) : Number(m.score_p2)
+        const ga = isP1 ? Number(m.score_p2) : Number(m.score_p1)
+        bp += gf; bc += ga; if (gf > ga) v++; else if (gf < ga) d++; else nn++
+      }
+      sorties.push({
+        type: 'tournoi', date: dayjs(t.dt).format('YYYY-MM-DD'), label: t.name,
+        rank: idx + 1, total: n, v, n: nn, d, bp, bc, pts: pointsD1(n, idx + 1),
+      })
     }
-    for (const o of byT.values()) { o.pts = o.v * 3 + o.n; sorties.push(o) }
 
     sorties.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
 
@@ -4565,45 +4584,61 @@ async function computeGuestStandings(seasonId) {
         }
       }
       const ranked = [...agg.entries()]
-        .map(([id, s]) => ({ id, pts: s.v * 3 + s.n, ...s }))
-        .sort((a, b) => b.pts - a.pts || (b.bp - b.bc) - (a.bp - a.bc) || b.bp - a.bp)
+        .map(([id, s]) => ({ id, mp: s.v * 3 + s.n, ...s }))
+        .sort((a, b) => b.mp - a.mp || (b.bp - b.bc) - (a.bp - a.bc) || b.bp - a.bp)
+      const isD1 = divKey === 'd1'
       ranked.forEach((rr, idx) => {
         if (!inviteIds.has(rr.id)) return
         const s = ensure(rr.id)
-        s.journees += 1; s.pts += rr.pts; s.wins += rr.v; s.draws += rr.n; s.losses += rr.d; s.bp += rr.bp; s.bc += rr.bc
+        s.journees += 1
+        // Barème membre : points selon le classement de la journée (base 15 en D1)
+        s.pts += isD1 ? pointsD1(ranked.length, idx + 1) : pointsD2(idx + 1)
+        s.wins += rr.v; s.draws += rr.n; s.losses += rr.d; s.bp += rr.bp; s.bc += rr.bc
         if (!s.last_date || day > s.last_date) { s.last_date = day; s.last_div = divKey.toUpperCase(); s.last_rank = idx + 1; s.last_total = ranked.length }
       })
     }
   }
 
-  // 2) Tournois membres TERMINÉS (hors archivés) — 1 tournoi = 1 participation
-  const tmatches = await q(`
-    SELECT m.tournament_id, p1.player_id AS pid1, p2.player_id AS pid2, m.score_p1 AS s1, m.score_p2 AS s2
-    FROM tournament_matches m
-    JOIN tournaments t ON t.id = m.tournament_id
-    JOIN tournament_participants p1 ON p1.id = m.p1_participant_id
-    JOIN tournament_participants p2 ON p2.id = m.p2_participant_id
-    WHERE t.season_id=$1 AND t.member_tournament=true AND t.status='completed'
-      AND m.status='completed' AND m.score_p1 IS NOT NULL AND m.score_p2 IS NOT NULL
+  // 2) Tournois membres TERMINÉS (hors archivés) — 1 tournoi = 1 participation,
+  //    points selon le classement final (barème membre, base 15).
+  const tournaments = await q(`
+    SELECT id, format, winner_name, rr_standings_mode
+    FROM tournaments
+    WHERE season_id=$1 AND member_tournament=true AND status='completed' AND counts_for_title=true
+    ORDER BY COALESCE(ended_at, updated_at, created_at) ASC, id ASC
   `, [seasonId])
-  const perTour = new Map() // tid|pid -> agg
-  const addLeg = (tid, pid, gf, ga) => {
-    if (!inviteIds.has(pid)) return
-    const k = `${tid}|${pid}`
-    if (!perTour.has(k)) perTour.set(k, { pid, v: 0, n: 0, d: 0, bp: 0, bc: 0 })
-    const o = perTour.get(k)
-    o.bp += gf; o.bc += ga
-    if (gf > ga) o.v++; else if (gf < ga) o.d++; else o.n++
-  }
-  for (const r of tmatches.rows) {
-    addLeg(r.tournament_id, r.pid1, +r.s1, +r.s2)
-    addLeg(r.tournament_id, r.pid2, +r.s2, +r.s1)
-  }
-  for (const o of perTour.values()) {
-    const s = ensure(o.pid)
-    s.journees += 1
-    s.pts += o.v * 3 + o.n
-    s.wins += o.v; s.draws += o.n; s.losses += o.d; s.bp += o.bp; s.bc += o.bc
+  for (const t of tournaments.rows) {
+    const parts = await q(`SELECT id, player_id, display_name, seed FROM tournament_participants WHERE tournament_id=$1 ORDER BY seed ASC NULLS LAST, id ASC`, [t.id])
+    if (!parts.rowCount) continue
+    const matchesT = await q(`SELECT id, round_no, slot_no, bracket_side, group_no, status, next_match_id, p1_participant_id, p2_participant_id, winner_participant_id, score_p1, score_p2 FROM tournament_matches WHERE tournament_id=$1 ORDER BY round_no ASC, slot_no ASC`, [t.id])
+    let ranking = rankTournamentParticipants(t, parts.rows, matchesT.rows)
+    ranking = await attachPlayerIdsByDisplayName(ranking)
+    const n = ranking.length
+    if (!n) continue
+
+    // Stats de match par joueur (V/N/D/BP/BC, pour l'affichage)
+    const pidByPart = new Map(parts.rows.map(p => [p.id, p.player_id]))
+    const tstat = new Map()
+    const tEnsure = pid => { if (!tstat.has(pid)) tstat.set(pid, { v: 0, n: 0, d: 0, bp: 0, bc: 0 }); return tstat.get(pid) }
+    for (const m of matchesT.rows) {
+      if (m.status !== 'completed' || m.score_p1 == null || m.score_p2 == null) continue
+      const p1 = pidByPart.get(m.p1_participant_id)
+      const p2 = pidByPart.get(m.p2_participant_id)
+      if (!p1 || !p2) continue
+      const s1 = Number(m.score_p1), s2 = Number(m.score_p2)
+      const A = tEnsure(p1), B = tEnsure(p2)
+      A.bp += s1; A.bc += s2; B.bp += s2; B.bc += s1
+      if (s1 > s2) { A.v++; B.d++ } else if (s2 > s1) { B.v++; A.d++ } else { A.n++; B.n++ }
+    }
+
+    ranking.forEach((row, idx) => {
+      if (!inviteIds.has(row.player_id)) return
+      const s = ensure(row.player_id)
+      s.journees += 1
+      s.pts += pointsD1(n, idx + 1)
+      const ts = tstat.get(row.player_id)
+      if (ts) { s.wins += ts.v; s.draws += ts.n; s.losses += ts.d; s.bp += ts.bp; s.bc += ts.bc }
+    })
   }
 
   return [...stats.values()]
