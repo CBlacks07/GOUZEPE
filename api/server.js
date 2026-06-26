@@ -295,11 +295,14 @@ function sanitizeSqlFileName(name) {
    Stockage dans la table backups_store (Neon compatible)
    ================================================================ */
 
-// Ordre d'insertion respectant les FK
+// Ordre d'insertion respectant les FK.
+// (backups_store est volontairement exclu : on ne sauvegarde pas la liste des
+//  sauvegardes elle-même.)
 const BACKUP_TABLE_ORDER = [
-  'players','seasons','users','season_totals','matchday','draft','sessions',
+  'players','seasons','users','season_totals','matchday','draft','sessions','site_settings',
   'champion_result','guest_season_stats','membership_requests',
   'tournaments','tournament_participants','tournament_matches',
+  'tournament_match_attachments','tournament_match_comments',
   'tournament_groups','tournament_participant_stats','tournament_pool_participants',
   'duels','handoff_requests','match_attachments','match_comments','match_games',
   'tekken_ladder','tekken_duels',
