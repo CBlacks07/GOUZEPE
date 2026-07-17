@@ -634,7 +634,24 @@ const seasonHighlights = computed(() => {
   const teamsPlayers      = topTied(rows,     r => r.teams_used || 0)
   const defPlayers        = topTied(withAgg,  r => agg(r).J ? -(agg(r).BC / agg(r).J) : -999)
   const attPlayers        = topTied(withAgg,  r => agg(r).J ?  (agg(r).BP / agg(r).J) :    0)
-  const felicitatePlayers = topTied(rows.filter(r => r.id !== champion.id), r => winPct(r))
+
+  // Meilleure série de journées (D1) gagnées d'affilée
+  const d1Seq = []
+  for (const [id, list] of championsByPlayer.value) {
+    for (const c of list) if (c.div === 'D1') d1Seq.push({ id, date: c.date })
+  }
+  d1Seq.sort((a, b) => String(a.date).localeCompare(String(b.date)))
+  const streakBestById = new Map()
+  let sCur = null, sLen = 0
+  for (const c of d1Seq) {
+    if (c.id === sCur) sLen++
+    else { sCur = c.id; sLen = 1 }
+    if (sLen > (streakBestById.get(sCur) || 0)) streakBestById.set(sCur, sLen)
+  }
+  const bestStreakVal = rows.reduce((m, r) => Math.max(m, streakBestById.get(r.id) || 0), 0)
+  const streakPlayers = bestStreakVal > 1
+    ? rows.filter(r => (streakBestById.get(r.id) || 0) === bestStreakVal)
+    : []
 
   return {
     champion,
@@ -643,7 +660,7 @@ const seasonHighlights = computed(() => {
       { icon: svgIcon('shirt'),    title: "Plus d'équipes",      players: teamsPlayers,      detail: `${teamsPlayers[0]?.teams_used || 0} équipes différentes` },
       { icon: svgIcon('shield'),   title: 'Meilleure défense',  players: defPlayers,        detail: defPlayers[0] ? `${ratio(defPlayers[0], 'BC', 'J')} buts encaissés/match` : '—' },
       { icon: svgIcon('target'),   title: 'Meilleure attaque',  players: attPlayers,        detail: attPlayers[0] ? `${ratio(attPlayers[0], 'BP', 'J')} buts marqués/match`   : '—' },
-      { icon: svgIcon('star'),     title: 'À féliciter',         players: felicitatePlayers, detail: `${winPct(felicitatePlayers[0] || {})}% de victoires` },
+      { icon: svgIcon('flame'),    title: 'Meilleure série',    players: streakPlayers,     detail: bestStreakVal > 1 ? `${bestStreakVal} journées gagnées d'affilée` : 'Aucune série de 2+ journées' },
     ],
   }
 })
@@ -668,6 +685,7 @@ function svgIcon(name) {
     shield:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>',
     target:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
     star:     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    flame:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
   }
   return icons[name] || ''
 }
