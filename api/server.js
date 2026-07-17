@@ -377,6 +377,10 @@ async function restoreFromSqlString(sql) {
   const client = await pool.connect();
   try {
     const normalized = sql.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    // Retire UNIQUEMENT les lignes de commentaire EN TÊTE d'un bloc (le dump place
+    // "-- Table: X" juste avant chaque TRUNCATE). Sans ça, le bloc "commentaire +
+    // TRUNCATE" était jeté et les TRUNCATE ne s'exécutaient pas -> doublons au restore.
+    const cleanStmt = (raw) => String(raw || '').trim().replace(/^(?:[ \t]*--[^\n]*(?:\n|$))+/, '').trim();
     const stmts = [];
     let current = '';
     let inString = false;
@@ -391,21 +395,21 @@ async function restoreFromSqlString(sql) {
         continue;
       }
       if (ch === ';' && !inString) {
-        const trimmed = current.trim();
-        if (trimmed && !trimmed.startsWith('--')) stmts.push(trimmed);
+        const stmt = cleanStmt(current);
+        if (stmt && !stmt.startsWith('--')) stmts.push(stmt);
         current = '';
         continue;
       }
       current += ch;
     }
-    const last = current.trim();
+    const last = cleanStmt(current);
     if (last && !last.startsWith('--')) stmts.push(last);
 
     await client.query('BEGIN');
     await client.query(`SET session_replication_role = 'replica'`);
     for (let si = 0; si < stmts.length; si++) {
-      const line = stmts[si].replace(/^--[^\n]*\n/gm, '').trim();
-      if (!line || line.startsWith('--')) continue;
+      const line = stmts[si];
+      if (!line) continue;
       try {
         await client.query(line);
       } catch (stmtErr) {
