@@ -34,6 +34,9 @@
         <button @click="openTournamentsModal" class="btn">
           <TrophyIcon class="w-4 h-4" /> Tournois
         </button>
+        <button @click="streakModal = true" class="btn" title="Meilleures séries de journées gagnées d'affilée">
+          <FlameIcon class="w-4 h-4" /> Séries
+        </button>
         <button @click="load" class="btn" :disabled="loading">
           <RefreshCwIcon class="w-4 h-4" :class="{ 'animate-spin': loading }" />
         </button>
@@ -506,6 +509,29 @@
       </template>
     </BaseModal>
 
+    <!-- Modal: Meilleures séries -->
+    <BaseModal :open="streakModal" title="Meilleures séries" @close="streakModal = false" size="md">
+      <p class="text-sm mb-3" style="color:var(--muted)">
+        Plus grand nombre de journées (titre D1) remportées d'affilée, par joueur.
+      </p>
+      <div v-if="!streakRanking.length" class="text-sm py-4 text-center" style="color:var(--muted)">
+        Aucune donnée de champion de journée pour cette saison.
+      </div>
+      <div v-else class="streak-list">
+        <div v-for="(r, i) in streakRanking" :key="r.id" class="streak-row">
+          <span class="streak-rank" :class="{ gold: i === 0 }">{{ i + 1 }}</span>
+          <div class="min-w-0 flex-1">
+            <div class="streak-name">{{ r.name }}</div>
+            <div class="streak-id">({{ r.id }})</div>
+          </div>
+          <span class="streak-val" :class="{ gold: i === 0 }">
+            <FlameIcon v-if="i === 0" class="w-3.5 h-3.5 inline" /> {{ r.streak }}
+            <small>journée{{ r.streak > 1 ? 's' : '' }}</small>
+          </span>
+        </div>
+      </div>
+    </BaseModal>
+
   </AppLayout>
 </template>
 
@@ -518,7 +544,7 @@ import { useAPI } from '@/composables/useAPI'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
-import { ArrowLeftRightIcon, RefreshCwIcon, PlusIcon, Loader2Icon, PrinterIcon, TrophyIcon } from 'lucide-vue-next'
+import { ArrowLeftRightIcon, RefreshCwIcon, PlusIcon, Loader2Icon, PrinterIcon, TrophyIcon, FlameIcon } from 'lucide-vue-next'
 
 const api    = useAPI()
 const auth   = useAuthStore()
@@ -556,6 +582,7 @@ const roleById     = ref(new Map())
 const rolesLoaded  = ref(false)
 
 const tournamentsModal    = ref(false)
+const streakModal         = ref(false)
 const tournamentsLoading  = ref(false)
 const tournamentsList     = ref([])
 const activeTournamentId  = ref(null)
@@ -613,6 +640,32 @@ const filteredData = computed(() => {
 const classedRows   = computed(() => filteredData.value.filter(r => (r.participations || 0) >= threshold.value))
 const unclassedRows = computed(() => filteredData.value.filter(r => (r.participations || 0) < threshold.value))
 
+// Meilleure série de journées (D1) gagnées d'affilée, par joueur
+const streakByPlayerId = computed(() => {
+  const seq = []
+  for (const [id, list] of championsByPlayer.value) {
+    for (const c of list) if (c.div === 'D1') seq.push({ id, date: c.date })
+  }
+  seq.sort((a, b) => String(a.date).localeCompare(String(b.date)))
+  const best = new Map()
+  let cur = null, len = 0
+  for (const c of seq) {
+    if (c.id === cur) len++
+    else { cur = c.id; len = 1 }
+    if (len > (best.get(cur) || 0)) best.set(cur, len)
+  }
+  return best
+})
+const streakRanking = computed(() => {
+  const nameById = new Map((orderedData.value || []).map(r => [r.id, r.name]))
+  const out = []
+  for (const [id, s] of streakByPlayerId.value) {
+    if (s < 1) continue
+    out.push({ id, name: nameById.get(id) || id, streak: s })
+  }
+  return out.sort((a, b) => b.streak - a.streak || String(a.name || a.id).localeCompare(String(b.name || b.id), 'fr'))
+})
+
 const seasonHighlights = computed(() => {
   const rows = classedRows.value
   if (!rows.length) return null
@@ -635,19 +688,8 @@ const seasonHighlights = computed(() => {
   const defPlayers        = topTied(withAgg,  r => agg(r).J ? -(agg(r).BC / agg(r).J) : -999)
   const attPlayers        = topTied(withAgg,  r => agg(r).J ?  (agg(r).BP / agg(r).J) :    0)
 
-  // Meilleure série de journées (D1) gagnées d'affilée
-  const d1Seq = []
-  for (const [id, list] of championsByPlayer.value) {
-    for (const c of list) if (c.div === 'D1') d1Seq.push({ id, date: c.date })
-  }
-  d1Seq.sort((a, b) => String(a.date).localeCompare(String(b.date)))
-  const streakBestById = new Map()
-  let sCur = null, sLen = 0
-  for (const c of d1Seq) {
-    if (c.id === sCur) sLen++
-    else { sCur = c.id; sLen = 1 }
-    if (sLen > (streakBestById.get(sCur) || 0)) streakBestById.set(sCur, sLen)
-  }
+  // Meilleure série de journées (D1) gagnées d'affilée (calcul partagé)
+  const streakBestById = streakByPlayerId.value
   const bestStreakVal = rows.reduce((m, r) => Math.max(m, streakBestById.get(r.id) || 0), 0)
   const streakPlayers = bestStreakVal > 1
     ? rows.filter(r => (streakBestById.get(r.id) || 0) === bestStreakVal)
@@ -1455,6 +1497,26 @@ async function createSeason() {
 .rank-gold   { background: #ca8a04; color: #fff; }
 .rank-silver { background: #94a3b8; color: #fff; }
 .rank-bronze { background: #b45309; color: #fff; }
+
+/* Meilleures séries */
+.streak-list { display: flex; flex-direction: column; gap: .35rem; }
+.streak-row {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .5rem .65rem; border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+}
+.streak-rank {
+  flex: none; width: 1.6rem; height: 1.6rem; display: grid; place-items: center;
+  border-radius: 50%; font-weight: 800; font-size: .78rem; color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 70%, transparent); border: 1px solid var(--border);
+}
+.streak-rank.gold { color: #fff; background: linear-gradient(135deg, #f59e0b, #ca8a04); border-color: transparent; }
+.streak-name { font-weight: 600; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.streak-id { font-size: .72rem; color: var(--muted); }
+.streak-val { flex: none; font-family: var(--font-title); font-weight: 800; font-size: 1rem; font-variant-numeric: tabular-nums; }
+.streak-val.gold { color: #f59e0b; }
+.streak-val small { font-size: .58rem; font-weight: 600; color: var(--muted); margin-left: .2rem; }
 
 </style>
 
