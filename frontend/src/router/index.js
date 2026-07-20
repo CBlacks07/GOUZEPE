@@ -84,6 +84,12 @@ const routes = [
     meta: { requiresAuth: false, title: 'Records du club' },
   },
   {
+    path: '/joueur/:id',
+    name: 'PlayerProfile',
+    component: () => import('@/views/public/PlayerProfileView.vue'),
+    meta: { requiresAuth: false, title: 'Profil joueur' },
+  },
+  {
     path: '/inscription',
     name: 'Inscription',
     component: () => import('@/views/InscriptionView.vue'),
