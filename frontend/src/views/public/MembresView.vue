@@ -40,7 +40,7 @@
         <div v-if="loading" class="empty">Chargement…</div>
         <div v-else-if="!filtered.length" class="empty">Aucun membre trouvé.</div>
         <div v-else class="m-grid">
-        <article v-for="m in filtered" :key="m.player_id" class="m-card">
+        <RouterLink v-for="m in filtered" :key="m.player_id" :to="`/joueur/${m.player_id}`" class="m-card">
           <div class="m-avatar">
             <img v-if="avatarUrl(m)" :src="avatarUrl(m)" :alt="m.name" />
             <span v-else>{{ initials(m.name) }}</span>
@@ -51,7 +51,7 @@
             <span class="m-since">Membre depuis {{ m.admission_year || memberYear(m.created_at) }}</span>
           </div>
           <span v-if="isAdminRole(m.role)" class="m-badge">Admin</span>
-        </article>
+        </RouterLink>
         </div>
       </template>
     </section>
@@ -148,7 +148,7 @@ onMounted(async () => {
 .m-search { max-width: 22rem; }
 
 .m-grid { display: grid; gap: .9rem; grid-template-columns: 1fr; }
-.m-card { display: flex; align-items: center; gap: .9rem; padding: .85rem 1rem; background: var(--card); border: 1px solid var(--border); border-radius: 14px; transition: transform .15s, border-color .15s; }
+.m-card { display: flex; align-items: center; gap: .9rem; padding: .85rem 1rem; background: var(--card); border: 1px solid var(--border); border-radius: 14px; transition: transform .15s, border-color .15s; text-decoration: none; color: inherit; cursor: pointer; }
 .m-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
 .m-avatar { width: 46px; height: 46px; border-radius: 50%; flex: none; display: grid; place-items: center; overflow: hidden; background: color-mix(in srgb, var(--accent) 18%, var(--panel)); color: var(--accent-l); font-family: var(--font-title); font-weight: 700; }
 .m-avatar img { width: 100%; height: 100%; object-fit: cover; }

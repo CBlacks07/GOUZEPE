@@ -2935,6 +2935,99 @@ app.get('/public/records', async (_req, res) => {
   }
 })
 
+// Profil public d'un joueur : stats saison, titres, forme
+app.get('/public/player/:id', async (req, res) => {
+  try {
+    const id = String(req.params.id)
+    const pr = await q(`SELECT player_id, name, role, profile_pic_url, created_at FROM players WHERE player_id=$1`, [id])
+    if (!pr.rowCount) return bad(res, 404, 'joueur inconnu')
+    const player = pr.rows[0]
+    const num = v => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) ? null : Number(v)
+
+    let season = (await q(`SELECT id, name FROM seasons WHERE is_closed=false ORDER BY id DESC LIMIT 1`)).rows[0]
+      || (await q(`SELECT id, name FROM seasons ORDER BY id DESC LIMIT 1`)).rows[0]
+    let stats = null
+    if (season) {
+      const standings = await computeSeasonStandings(season.id)
+      const idx = standings.findIndex(r => r.id === id)
+      if (idx >= 0) stats = { moyenne: standings[idx].moyenne, total: standings[idx].total, participations: standings[idx].participations, rank: idx + 1, classed: standings.length }
+    }
+
+    const agg = { J: 0, V: 0, N: 0, D: 0, BP: 0, BC: 0 }
+    const form = []
+    const titles = { d1: 0, d2: 0, list: [] }
+    const allDays = (await q(`SELECT day, season_id, payload FROM matchday ORDER BY day ASC`)).rows
+    for (const row of allDays) {
+      const day = dayjs(row.day).format('YYYY-MM-DD')
+      const p = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
+      if (p?.champions?.d1?.id === id) { titles.d1++; titles.list.push({ date: day, div: 'D1' }) }
+      if (p?.champions?.d2?.id === id) { titles.d2++; titles.list.push({ date: day, div: 'D2' }) }
+      if (season && row.season_id === season.id) {
+        for (const div of ['d1', 'd2']) {
+          for (const m of (p[div] || [])) {
+            if (m.p1 !== id && m.p2 !== id) continue
+            const isP1 = m.p1 === id
+            const legs = []
+            const a1 = num(m.a1), a2 = num(m.a2), r1 = num(m.r1), r2 = num(m.r2)
+            if (a1 !== null && a2 !== null) legs.push(isP1 ? [a1, a2] : [a2, a1])
+            if (r1 !== null && r2 !== null) legs.push(isP1 ? [r1, r2] : [r2, r1])
+            for (const [gf, ga] of legs) {
+              agg.J++; agg.BP += gf; agg.BC += ga
+              const rr = gf > ga ? 'V' : (gf < ga ? 'D' : 'N')
+              agg[rr]++; form.push(rr)
+            }
+          }
+        }
+      }
+    }
+    titles.list.reverse()
+
+    ok(res, {
+      player: { id: player.player_id, name: player.name, role: player.role, avatar: player.profile_pic_url },
+      season: season ? { id: season.id, name: String(season.name || '').replace(/^"|"$/g, '') } : null,
+      stats, agg, form: form.slice(-8), titles: { d1: titles.d1, d2: titles.d2, list: titles.list.slice(0, 12) },
+    })
+  } catch (e) {
+    console.error('GET /public/player/:id', e)
+    bad(res, 500, 'Impossible de charger le profil')
+  }
+})
+
+// Face-à-face public entre deux joueurs (toutes journées)
+app.get('/public/faceoff/:a/:b', async (req, res) => {
+  try {
+    const a = String(req.params.a), b = String(req.params.b)
+    const num = v => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) ? null : Number(v)
+    const nm = await q(`SELECT player_id, name FROM players WHERE player_id = ANY($1::text[])`, [[a, b]])
+    const nameById = new Map(nm.rows.map(r => [r.player_id, r.name]))
+    const t = { legs: 0, aWins: 0, bWins: 0, draws: 0, aGoals: 0, bGoals: 0, matches: [] }
+    const days = (await q(`SELECT day, payload FROM matchday ORDER BY day DESC`)).rows
+    for (const row of days) {
+      const day = dayjs(row.day).format('YYYY-MM-DD')
+      const p = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
+      for (const div of ['d1', 'd2']) {
+        for (const m of (p[div] || [])) {
+          if (!((m.p1 === a && m.p2 === b) || (m.p1 === b && m.p2 === a))) continue
+          const aIsP1 = m.p1 === a
+          const legs = []
+          const a1 = num(m.a1), a2 = num(m.a2), r1 = num(m.r1), r2 = num(m.r2)
+          if (a1 !== null && a2 !== null) legs.push(aIsP1 ? [a1, a2] : [a2, a1])
+          if (r1 !== null && r2 !== null) legs.push(aIsP1 ? [r1, r2] : [r2, r1])
+          for (const [ga, gb] of legs) {
+            t.legs++; t.aGoals += ga; t.bGoals += gb
+            if (ga > gb) t.aWins++; else if (gb > ga) t.bWins++; else t.draws++
+            if (t.matches.length < 10) t.matches.push({ date: day, div: div.toUpperCase(), a: ga, b: gb })
+          }
+        }
+      }
+    }
+    ok(res, { a, b, a_name: nameById.get(a) || a, b_name: nameById.get(b) || b, ...t })
+  } catch (e) {
+    console.error('GET /public/faceoff', e)
+    bad(res, 500, 'Impossible de charger le face-à-face')
+  }
+})
+
 // Annuaire public des membres (hors invités)
 app.get('/public/members', async (_req, res) => {
   const r = await q(`
