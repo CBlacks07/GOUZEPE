@@ -12,6 +12,7 @@
         <RouterLink to="/tekken" active-class="on">Tekken</RouterLink>
         <RouterLink to="/classements" active-class="on">Classements</RouterLink>
         <RouterLink to="/palmares" active-class="on">Palmarès</RouterLink>
+        <RouterLink to="/records" active-class="on">Records</RouterLink>
         <RouterLink to="/membres" active-class="on">Membres</RouterLink>
       </nav>
 

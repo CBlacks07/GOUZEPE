@@ -2838,6 +2838,103 @@ app.get('/public/palmares', async (_req, res) => {
   }
 })
 
+// Records all-time du club
+app.get('/public/records', async (_req, res) => {
+  try {
+    const num = v => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) ? null : Number(v)
+    const days = (await q(`SELECT day, payload FROM matchday ORDER BY day ASC`)).rows
+
+    let carton = null              // plus large victoire (une manche)
+    let topJournee = null          // plus de buts sur une journée
+    const d1Titles = new Map()     // titres D1 par joueur
+    const d1Seq = []               // séquence chrono des champions D1
+
+    for (const row of days) {
+      const day = dayjs(row.day).format('YYYY-MM-DD')
+      const p = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
+      const goalsByPlayer = new Map()
+
+      for (const div of ['d1', 'd2']) {
+        for (const m of (p[div] || [])) {
+          if (!m?.p1 || !m?.p2) continue
+          const legs = [
+            [num(m.a1), num(m.a2)],
+            [num(m.r1), num(m.r2)],
+          ]
+          for (const [g1, g2] of legs) {
+            if (g1 === null || g2 === null) continue
+            goalsByPlayer.set(m.p1, (goalsByPlayer.get(m.p1) || 0) + g1)
+            goalsByPlayer.set(m.p2, (goalsByPlayer.get(m.p2) || 0) + g2)
+            if (g1 !== g2) {
+              const margin = Math.abs(g1 - g2)
+              if (!carton || margin > carton.margin) {
+                const p1Win = g1 > g2
+                carton = {
+                  margin, date: day, div: div.toUpperCase(),
+                  winner: p1Win ? m.p1 : m.p2, loser: p1Win ? m.p2 : m.p1,
+                  wScore: Math.max(g1, g2), lScore: Math.min(g1, g2),
+                }
+              }
+            }
+          }
+        }
+      }
+      for (const [pid, g] of goalsByPlayer) {
+        if (!topJournee || g > topJournee.goals) topJournee = { id: pid, goals: g, date: day }
+      }
+      const c1 = p?.champions?.d1?.id
+      if (c1) { d1Titles.set(c1, (d1Titles.get(c1) || 0) + 1); d1Seq.push({ id: c1, date: day }) }
+    }
+
+    // Meilleure série D1
+    d1Seq.sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    let bestStreak = null, sCur = null, sLen = 0
+    for (const c of d1Seq) {
+      if (c.id === sCur) sLen++; else { sCur = c.id; sLen = 1 }
+      if (!bestStreak || sLen > bestStreak.streak) bestStreak = { id: sCur, streak: sLen }
+    }
+
+    // Plus de titres D1
+    let mostTitles = null
+    for (const [id, n] of d1Titles) if (!mostTitles || n > mostTitles.count) mostTitles = { id, count: n }
+
+    // Meilleure moyenne de saison (parmi les classés)
+    const seasons = (await q(`SELECT id, name FROM seasons ORDER BY id ASC`)).rows
+    let bestAvg = null
+    for (const s of seasons) {
+      const daysCount = (await q(`SELECT COUNT(*)::int c FROM matchday WHERE season_id=$1`, [s.id])).rows[0]?.c || 0
+      const threshold = daysCount ? Math.ceil(daysCount * 0.25) : 0
+      const st = await computeSeasonStandings(s.id)
+      const top = st.filter(r => (r.participations || 0) >= threshold)[0]
+      if (top && (!bestAvg || top.moyenne > bestAvg.moyenne)) {
+        bestAvg = { id: top.id, moyenne: top.moyenne, season: String(s.name || '').replace(/^"|"$/g, '') }
+      }
+    }
+
+    // Noms des joueurs impliqués
+    const ids = [...new Set([carton?.winner, carton?.loser, topJournee?.id, bestStreak?.id, mostTitles?.id, bestAvg?.id].filter(Boolean))]
+    const nameById = new Map()
+    if (ids.length) {
+      const r = await q(`SELECT player_id, name FROM players WHERE player_id = ANY($1::text[])`, [ids])
+      for (const row of r.rows) nameById.set(row.player_id, row.name)
+    }
+    const nm = id => nameById.get(id) || id
+
+    ok(res, {
+      records: {
+        carton: carton ? { ...carton, winner_name: nm(carton.winner), loser_name: nm(carton.loser) } : null,
+        top_journee: topJournee ? { ...topJournee, name: nm(topJournee.id) } : null,
+        best_streak: bestStreak ? { ...bestStreak, name: nm(bestStreak.id) } : null,
+        most_titles: mostTitles ? { ...mostTitles, name: nm(mostTitles.id) } : null,
+        best_avg: bestAvg ? { ...bestAvg, name: nm(bestAvg.id) } : null,
+      },
+    })
+  } catch (e) {
+    console.error('GET /public/records', e)
+    bad(res, 500, 'Impossible de charger les records')
+  }
+})
+
 // Annuaire public des membres (hors invités)
 app.get('/public/members', async (_req, res) => {
   const r = await q(`
