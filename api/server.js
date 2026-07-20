@@ -2812,6 +2812,32 @@ app.get('/public/standings', async (req, res) => {
   }
 })
 
+// Palmarès : champions (podium) de chaque saison
+app.get('/public/palmares', async (_req, res) => {
+  try {
+    const seasons = (await q(`SELECT id, name, is_closed, started_at, ended_at FROM seasons ORDER BY id DESC`)).rows
+    const out = []
+    for (const s of seasons) {
+      const daysCount = (await q(`SELECT COUNT(*)::int AS c FROM matchday WHERE season_id=$1`, [s.id])).rows[0]?.c || 0
+      const threshold = daysCount ? Math.ceil(daysCount * 0.25) : 0
+      const standings = await computeSeasonStandings(s.id)
+      const classed = standings.filter(r => (r.participations || 0) >= threshold)
+      const podium = classed.slice(0, 3).map(r => ({
+        id: r.id, name: r.name, moyenne: r.moyenne, total: r.total,
+        participations: r.participations, won_d1: r.won_d1, won_d2: r.won_d2,
+      }))
+      out.push({
+        id: s.id, name: s.name, is_closed: s.is_closed, ended_at: s.ended_at,
+        journees: daysCount, classed_count: classed.length, podium,
+      })
+    }
+    ok(res, { seasons: out })
+  } catch (e) {
+    console.error('GET /public/palmares', e)
+    bad(res, 500, 'Impossible de charger le palmarès')
+  }
+})
+
 // Annuaire public des membres (hors invités)
 app.get('/public/members', async (_req, res) => {
   const r = await q(`
