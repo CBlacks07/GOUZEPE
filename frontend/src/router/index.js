@@ -78,6 +78,12 @@ const routes = [
     meta: { requiresAuth: false, title: 'Palmarès' },
   },
   {
+    path: '/records',
+    name: 'Records',
+    component: () => import('@/views/public/RecordsView.vue'),
+    meta: { requiresAuth: false, title: 'Records du club' },
+  },
+  {
     path: '/inscription',
     name: 'Inscription',
     component: () => import('@/views/InscriptionView.vue'),
