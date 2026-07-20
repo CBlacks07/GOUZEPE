@@ -72,6 +72,12 @@ const routes = [
     meta: { requiresAuth: false, title: 'Membres' },
   },
   {
+    path: '/palmares',
+    name: 'Palmares',
+    component: () => import('@/views/public/PalmaresView.vue'),
+    meta: { requiresAuth: false, title: 'Palmarès' },
+  },
+  {
     path: '/inscription',
     name: 'Inscription',
     component: () => import('@/views/InscriptionView.vue'),
