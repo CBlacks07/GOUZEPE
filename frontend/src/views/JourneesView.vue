@@ -1552,7 +1552,7 @@ function mergeGeneratedMatches(existingMatches, playerIds) {
 }
 
 /* ====== Print ====== */
-function printDaySheet() {
+async function printDaySheet() {
   const hasContent = d1Matches.value.length || d2Matches.value.length
   if (!hasContent) {
     toastInfo('Aucune confrontation à imprimer pour cette journée.')
@@ -1565,6 +1565,27 @@ function printDaySheet() {
     main.forEach((r, idx) => { r.RANK = idx + 1 })
     inv.forEach(r => { r.RANK = '—' })
     return { main, inv }
+  }
+
+  async function logoDataURL() {
+    const tryFetch = async (path) => {
+      try {
+        const r = await fetch(path, { cache: 'no-store' })
+        if (!r.ok) return null
+        const blob = await r.blob()
+        return await new Promise((resolve) => {
+          const fr = new FileReader()
+          fr.onload = () => resolve(fr.result)
+          fr.readAsDataURL(blob)
+        })
+      } catch (_) {
+        return null
+      }
+    }
+    return (await tryFetch('/assets/logo.png'))
+      || (await tryFetch('/assets/icons/apple-touch-icon.png'))
+      || (await tryFetch('assets/logo.png'))
+      || (await tryFetch('assets/icons/apple-touch-icon.png'))
   }
 
   const { main: main1, inv: inv1 } = splitAndRank([...d1Standings.value])
@@ -1598,9 +1619,10 @@ function printDaySheet() {
   const c2Id = d2ChampId.value || '—'
   const team1 = (champTeamD1.value || '').toUpperCase() || '—'
   const team2 = (champTeamD2.value || '').toUpperCase() || '—'
+  const logo = await logoDataURL()
 
   let html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>Résultats — ${escapeHtml(selectedDate.value)}</title><style>${css}</style></head><body onload="window.print()">`
-  html += `<h1>GOUZEPE GAMING CLUB — Journée du ${escapeHtml(fmtDate(selectedDate.value))}</h1>`
+  html += `<h1>${logo ? `<img src="${logo}" alt="logo">` : ''}GOUZEPE GAMING CLUB — Journée du ${escapeHtml(fmtDate(selectedDate.value))}</h1>`
   html += '<h2>SCORES D1</h2>' + renderMatches(d1Matches.value)
   html += `<div class="champ">${SVG_TROPHY} ${escapeHtml(c1Id)} — CHAMPION avec ${escapeHtml(team1)}</div>`
   html += renderStand('CLASSEMENT D1', main1, inv1)
