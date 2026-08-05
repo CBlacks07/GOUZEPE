@@ -564,7 +564,7 @@ const confirmedDays  = ref([])
 // SEASON_AGG (Win%, Forme, D1/D2 count)
 const aggMap          = ref(new Map()) // id -> {J, V, form:[], d1, d2}
 const championsByPlayer = ref(new Map()) // id -> [{date, div, team}]
-const bestDayPerfByDiv = ref({ d1: null, d2: null }) // { id, goals, date } — meilleure perf en une journée
+const dayPerfByDiv = ref({ d1: [], d2: [] }) // [{id, goals, date}, …] — perfs (buts) par journée et division, filtrées ensuite (invités, ex-champions D1 pour D2)
 
 const search   = ref('')
 const showWin  = ref(true)
@@ -712,7 +712,7 @@ const seasonHighlights = computed(() => {
 
 // Détails par division (D1 / D2) : titres, meilleure défense, meilleure attaque
 const seasonDivisionHighlights = computed(() => {
-  const rows = filteredData.value
+  const rows = filteredData.value // déjà sans les invités (voir filteredData)
   if (!rows.length) return null
 
   const topTied = (arr, scoreFn) => {
@@ -724,17 +724,27 @@ const seasonDivisionHighlights = computed(() => {
   const agg = r => aggMap.value.get(r.id) || {}
 
   const nameById = new Map(rows.map(r => [r.id, r.name || r.id]))
+  const rowById  = new Map(rows.map(r => [r.id, r]))
+
+  // Joueurs ayant remporté au moins un titre D1 cette saison — exclus des honneurs D2
+  const d1ChampIds = new Set()
+  for (const [id, list] of championsByPlayer.value) {
+    if (list.some(c => c.div === 'D1')) d1ChampIds.add(id)
+  }
 
   const buildDiv = (div) => {
-    const played = rows.filter(r => (agg(r)[`J_${div}`] || 0) > 0)
+    let played = rows.filter(r => (agg(r)[`J_${div}`] || 0) > 0)
+    if (div === 'd2') played = played.filter(r => !d1ChampIds.has(r.id))
     const regPlayers = topTied(played, r => agg(r)[`J_${div}`] || 0)
     const defPlayers = topTied(played, r => agg(r)[`J_${div}`] ? -(agg(r)[`BC_${div}`] / agg(r)[`J_${div}`]) : -999)
     const attPlayers = topTied(played, r => agg(r)[`J_${div}`] ? (agg(r)[`BP_${div}`] / agg(r)[`J_${div}`]) : 0)
     const ratio = (r, num) => { const a = agg(r); return a[`J_${div}`] ? (a[`${num}_${div}`] / a[`J_${div}`]).toFixed(2) : '—' }
 
-    // Le(s) plus titré(s) dans cette division cette saison
+    // Le(s) plus titré(s) dans cette division cette saison (invités exclus, ex-champions D1 exclus des honneurs D2)
     const titleCounts = new Map()
     for (const [id, list] of championsByPlayer.value) {
+      if (isInviteRow({ id })) continue
+      if (div === 'd2' && d1ChampIds.has(id)) continue
       const n = list.filter(c => c.div === div.toUpperCase()).length
       if (n > 0) titleCounts.set(id, n)
     }
@@ -743,8 +753,12 @@ const seasonDivisionHighlights = computed(() => {
     const titlePlayers = bestTitleN > 0 ? rows.filter(r => (titleCounts.get(r.id) || 0) === bestTitleN) : []
 
     // Meilleure performance en une seule journée (buts marqués, aller+retour cumulés)
-    const bd = bestDayPerfByDiv.value?.[div] || null
-    const bdPlayers = bd ? [{ id: bd.id, name: nameById.get(bd.id) || bd.id }] : []
+    // — invités exclus, ex-champions D1 exclus de la sélection D2
+    let perfList = (dayPerfByDiv.value[div] || []).filter(e => !isInviteRow({ id: e.id }))
+    if (div === 'd2') perfList = perfList.filter(e => !d1ChampIds.has(e.id))
+    let bd = null
+    for (const e of perfList) if (!bd || e.goals > bd.goals) bd = e
+    const bdPlayers = bd ? [{ id: bd.id, name: nameById.get(bd.id) || rowById.get(bd.id)?.name || bd.id }] : []
 
     return {
       titles:  { icon: svgIcon('trophy'),   title: `Titres ${div.toUpperCase()}`,             players: titlePlayers, detail: bestTitleN > 0 ? `${bestTitleN} journée(s) remportée(s)` : 'Aucun titre' },
@@ -756,6 +770,35 @@ const seasonDivisionHighlights = computed(() => {
   }
 
   return { d1: buildDiv('d1'), d2: buildDiv('d2') }
+})
+
+// Plus grande progression : compare le rythme de points (3/1/0 par manche) entre
+// la 1re et la 2e moitié chronologique de la saison, pour féliciter ceux qui montent en puissance.
+const MIN_HALF_MATCHES = 3
+const seasonProgression = computed(() => {
+  const rows = filteredData.value
+  if (!rows.length) return null
+  const agg = r => aggMap.value.get(r.id) || {}
+  const rate = (a, n) => a[`halfJ${n}`] ? a[`halfPts${n}`] / a[`halfJ${n}`] : null
+
+  const scored = []
+  for (const r of rows) {
+    const a = agg(r)
+    if ((a.halfJ1 || 0) < MIN_HALF_MATCHES || (a.halfJ2 || 0) < MIN_HALF_MATCHES) continue
+    const first = rate(a, 1), second = rate(a, 2)
+    if (first == null || second == null) continue
+    scored.push({ r, delta: second - first, first, second })
+  }
+  if (!scored.length) return null
+
+  const bestDelta = Math.max(...scored.map(s => Math.round(s.delta * 100)))
+  if (bestDelta <= 0) return null // personne n'a réellement progressé
+  const best = scored.filter(s => Math.round(s.delta * 100) === bestDelta)
+
+  return {
+    players: best.map(s => s.r),
+    detail: `+${(bestDelta / 100).toFixed(2)} pt(s)/manche en 2e moitié (${best[0].first.toFixed(2)} → ${best[0].second.toFixed(2)})`,
+  }
 })
 
 const filteredTitles = computed(() => {
@@ -779,6 +822,7 @@ function svgIcon(name) {
     target:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
     star:     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
     flame:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+    trend:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>',
   }
   return icons[name] || ''
 }
@@ -906,15 +950,20 @@ async function buildSeasonAgg(days) {
   const runVersion = ++aggBuildVersion
   const agg = new Map()
   const champs = new Map()
-  const bestDay = { d1: null, d2: null } // meilleure perf (buts) en une journée, par division
+  const dayPerf = { d1: [], d2: [] } // [{id, goals, date}, …] — perf de chaque joueur, chaque journée, par division
   const ensure = id => {
     if (!agg.has(id)) agg.set(id, {
       J: 0, V: 0, N: 0, D: 0, BP: 0, BC: 0, form: [], d1: 0, d2: 0,
       J_d1: 0, BP_d1: 0, BC_d1: 0, J_d2: 0, BP_d2: 0, BC_d2: 0,
+      halfJ1: 0, halfPts1: 0, halfJ2: 0, halfPts2: 0,
     })
     return agg.get(id)
   }
+  const midIndex = Math.ceil(days.length / 2) // sépare la saison en 2 moitiés chronologiques
+  let dayIndex = -1
   for (const day of days) {
+    dayIndex++
+    const half = dayIndex < midIndex ? 1 : 2
     if (runVersion !== aggBuildVersion) return
     try {
       const { data: p } = await api.get(`/matchdays/${day}`)
@@ -931,9 +980,10 @@ async function buildSeasonAgg(days) {
             A[`BP_${div}`] += Number(m.a1); A[`BC_${div}`] += Number(m.a2)
             B[`BP_${div}`] += Number(m.a2); B[`BC_${div}`] += Number(m.a1)
             addGoals(m.p1, Number(m.a1)); addGoals(m.p2, Number(m.a2))
-            if (m.a1 > m.a2)      { A.V++; B.D++; A.form.push('V'); B.form.push('D') }
-            else if (m.a1 < m.a2) { B.V++; A.D++; B.form.push('V'); A.form.push('D') }
-            else                   { A.N++; B.N++; A.form.push('N'); B.form.push('N') }
+            A[`halfJ${half}`]++; B[`halfJ${half}`]++
+            if (m.a1 > m.a2)      { A.V++; B.D++; A.form.push('V'); B.form.push('D'); A[`halfPts${half}`] += 3 }
+            else if (m.a1 < m.a2) { B.V++; A.D++; B.form.push('V'); A.form.push('D'); B[`halfPts${half}`] += 3 }
+            else                   { A.N++; B.N++; A.form.push('N'); B.form.push('N'); A[`halfPts${half}`] += 1; B[`halfPts${half}`] += 1 }
           }
           if (m.r1 != null && m.r2 != null) {
             const A2 = ensure(m.p2), B2 = ensure(m.p1) // p2 at home in retour
@@ -942,15 +992,16 @@ async function buildSeasonAgg(days) {
             A2[`BP_${div}`] += Number(m.r2); A2[`BC_${div}`] += Number(m.r1)
             B2[`BP_${div}`] += Number(m.r1); B2[`BC_${div}`] += Number(m.r2)
             addGoals(m.p2, Number(m.r2)); addGoals(m.p1, Number(m.r1))
-            if (m.r2 > m.r1)      { A2.V++; B2.D++; A2.form.push('V'); B2.form.push('D') }
-            else if (m.r2 < m.r1) { B2.V++; A2.D++; B2.form.push('V'); A2.form.push('D') }
-            else                   { A2.N++; B2.N++; A2.form.push('N'); B2.form.push('N') }
+            A2[`halfJ${half}`]++; B2[`halfJ${half}`]++
+            if (m.r2 > m.r1)      { A2.V++; B2.D++; A2.form.push('V'); B2.form.push('D'); A2[`halfPts${half}`] += 3 }
+            else if (m.r2 < m.r1) { B2.V++; A2.D++; B2.form.push('V'); A2.form.push('D'); B2[`halfPts${half}`] += 3 }
+            else                   { A2.N++; B2.N++; A2.form.push('N'); B2.form.push('N'); A2[`halfPts${half}`] += 1; B2[`halfPts${half}`] += 1 }
           }
           if (div === 'd1') { ensure(m.p1).d1++; ensure(m.p2).d1++ }
           else              { ensure(m.p1).d2++; ensure(m.p2).d2++ }
         }
         for (const [id, goals] of dayGoals) {
-          if (!bestDay[div] || goals > bestDay[div].goals) bestDay[div] = { id, goals, date: day }
+          dayPerf[div].push({ id, goals, date: day })
         }
       }
       const c1 = p?.champions?.d1, c2 = p?.champions?.d2
@@ -969,7 +1020,7 @@ async function buildSeasonAgg(days) {
   if (runVersion !== aggBuildVersion) return
   aggMap.value = agg
   championsByPlayer.value = champs
-  bestDayPerfByDiv.value = bestDay
+  dayPerfByDiv.value = dayPerf
 }
 
 /* ====== Day actions ====== */
@@ -1172,6 +1223,13 @@ async function printSeasonA4() {
     .div-breakdown{display:flex;flex-direction:column;gap:10px;margin-top:12px}
     .div-block{border:1px solid #ddd;border-radius:8px;padding:8px;background:#fff}
     .div-block h3{font-size:11px;margin:0 0 6px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#334155}
+    .progress-box{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border-radius:8px;background:#eef2ff;border:2px solid #6366f1}
+    .progress-icon{flex:none;width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+    .progress-icon svg{width:22px;height:22px}
+    .progress-label{font-size:9px;font-weight:800;letter-spacing:.08em;color:#4338ca;text-transform:uppercase}
+    .progress-name{font-size:14px;font-weight:900;color:#312e81;line-height:1.2}
+    .progress-id{font-size:10px;color:#4338ca}
+    .progress-detail{font-size:10px;color:#4f46e5;margin-top:2px}
   `
   const logo = await logoDataURL()
 
@@ -1245,6 +1303,23 @@ async function printSeasonA4() {
           </div>
         </div>`
       bilanHtml += `<div class="div-breakdown">${renderDivBlock('D1', dh.d1)}${renderDivBlock('D2', dh.d2)}</div>`
+    }
+
+    // Plus grande progression (félicitations)
+    const prog = seasonProgression.value
+    if (prog) {
+      const names = prog.players.map(p => escapeHtml(p.name || p.id)).join(' &amp; ')
+      const ids   = prog.players.map(p => '(' + escapeHtml(p.id) + ')').join(' &amp; ')
+      bilanHtml += `
+        <div class="progress-box">
+          <div class="progress-icon">${svgIcon('trend')}</div>
+          <div>
+            <div class="progress-label">Plus grande progression — Félicitations !</div>
+            <div class="progress-name">${names}</div>
+            <div class="progress-id">${ids}</div>
+            <div class="progress-detail">${escapeHtml(prog.detail)}</div>
+          </div>
+        </div>`
     }
 
     bilanHtml += '</div>'
