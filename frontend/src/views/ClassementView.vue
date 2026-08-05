@@ -709,6 +709,45 @@ const seasonHighlights = computed(() => {
   }
 })
 
+// Détails par division (D1 / D2) : titres, meilleure défense, meilleure attaque
+const seasonDivisionHighlights = computed(() => {
+  const rows = filteredData.value
+  if (!rows.length) return null
+
+  const topTied = (arr, scoreFn) => {
+    if (!arr.length) return []
+    const scored = arr.map(r => ({ r, s: Math.round(scoreFn(r) * 100) }))
+    const best = Math.max(...scored.map(x => x.s))
+    return scored.filter(x => x.s === best).map(x => x.r)
+  }
+  const agg = r => aggMap.value.get(r.id) || {}
+
+  const buildDiv = (div) => {
+    const played = rows.filter(r => (agg(r)[`J_${div}`] || 0) > 0)
+    const defPlayers = topTied(played, r => agg(r)[`J_${div}`] ? -(agg(r)[`BC_${div}`] / agg(r)[`J_${div}`]) : -999)
+    const attPlayers = topTied(played, r => agg(r)[`J_${div}`] ? (agg(r)[`BP_${div}`] / agg(r)[`J_${div}`]) : 0)
+    const ratio = (r, num) => { const a = agg(r); return a[`J_${div}`] ? (a[`${num}_${div}`] / a[`J_${div}`]).toFixed(2) : '—' }
+
+    // Le(s) plus titré(s) dans cette division cette saison
+    const titleCounts = new Map()
+    for (const [id, list] of championsByPlayer.value) {
+      const n = list.filter(c => c.div === div.toUpperCase()).length
+      if (n > 0) titleCounts.set(id, n)
+    }
+    let bestTitleN = 0
+    for (const n of titleCounts.values()) if (n > bestTitleN) bestTitleN = n
+    const titlePlayers = bestTitleN > 0 ? rows.filter(r => (titleCounts.get(r.id) || 0) === bestTitleN) : []
+
+    return {
+      titles:  { icon: svgIcon('trophy'), title: `Titres ${div.toUpperCase()}`,          players: titlePlayers, detail: bestTitleN > 0 ? `${bestTitleN} journée(s) remportée(s)` : 'Aucun titre' },
+      defense: { icon: svgIcon('shield'), title: `Meilleure défense ${div.toUpperCase()}`, players: defPlayers,  detail: defPlayers[0] ? `${ratio(defPlayers[0], 'BC')} buts encaissés/match` : '—' },
+      attack:  { icon: svgIcon('target'), title: `Meilleure attaque ${div.toUpperCase()}`, players: attPlayers,  detail: attPlayers[0] ? `${ratio(attPlayers[0], 'BP')} buts marqués/match`   : '—' },
+    }
+  }
+
+  return { d1: buildDiv('d1'), d2: buildDiv('d2') }
+})
+
 const filteredTitles = computed(() => {
   if (!playerTitles.value) return []
   const list = championsByPlayer.value.get(playerTitles.value.id) || []
@@ -724,10 +763,10 @@ const SVG_TROPHY = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="1
 function svgIcon(name) {
   const icons = {
     trophy:   SVG_TROPHY,
-    calendar: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>',
-    shirt:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>',
-    shield:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>',
-    target:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+    calendar: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>',
+    shirt:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>',
+    shield:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>',
+    target:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
     star:     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
     flame:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
   }
@@ -851,7 +890,10 @@ async function buildSeasonAgg(days) {
   const agg = new Map()
   const champs = new Map()
   const ensure = id => {
-    if (!agg.has(id)) agg.set(id, { J: 0, V: 0, N: 0, D: 0, BP: 0, BC: 0, form: [], d1: 0, d2: 0 })
+    if (!agg.has(id)) agg.set(id, {
+      J: 0, V: 0, N: 0, D: 0, BP: 0, BC: 0, form: [], d1: 0, d2: 0,
+      J_d1: 0, BP_d1: 0, BC_d1: 0, J_d2: 0, BP_d2: 0, BC_d2: 0,
+    })
     return agg.get(id)
   }
   for (const day of days) {
@@ -865,6 +907,9 @@ async function buildSeasonAgg(days) {
           const A = ensure(m.p1), B = ensure(m.p2)
           if (m.a1 != null && m.a2 != null) {
             A.J++; B.J++; A.BP += Number(m.a1); A.BC += Number(m.a2); B.BP += Number(m.a2); B.BC += Number(m.a1)
+            A[`J_${div}`]++; B[`J_${div}`]++
+            A[`BP_${div}`] += Number(m.a1); A[`BC_${div}`] += Number(m.a2)
+            B[`BP_${div}`] += Number(m.a2); B[`BC_${div}`] += Number(m.a1)
             if (m.a1 > m.a2)      { A.V++; B.D++; A.form.push('V'); B.form.push('D') }
             else if (m.a1 < m.a2) { B.V++; A.D++; B.form.push('V'); A.form.push('D') }
             else                   { A.N++; B.N++; A.form.push('N'); B.form.push('N') }
@@ -872,6 +917,9 @@ async function buildSeasonAgg(days) {
           if (m.r1 != null && m.r2 != null) {
             const A2 = ensure(m.p2), B2 = ensure(m.p1) // p2 at home in retour
             A2.J++; B2.J++; A2.BP += Number(m.r2); A2.BC += Number(m.r1); B2.BP += Number(m.r1); B2.BC += Number(m.r2)
+            A2[`J_${div}`]++; B2[`J_${div}`]++
+            A2[`BP_${div}`] += Number(m.r2); A2[`BC_${div}`] += Number(m.r1)
+            B2[`BP_${div}`] += Number(m.r1); B2[`BC_${div}`] += Number(m.r2)
             if (m.r2 > m.r1)      { A2.V++; B2.D++; A2.form.push('V'); B2.form.push('D') }
             else if (m.r2 < m.r1) { B2.V++; A2.D++; B2.form.push('V'); A2.form.push('D') }
             else                   { A2.N++; B2.N++; A2.form.push('N'); B2.form.push('N') }
@@ -1095,6 +1143,10 @@ async function printSeasonA4() {
     .hl-name{font-size:11px;font-weight:800;color:#111;margin-top:3px;word-break:break-word}
     .hl-id{font-size:9px;color:#64748b}
     .hl-detail{font-size:9px;color:#94a3b8;margin-top:2px}
+    .div-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+    .div-block{border:1px solid #ddd;border-radius:8px;padding:8px;background:#fff}
+    .div-block h3{font-size:11px;margin:0 0 6px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#334155}
+    .div-block .highlights{grid-template-columns:repeat(3,1fr)}
   `
   const logo = await logoDataURL()
 
@@ -1143,7 +1195,34 @@ async function printSeasonA4() {
           <div class="hl-detail">${escapeHtml(card.detail)}</div>
         </div>`
     }
-    bilanHtml += '</div></div>'
+    bilanHtml += '</div>'
+
+    // Détails par division (D1 / D2)
+    const dh = seasonDivisionHighlights.value
+    if (dh) {
+      const renderDivCard = (card) => {
+        const names = (card.players || []).map(p => escapeHtml(p.name || p.id)).join(' &amp; ')
+        const ids   = (card.players || []).map(p => '(' + escapeHtml(p.id) + ')').join(' &amp; ')
+        return `
+          <div class="hl-card">
+            <div class="hl-icon">${card.icon}</div>
+            <div class="hl-title">${escapeHtml(card.title)}</div>
+            <div class="hl-name">${names || '—'}</div>
+            <div class="hl-id">${ids}</div>
+            <div class="hl-detail">${escapeHtml(card.detail)}</div>
+          </div>`
+      }
+      const renderDivBlock = (label, d) => `
+        <div class="div-block">
+          <h3>Détails ${label}</h3>
+          <div class="highlights">
+            ${renderDivCard(d.titles)}${renderDivCard(d.defense)}${renderDivCard(d.attack)}
+          </div>
+        </div>`
+      bilanHtml += `<div class="div-breakdown">${renderDivBlock('D1', dh.d1)}${renderDivBlock('D2', dh.d2)}</div>`
+    }
+
+    bilanHtml += '</div>'
   }
 
   const seasonLabel = currentSeasonName.value || 'Saison'
