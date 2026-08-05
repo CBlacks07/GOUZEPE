@@ -564,6 +564,7 @@ const confirmedDays  = ref([])
 // SEASON_AGG (Win%, Forme, D1/D2 count)
 const aggMap          = ref(new Map()) // id -> {J, V, form:[], d1, d2}
 const championsByPlayer = ref(new Map()) // id -> [{date, div, team}]
+const bestDayPerfByDiv = ref({ d1: null, d2: null }) // { id, goals, date } — meilleure perf en une journée
 
 const search   = ref('')
 const showWin  = ref(true)
@@ -722,8 +723,11 @@ const seasonDivisionHighlights = computed(() => {
   }
   const agg = r => aggMap.value.get(r.id) || {}
 
+  const nameById = new Map(rows.map(r => [r.id, r.name || r.id]))
+
   const buildDiv = (div) => {
     const played = rows.filter(r => (agg(r)[`J_${div}`] || 0) > 0)
+    const regPlayers = topTied(played, r => agg(r)[`J_${div}`] || 0)
     const defPlayers = topTied(played, r => agg(r)[`J_${div}`] ? -(agg(r)[`BC_${div}`] / agg(r)[`J_${div}`]) : -999)
     const attPlayers = topTied(played, r => agg(r)[`J_${div}`] ? (agg(r)[`BP_${div}`] / agg(r)[`J_${div}`]) : 0)
     const ratio = (r, num) => { const a = agg(r); return a[`J_${div}`] ? (a[`${num}_${div}`] / a[`J_${div}`]).toFixed(2) : '—' }
@@ -738,10 +742,16 @@ const seasonDivisionHighlights = computed(() => {
     for (const n of titleCounts.values()) if (n > bestTitleN) bestTitleN = n
     const titlePlayers = bestTitleN > 0 ? rows.filter(r => (titleCounts.get(r.id) || 0) === bestTitleN) : []
 
+    // Meilleure performance en une seule journée (buts marqués, aller+retour cumulés)
+    const bd = bestDayPerfByDiv.value?.[div] || null
+    const bdPlayers = bd ? [{ id: bd.id, name: nameById.get(bd.id) || bd.id }] : []
+
     return {
-      titles:  { icon: svgIcon('trophy'), title: `Titres ${div.toUpperCase()}`,          players: titlePlayers, detail: bestTitleN > 0 ? `${bestTitleN} journée(s) remportée(s)` : 'Aucun titre' },
-      defense: { icon: svgIcon('shield'), title: `Meilleure défense ${div.toUpperCase()}`, players: defPlayers,  detail: defPlayers[0] ? `${ratio(defPlayers[0], 'BC')} buts encaissés/match` : '—' },
-      attack:  { icon: svgIcon('target'), title: `Meilleure attaque ${div.toUpperCase()}`, players: attPlayers,  detail: attPlayers[0] ? `${ratio(attPlayers[0], 'BP')} buts marqués/match`   : '—' },
+      titles:  { icon: svgIcon('trophy'),   title: `Titres ${div.toUpperCase()}`,             players: titlePlayers, detail: bestTitleN > 0 ? `${bestTitleN} journée(s) remportée(s)` : 'Aucun titre' },
+      regular: { icon: svgIcon('calendar'), title: `Plus régulier ${div.toUpperCase()}`,        players: regPlayers,  detail: `${agg(regPlayers[0])[`J_${div}`] || 0} journée(s) jouée(s)` },
+      defense: { icon: svgIcon('shield'),   title: `Meilleure défense ${div.toUpperCase()}`,    players: defPlayers,  detail: defPlayers[0] ? `${ratio(defPlayers[0], 'BC')} buts encaissés/match` : '—' },
+      attack:  { icon: svgIcon('target'),   title: `Meilleure attaque ${div.toUpperCase()}`,    players: attPlayers,  detail: attPlayers[0] ? `${ratio(attPlayers[0], 'BP')} buts marqués/match`   : '—' },
+      bestDay: { icon: svgIcon('star'),     title: `Meilleure perf. (1 journée) ${div.toUpperCase()}`, players: bdPlayers, detail: bd ? `${bd.goals} but(s) le ${fmtDateShort(bd.date)}` : 'Aucune donnée' },
     }
   }
 
@@ -767,7 +777,7 @@ function svgIcon(name) {
     shirt:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>',
     shield:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>',
     target:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
-    star:     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    star:     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
     flame:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
   }
   return icons[name] || ''
@@ -795,6 +805,13 @@ function fmtDate(d) {
     return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', {
       weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
     })
+  } catch (_) { return d }
+}
+
+function fmtDateShort(d) {
+  if (!d) return '—'
+  try {
+    return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
   } catch (_) { return d }
 }
 
@@ -889,6 +906,7 @@ async function buildSeasonAgg(days) {
   const runVersion = ++aggBuildVersion
   const agg = new Map()
   const champs = new Map()
+  const bestDay = { d1: null, d2: null } // meilleure perf (buts) en une journée, par division
   const ensure = id => {
     if (!agg.has(id)) agg.set(id, {
       J: 0, V: 0, N: 0, D: 0, BP: 0, BC: 0, form: [], d1: 0, d2: 0,
@@ -902,6 +920,8 @@ async function buildSeasonAgg(days) {
       const { data: p } = await api.get(`/matchdays/${day}`)
       if (runVersion !== aggBuildVersion) return
       for (const div of ['d1', 'd2']) {
+        const dayGoals = new Map()
+        const addGoals = (id, g) => dayGoals.set(id, (dayGoals.get(id) || 0) + g)
         for (const m of (p[div] || [])) {
           if (!m.p1 || !m.p2) continue
           const A = ensure(m.p1), B = ensure(m.p2)
@@ -910,6 +930,7 @@ async function buildSeasonAgg(days) {
             A[`J_${div}`]++; B[`J_${div}`]++
             A[`BP_${div}`] += Number(m.a1); A[`BC_${div}`] += Number(m.a2)
             B[`BP_${div}`] += Number(m.a2); B[`BC_${div}`] += Number(m.a1)
+            addGoals(m.p1, Number(m.a1)); addGoals(m.p2, Number(m.a2))
             if (m.a1 > m.a2)      { A.V++; B.D++; A.form.push('V'); B.form.push('D') }
             else if (m.a1 < m.a2) { B.V++; A.D++; B.form.push('V'); A.form.push('D') }
             else                   { A.N++; B.N++; A.form.push('N'); B.form.push('N') }
@@ -920,12 +941,16 @@ async function buildSeasonAgg(days) {
             A2[`J_${div}`]++; B2[`J_${div}`]++
             A2[`BP_${div}`] += Number(m.r2); A2[`BC_${div}`] += Number(m.r1)
             B2[`BP_${div}`] += Number(m.r1); B2[`BC_${div}`] += Number(m.r2)
+            addGoals(m.p2, Number(m.r2)); addGoals(m.p1, Number(m.r1))
             if (m.r2 > m.r1)      { A2.V++; B2.D++; A2.form.push('V'); B2.form.push('D') }
             else if (m.r2 < m.r1) { B2.V++; A2.D++; B2.form.push('V'); A2.form.push('D') }
             else                   { A2.N++; B2.N++; A2.form.push('N'); B2.form.push('N') }
           }
           if (div === 'd1') { ensure(m.p1).d1++; ensure(m.p2).d1++ }
           else              { ensure(m.p1).d2++; ensure(m.p2).d2++ }
+        }
+        for (const [id, goals] of dayGoals) {
+          if (!bestDay[div] || goals > bestDay[div].goals) bestDay[div] = { id, goals, date: day }
         }
       }
       const c1 = p?.champions?.d1, c2 = p?.champions?.d2
@@ -944,6 +969,7 @@ async function buildSeasonAgg(days) {
   if (runVersion !== aggBuildVersion) return
   aggMap.value = agg
   championsByPlayer.value = champs
+  bestDayPerfByDiv.value = bestDay
 }
 
 /* ====== Day actions ====== */
@@ -1143,10 +1169,9 @@ async function printSeasonA4() {
     .hl-name{font-size:11px;font-weight:800;color:#111;margin-top:3px;word-break:break-word}
     .hl-id{font-size:9px;color:#64748b}
     .hl-detail{font-size:9px;color:#94a3b8;margin-top:2px}
-    .div-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+    .div-breakdown{display:flex;flex-direction:column;gap:10px;margin-top:12px}
     .div-block{border:1px solid #ddd;border-radius:8px;padding:8px;background:#fff}
     .div-block h3{font-size:11px;margin:0 0 6px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#334155}
-    .div-block .highlights{grid-template-columns:repeat(3,1fr)}
   `
   const logo = await logoDataURL()
 
@@ -1216,7 +1241,7 @@ async function printSeasonA4() {
         <div class="div-block">
           <h3>Détails ${label}</h3>
           <div class="highlights">
-            ${renderDivCard(d.titles)}${renderDivCard(d.defense)}${renderDivCard(d.attack)}
+            ${renderDivCard(d.titles)}${renderDivCard(d.regular)}${renderDivCard(d.defense)}${renderDivCard(d.attack)}${renderDivCard(d.bestDay)}
           </div>
         </div>`
       bilanHtml += `<div class="div-breakdown">${renderDivBlock('D1', dh.d1)}${renderDivBlock('D2', dh.d2)}</div>`
