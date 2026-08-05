@@ -643,7 +643,8 @@ import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useAPI } from '@/composables/useAPI'
+import { useAPI, mediaUrl } from '@/composables/useAPI'
+import { useSiteSettings } from '@/stores/siteSettings'
 import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
 import { onRealtimeEvent, joinRealtimeRoom, leaveRealtimeRoom } from '@/composables/useRealtimeSocket'
@@ -653,6 +654,7 @@ const SVG_TROPHY = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="1
 
 const auth   = useAuthStore()
 const api    = useAPI()
+const site   = useSiteSettings()
 const route  = useRoute()
 const router = useRouter()
 const { success, error: toastError, info: toastInfo } = useToast()
@@ -1569,6 +1571,7 @@ async function printDaySheet() {
 
   async function logoDataURL() {
     const tryFetch = async (path) => {
+      if (!path) return null
       try {
         const r = await fetch(path, { cache: 'no-store' })
         if (!r.ok) return null
@@ -1582,7 +1585,9 @@ async function printDaySheet() {
         return null
       }
     }
-    return (await tryFetch('/assets/logo.png'))
+    const logoPath = mediaUrl(site.settings.brand.logo)
+    return (await tryFetch(logoPath))
+      || (await tryFetch('/assets/logo.png'))
       || (await tryFetch('/assets/icons/apple-touch-icon.png'))
       || (await tryFetch('assets/logo.png'))
       || (await tryFetch('assets/icons/apple-touch-icon.png'))
