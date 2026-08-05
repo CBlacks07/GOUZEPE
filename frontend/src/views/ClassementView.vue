@@ -540,14 +540,16 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
-import { useAPI } from '@/composables/useAPI'
+import { useAPI, mediaUrl } from '@/composables/useAPI'
 import { useAuthStore } from '@/stores/auth'
+import { useSiteSettings } from '@/stores/siteSettings'
 import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
 import { ArrowLeftRightIcon, RefreshCwIcon, PlusIcon, Loader2Icon, PrinterIcon, TrophyIcon, FlameIcon } from 'lucide-vue-next'
 
 const api    = useAPI()
 const auth   = useAuthStore()
+const site   = useSiteSettings()
 const router = useRouter()
 const { success, error: toastError } = useToast()
 
@@ -973,6 +975,7 @@ function splitAndRankDaily(st) {
 
 async function logoDataURL() {
   const tryFetch = async (path) => {
+    if (!path) return null
     try {
       const r = await fetch(path, { cache: 'no-store' })
       if (!r.ok) return null
@@ -986,7 +989,9 @@ async function logoDataURL() {
       return null
     }
   }
-  return (await tryFetch('/assets/logo.png'))
+  const logoPath = mediaUrl(site.settings.brand.logo)
+  return (await tryFetch(logoPath))
+    || (await tryFetch('/assets/logo.png'))
     || (await tryFetch('/assets/icons/apple-touch-icon.png'))
     || (await tryFetch('assets/logo.png'))
     || (await tryFetch('assets/icons/apple-touch-icon.png'))
