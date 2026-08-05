@@ -760,12 +760,35 @@ const seasonDivisionHighlights = computed(() => {
     for (const e of perfList) if (!bd || e.goals > bd.goals) bd = e
     const bdPlayers = bd ? [{ id: bd.id, name: nameById.get(bd.id) || rowById.get(bd.id)?.name || bd.id }] : []
 
+    // Plus grande progression dans cette division (rythme de points 3/1/0, 1re vs 2e moitié de saison)
+    const progRate = (r, n) => { const a = agg(r); const j = a[`halfJ${n}_${div}`]; return j ? a[`halfPts${n}_${div}`] / j : null }
+    const progScored = []
+    for (const r of played) {
+      const a = agg(r)
+      if ((a[`halfJ1_${div}`] || 0) < MIN_HALF_MATCHES || (a[`halfJ2_${div}`] || 0) < MIN_HALF_MATCHES) continue
+      const first = progRate(r, 1), second = progRate(r, 2)
+      if (first == null || second == null) continue
+      progScored.push({ r, delta: second - first, first, second })
+    }
+    let progressPlayers = [], progressDetail = 'Aucune donnée'
+    if (progScored.length) {
+      const bestProgDelta = Math.max(...progScored.map(s => Math.round(s.delta * 100)))
+      if (bestProgDelta > 0) {
+        const bestProg = progScored.filter(s => Math.round(s.delta * 100) === bestProgDelta)
+        progressPlayers = bestProg.map(s => s.r)
+        progressDetail = `+${(bestProgDelta / 100).toFixed(2)} pt(s)/manche (${bestProg[0].first.toFixed(2)} → ${bestProg[0].second.toFixed(2)})`
+      } else {
+        progressDetail = 'Pas de progression notable'
+      }
+    }
+
     return {
-      titles:  { icon: svgIcon('trophy'),   title: `Titres ${div.toUpperCase()}`,             players: titlePlayers, detail: bestTitleN > 0 ? `${bestTitleN} journée(s) remportée(s)` : 'Aucun titre' },
-      regular: { icon: svgIcon('calendar'), title: `Plus régulier ${div.toUpperCase()}`,        players: regPlayers,  detail: `${agg(regPlayers[0])[`J_${div}`] || 0} journée(s) jouée(s)` },
-      defense: { icon: svgIcon('shield'),   title: `Meilleure défense ${div.toUpperCase()}`,    players: defPlayers,  detail: defPlayers[0] ? `${ratio(defPlayers[0], 'BC')} buts encaissés/match` : '—' },
-      attack:  { icon: svgIcon('target'),   title: `Meilleure attaque ${div.toUpperCase()}`,    players: attPlayers,  detail: attPlayers[0] ? `${ratio(attPlayers[0], 'BP')} buts marqués/match`   : '—' },
-      bestDay: { icon: svgIcon('star'),     title: `Meilleure perf. (1 journée) ${div.toUpperCase()}`, players: bdPlayers, detail: bd ? `${bd.goals} but(s) le ${fmtDateShort(bd.date)}` : 'Aucune donnée' },
+      titles:   { icon: svgIcon('trophy'),   title: `Titres ${div.toUpperCase()}`,                       players: titlePlayers,    detail: bestTitleN > 0 ? `${bestTitleN} journée(s) remportée(s)` : 'Aucun titre' },
+      regular:  { icon: svgIcon('calendar'), title: `Plus régulier ${div.toUpperCase()}`,                players: regPlayers,     detail: `${agg(regPlayers[0])[`J_${div}`] || 0} journée(s) jouée(s)` },
+      defense:  { icon: svgIcon('shield'),   title: `Meilleure défense ${div.toUpperCase()}`,            players: defPlayers,     detail: defPlayers[0] ? `${ratio(defPlayers[0], 'BC')} buts encaissés/match` : '—' },
+      attack:   { icon: svgIcon('target'),   title: `Meilleure attaque ${div.toUpperCase()}`,            players: attPlayers,     detail: attPlayers[0] ? `${ratio(attPlayers[0], 'BP')} buts marqués/match`   : '—' },
+      bestDay:  { icon: svgIcon('star'),     title: `Meilleure perf. (1 journée) ${div.toUpperCase()}`,  players: bdPlayers,      detail: bd ? `${bd.goals} but(s) le ${fmtDateShort(bd.date)}` : 'Aucune donnée' },
+      progress: { icon: svgIcon('trend'),    title: `Plus grande progression ${div.toUpperCase()}`,      players: progressPlayers, detail: progressDetail },
     }
   }
 
@@ -956,6 +979,8 @@ async function buildSeasonAgg(days) {
       J: 0, V: 0, N: 0, D: 0, BP: 0, BC: 0, form: [], d1: 0, d2: 0,
       J_d1: 0, BP_d1: 0, BC_d1: 0, J_d2: 0, BP_d2: 0, BC_d2: 0,
       halfJ1: 0, halfPts1: 0, halfJ2: 0, halfPts2: 0,
+      halfJ1_d1: 0, halfPts1_d1: 0, halfJ2_d1: 0, halfPts2_d1: 0,
+      halfJ1_d2: 0, halfPts1_d2: 0, halfJ2_d2: 0, halfPts2_d2: 0,
     })
     return agg.get(id)
   }
@@ -981,9 +1006,10 @@ async function buildSeasonAgg(days) {
             B[`BP_${div}`] += Number(m.a2); B[`BC_${div}`] += Number(m.a1)
             addGoals(m.p1, Number(m.a1)); addGoals(m.p2, Number(m.a2))
             A[`halfJ${half}`]++; B[`halfJ${half}`]++
-            if (m.a1 > m.a2)      { A.V++; B.D++; A.form.push('V'); B.form.push('D'); A[`halfPts${half}`] += 3 }
-            else if (m.a1 < m.a2) { B.V++; A.D++; B.form.push('V'); A.form.push('D'); B[`halfPts${half}`] += 3 }
-            else                   { A.N++; B.N++; A.form.push('N'); B.form.push('N'); A[`halfPts${half}`] += 1; B[`halfPts${half}`] += 1 }
+            A[`halfJ${half}_${div}`]++; B[`halfJ${half}_${div}`]++
+            if (m.a1 > m.a2)      { A.V++; B.D++; A.form.push('V'); B.form.push('D'); A[`halfPts${half}`] += 3; A[`halfPts${half}_${div}`] += 3 }
+            else if (m.a1 < m.a2) { B.V++; A.D++; B.form.push('V'); A.form.push('D'); B[`halfPts${half}`] += 3; B[`halfPts${half}_${div}`] += 3 }
+            else                   { A.N++; B.N++; A.form.push('N'); B.form.push('N'); A[`halfPts${half}`] += 1; B[`halfPts${half}`] += 1; A[`halfPts${half}_${div}`] += 1; B[`halfPts${half}_${div}`] += 1 }
           }
           if (m.r1 != null && m.r2 != null) {
             const A2 = ensure(m.p2), B2 = ensure(m.p1) // p2 at home in retour
@@ -993,9 +1019,10 @@ async function buildSeasonAgg(days) {
             B2[`BP_${div}`] += Number(m.r1); B2[`BC_${div}`] += Number(m.r2)
             addGoals(m.p2, Number(m.r2)); addGoals(m.p1, Number(m.r1))
             A2[`halfJ${half}`]++; B2[`halfJ${half}`]++
-            if (m.r2 > m.r1)      { A2.V++; B2.D++; A2.form.push('V'); B2.form.push('D'); A2[`halfPts${half}`] += 3 }
-            else if (m.r2 < m.r1) { B2.V++; A2.D++; B2.form.push('V'); A2.form.push('D'); B2[`halfPts${half}`] += 3 }
-            else                   { A2.N++; B2.N++; A2.form.push('N'); B2.form.push('N'); A2[`halfPts${half}`] += 1; B2[`halfPts${half}`] += 1 }
+            A2[`halfJ${half}_${div}`]++; B2[`halfJ${half}_${div}`]++
+            if (m.r2 > m.r1)      { A2.V++; B2.D++; A2.form.push('V'); B2.form.push('D'); A2[`halfPts${half}`] += 3; A2[`halfPts${half}_${div}`] += 3 }
+            else if (m.r2 < m.r1) { B2.V++; A2.D++; B2.form.push('V'); A2.form.push('D'); B2[`halfPts${half}`] += 3; B2[`halfPts${half}_${div}`] += 3 }
+            else                   { A2.N++; B2.N++; A2.form.push('N'); B2.form.push('N'); A2[`halfPts${half}`] += 1; B2[`halfPts${half}`] += 1; A2[`halfPts${half}_${div}`] += 1; B2[`halfPts${half}_${div}`] += 1 }
           }
           if (div === 'd1') { ensure(m.p1).d1++; ensure(m.p2).d1++ }
           else              { ensure(m.p1).d2++; ensure(m.p2).d2++ }
@@ -1223,6 +1250,7 @@ async function printSeasonA4() {
     .div-breakdown{display:flex;flex-direction:column;gap:10px;margin-top:12px}
     .div-block{border:1px solid #ddd;border-radius:8px;padding:8px;background:#fff}
     .div-block h3{font-size:11px;margin:0 0 6px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#334155}
+    .div-block .highlights{grid-template-columns:repeat(6,1fr)}
     .progress-box{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border-radius:8px;background:#eef2ff;border:2px solid #6366f1}
     .progress-icon{flex:none;width:26px;height:26px;display:flex;align-items:center;justify-content:center}
     .progress-icon svg{width:22px;height:22px}
@@ -1299,7 +1327,7 @@ async function printSeasonA4() {
         <div class="div-block">
           <h3>Détails ${label}</h3>
           <div class="highlights">
-            ${renderDivCard(d.titles)}${renderDivCard(d.regular)}${renderDivCard(d.defense)}${renderDivCard(d.attack)}${renderDivCard(d.bestDay)}
+            ${renderDivCard(d.titles)}${renderDivCard(d.regular)}${renderDivCard(d.defense)}${renderDivCard(d.attack)}${renderDivCard(d.bestDay)}${renderDivCard(d.progress)}
           </div>
         </div>`
       bilanHtml += `<div class="div-breakdown">${renderDivBlock('D1', dh.d1)}${renderDivBlock('D2', dh.d2)}</div>`
