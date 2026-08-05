@@ -56,7 +56,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import { useMembershipNotif } from '@/composables/useMembershipNotif'
 import {
   UsersIcon, TrophyIcon, CalendarDaysIcon, BarChart2Icon, SwordsIcon,
-  ShieldIcon, DatabaseIcon, PaletteIcon, GamepadIcon, ListOrderedIcon,
+  ShieldIcon, DatabaseIcon, PaletteIcon, GamepadIcon, ListOrderedIcon, MegaphoneIcon,
 } from 'lucide-vue-next'
 
 const { pendingCount } = useMembershipNotif()
@@ -76,6 +76,7 @@ const tekkenCards = [
 
 const commonCards = [
   { to: '/admin/utilisateurs', label: 'Utilisateurs & demandes', desc: 'Comptes et demandes d\'adhésion', icon: ShieldIcon },
+  { to: '/admin/news',         label: 'Actualités',              desc: 'Annonces du club',                icon: MegaphoneIcon },
   { to: '/admin/site',         label: 'Apparence du site',       desc: 'Textes, logo, fond, couleurs',    icon: PaletteIcon },
   { to: '/admin/sauvegardes',  label: 'Sauvegardes',             desc: 'Backups & restauration',          icon: DatabaseIcon },
 ]

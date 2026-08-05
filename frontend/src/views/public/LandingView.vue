@@ -32,6 +32,11 @@
       </div>
     </section>
 
+    <!-- ── Annonces du club ── -->
+    <section class="section news-section">
+      <NewsAnnouncements />
+    </section>
+
     <!-- ── Les deux univers ── -->
     <section id="univers" class="section univers">
       <div class="section-head">
@@ -181,6 +186,7 @@ import { RouterLink } from 'vue-router'
 import { ArrowRightIcon, TrophyIcon } from 'lucide-vue-next'
 import PublicNav from '@/components/public/PublicNav.vue'
 import PublicFooter from '@/components/public/PublicFooter.vue'
+import NewsAnnouncements from '@/components/NewsAnnouncements.vue'
 import { useGameStore } from '@/stores/game'
 import { useSiteSettings } from '@/stores/siteSettings'
 import { resolveBaseURL, mediaUrl } from '@/composables/useAPI'
@@ -331,6 +337,7 @@ onMounted(async () => {
 
 /* ── Sections ── */
 .section { max-width: none; padding: 4rem clamp(1.25rem, 4vw, 4rem); }
+.news-section { padding-bottom: 0; max-width: 48rem; margin: 0 auto; }
 .section-head { margin-bottom: 2rem; }
 .section-head h2 { font-family: var(--font-title); font-weight: 700; font-size: clamp(1.6rem, 4vw, 2.4rem); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 .4rem; }
 .section-head h2::after { content: ''; display: block; width: 3rem; height: 3px; margin-top: .7rem; border-radius: 3px; background: var(--accent); }

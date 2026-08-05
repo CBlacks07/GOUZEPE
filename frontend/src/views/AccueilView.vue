@@ -113,6 +113,11 @@
         </div>
       </div>
 
+      <!-- Annonces du club -->
+      <div class="mb-6 reveal delay-1">
+        <NewsAnnouncements />
+      </div>
+
       <!-- Pronostics -->
       <section v-if="hasPronostics" class="card pronos-card reveal delay-1">
         <div class="pronos-head">
@@ -240,6 +245,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import NewsAnnouncements from '@/components/NewsAnnouncements.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useAPI, mediaUrl } from '@/composables/useAPI'
 import { useSiteSettings } from '@/stores/siteSettings'
