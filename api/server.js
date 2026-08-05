@@ -299,7 +299,7 @@ function sanitizeSqlFileName(name) {
 // (backups_store est volontairement exclu : on ne sauvegarde pas la liste des
 //  sauvegardes elle-même.)
 const BACKUP_TABLE_ORDER = [
-  'players','seasons','users','season_totals','matchday','draft','sessions','site_settings',
+  'players','seasons','users','season_totals','matchday','draft','sessions','site_settings','news',
   'champion_result','guest_season_stats','membership_requests',
   'tournaments','tournament_participants','tournament_matches',
   'tournament_match_attachments','tournament_match_comments',
@@ -865,6 +865,18 @@ async function ensureSchema(){
     CONSTRAINT site_settings_single CHECK (id = 1)
   )`);
   await q(`INSERT INTO site_settings (id, data) VALUES (1, '{}'::jsonb) ON CONFLICT (id) DO NOTHING`);
+
+  /* Actualités / annonces du club */
+  await q(`CREATE TABLE IF NOT EXISTS news (
+    id         SERIAL PRIMARY KEY,
+    title      TEXT NOT NULL,
+    body       TEXT NOT NULL DEFAULT '',
+    tag        TEXT,
+    pinned     BOOLEAN NOT NULL DEFAULT false,
+    published  BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
 
   /* table stats invités — VESTIGIALE : le classement invités est désormais
      calculé en direct (computeGuestStandings). Conservée volontairement (plus
@@ -2773,6 +2785,72 @@ app.put('/admin/site-settings', auth, adminOnly, async (req, res) => {
 app.post('/admin/site-media', auth, adminOnly, siteUpload.single('file'), async (req, res) => {
   if (!req.file) return bad(res, 400, 'Aucun fichier')
   ok(res, { url: `/uploads/site/${req.file.filename}` })
+})
+
+// ── Actualités / annonces du club ────────────────────────────
+app.get('/public/news', async (_req, res) => {
+  try {
+    const r = await q(
+      `SELECT id, title, body, tag, pinned, created_at, updated_at FROM news
+       WHERE published = true ORDER BY pinned DESC, created_at DESC LIMIT 20`
+    )
+    ok(res, { news: r.rows })
+  } catch (e) {
+    console.error('GET /public/news', e)
+    bad(res, 500, 'Impossible de charger les actualités')
+  }
+})
+
+app.get('/admin/news', auth, adminOnly, async (_req, res) => {
+  try {
+    const r = await q(`SELECT * FROM news ORDER BY pinned DESC, created_at DESC`)
+    ok(res, { news: r.rows })
+  } catch (e) {
+    console.error('GET /admin/news', e)
+    bad(res, 500, 'Impossible de charger les actualités')
+  }
+})
+
+app.post('/admin/news', auth, adminOnly, async (req, res) => {
+  try {
+    const { title, body, tag, pinned, published } = req.body || {}
+    if (!title || !String(title).trim()) return bad(res, 400, 'Titre requis')
+    const r = await q(
+      `INSERT INTO news (title, body, tag, pinned, published) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      [String(title).trim(), String(body || ''), tag ? String(tag).trim() : null, !!pinned, published !== false]
+    )
+    ok(res, { news: r.rows[0] })
+  } catch (e) {
+    console.error('POST /admin/news', e)
+    bad(res, 500, 'Création impossible')
+  }
+})
+
+app.put('/admin/news/:id', auth, adminOnly, async (req, res) => {
+  try {
+    const { title, body, tag, pinned, published } = req.body || {}
+    if (!title || !String(title).trim()) return bad(res, 400, 'Titre requis')
+    const r = await q(
+      `UPDATE news SET title=$1, body=$2, tag=$3, pinned=$4, published=$5, updated_at=now()
+       WHERE id=$6 RETURNING *`,
+      [String(title).trim(), String(body || ''), tag ? String(tag).trim() : null, !!pinned, published !== false, req.params.id]
+    )
+    if (!r.rows[0]) return bad(res, 404, 'Introuvable')
+    ok(res, { news: r.rows[0] })
+  } catch (e) {
+    console.error('PUT /admin/news/:id', e)
+    bad(res, 500, 'Modification impossible')
+  }
+})
+
+app.delete('/admin/news/:id', auth, adminOnly, async (req, res) => {
+  try {
+    await q(`DELETE FROM news WHERE id=$1`, [req.params.id])
+    ok(res, { ok: true })
+  } catch (e) {
+    console.error('DELETE /admin/news/:id', e)
+    bad(res, 500, 'Suppression impossible')
+  }
 })
 
 // Classement général public (par jeu). game=efoot (défaut) | tekken

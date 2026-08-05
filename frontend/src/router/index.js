@@ -211,6 +211,12 @@ const routes = [
     component: () => import('@/views/admin/AdminSiteView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin - Apparence du site' },
   },
+  {
+    path: '/admin/news',
+    name: 'AdminNews',
+    component: () => import('@/views/admin/AdminNewsView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin - Actualités' },
+  },
 
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
