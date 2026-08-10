@@ -1078,7 +1078,7 @@ app.get('/presence/online', auth, async (_req,res)=>{
 
 /* ====== Admin users ====== */
 app.get('/admin/users', auth, adminOnly, async (_req,res)=>{
-  const r=await q(`SELECT id,email,role,created_at FROM users ORDER BY created_at DESC NULLS LAST, id DESC`);
+  const r=await q(`SELECT id,email,role,player_id,created_at FROM users ORDER BY created_at DESC NULLS LAST, id DESC`);
   ok(res,{ users:r.rows });
 });
 app.post('/admin/users', auth, adminOnly, async (req,res)=>{
@@ -1099,19 +1099,43 @@ app.post('/admin/users', auth, adminOnly, async (req,res)=>{
 });
 app.put('/admin/users/:id', auth, adminOnly, async (req,res)=>{
   const id=+req.params.id;
-  let { email, role, password } = req.body||{};
+  let { email, role, password, player_id } = req.body||{};
   email = email ? normEmail(email) : undefined;
-  const u=(await q(`SELECT id,email,role FROM users WHERE id=$1`,[id])).rows[0];
+  const u=(await q(`SELECT id,email,role,player_id FROM users WHERE id=$1`,[id])).rows[0];
   if(!u) return bad(res,404,'introuvable');
   const newEmail = email || u.email;
   const newRole  = (role||u.role)==='admin'?'admin':'member';
-  if(password){
-    const hash=await bcrypt.hash(password,10);
-    await q(`UPDATE users SET email=$1, role=$2, password_hash=$3 WHERE id=$4`,[newEmail,newRole,hash,id]);
-  }else{
-    await q(`UPDATE users SET email=$1, role=$2 WHERE id=$3`,[newEmail,newRole,id]);
+
+  // player_id : n'est modifié que si la clé est présente dans le body (permet de
+  // distinguer "ne pas toucher" de "délier" — le front envoie toujours la clé).
+  let newPlayerId = u.player_id;
+  if (Object.prototype.hasOwnProperty.call(req.body||{}, 'player_id')) {
+    const trimmed = player_id ? String(player_id).trim() : '';
+    if (!trimmed) {
+      newPlayerId = null; // délier
+    } else {
+      const pcheck = await q(`SELECT player_id FROM players WHERE player_id=$1`,[trimmed]);
+      if (!pcheck.rowCount) return bad(res,404,'Joueur introuvable');
+      const conflict = await q(`SELECT id FROM users WHERE player_id=$1 AND id<>$2`,[trimmed,id]);
+      if (conflict.rowCount) return bad(res,409,'Ce joueur est déjà lié à un autre compte');
+      newPlayerId = trimmed;
+    }
   }
-  const r=await q(`SELECT id,email,role,created_at FROM users WHERE id=$1`,[id]);
+
+  try {
+    if(password){
+      const hash=await bcrypt.hash(password,10);
+      await q(`UPDATE users SET email=$1, role=$2, password_hash=$3, player_id=$4 WHERE id=$5`,[newEmail,newRole,hash,newPlayerId,id]);
+    }else{
+      await q(`UPDATE users SET email=$1, role=$2, player_id=$3 WHERE id=$4`,[newEmail,newRole,newPlayerId,id]);
+    }
+  } catch (e) {
+    if (e.code === '23505') return bad(res,409,'Ce joueur est déjà lié à un autre compte');
+    if (e.code === '23503') return bad(res,404,'Joueur introuvable');
+    console.error('PUT /admin/users/:id', e);
+    return bad(res,500,'Enregistrement impossible');
+  }
+  const r=await q(`SELECT id,email,role,player_id,created_at FROM users WHERE id=$1`,[id]);
   ok(res,{ user:r.rows[0] });
 });
 app.delete('/admin/users/:id', auth, adminOnly, async (req,res)=>{
@@ -3927,6 +3951,30 @@ app.post('/admin/players/:playerId/attach_user', auth, adminOnly, async (req, re
     });
   } catch (error) {
     console.error('Error attaching user:', error);
+    bad(res, 500, error.message || 'Erreur serveur');
+  }
+});
+
+// POST /admin/players/:playerId/detach_user - Dissocier le compte utilisateur d'un joueur
+app.post('/admin/players/:playerId/detach_user', auth, adminOnly, async (req, res) => {
+  try {
+    const { playerId } = req.params;
+
+    const playerCheck = await q(`SELECT player_id FROM players WHERE player_id = $1`, [playerId]);
+    if (!playerCheck.rowCount) {
+      return bad(res, 404, 'Joueur introuvable');
+    }
+
+    const userCheck = await q(`SELECT id, email FROM users WHERE player_id = $1`, [playerId]);
+    if (!userCheck.rowCount) {
+      return bad(res, 404, 'Aucun compte lié à ce joueur');
+    }
+
+    await q(`UPDATE users SET player_id = NULL WHERE player_id = $1`, [playerId]);
+
+    ok(res, { message: 'Compte dissocié', player_id: playerId });
+  } catch (error) {
+    console.error('Error detaching user:', error);
     bad(res, 500, error.message || 'Erreur serveur');
   }
 });

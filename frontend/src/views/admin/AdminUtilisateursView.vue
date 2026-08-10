@@ -325,9 +325,8 @@ async function saveEdit() {
   editErr.value = ''
   try {
     const email = normEmail(form.value.email)
-    const body  = { email, role: form.value.role }
-    if (form.value.player_id) body.player_id = form.value.player_id
-    if (form.value.password)  body.password  = form.value.password
+    const body  = { email, role: form.value.role, player_id: form.value.player_id ? form.value.player_id.trim() : '' }
+    if (form.value.password) body.password = form.value.password
     await api.put('/admin/users/' + editingId.value, body)
     modal.value = false
     listStatus.value = 'Utilisateur modifié'
