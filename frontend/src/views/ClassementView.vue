@@ -15,39 +15,15 @@
         <button v-if="auth.isAdmin" @click="newSeasonModal = true" class="btn-primary text-sm">
           <PlusIcon class="w-3.5 h-3.5" /> Créer saison
         </button>
-        <div>
-          <label class="label">Recherche</label>
-          <input v-model="search" type="text" class="input w-52" placeholder="Nom ou ID joueur…" />
-        </div>
-        <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--muted)">
-          <input type="checkbox" v-model="showWin" class="w-4 h-4" /> Vict. %
-        </label>
-        <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--muted)">
-          <input type="checkbox" v-model="showForm" class="w-4 h-4" /> Forme (5)
-        </label>
         <button @click="printSeasonA4" class="btn text-sm" title="Imprimer le classement saison au format A4">
           <PrinterIcon class="w-4 h-4" /> Imprimer saison
-        </button>
-        <button @click="openCompareModal" class="btn">
-          <ArrowLeftRightIcon class="w-4 h-4" /> Comparer
-        </button>
-        <button @click="openTournamentsModal" class="btn">
-          <TrophyIcon class="w-4 h-4" /> Tournois
-        </button>
-        <button @click="streakModal = true" class="btn" title="Meilleures séries de journées gagnées d'affilée">
-          <FlameIcon class="w-4 h-4" /> Séries
         </button>
         <button @click="load" class="btn" :disabled="loading">
           <RefreshCwIcon class="w-4 h-4" :class="{ 'animate-spin': loading }" />
         </button>
       </div>
 
-      <!-- Seuil + Journée selector -->
-      <div class="flex flex-wrap gap-4 items-center mb-4 reveal delay-1 controls-meta">
-        <p class="text-xs" style="color:var(--muted)">
-          Seuil de classement : <strong>{{ threshold }}</strong> participation(s) (25% des Journées)
-        </p>
-      </div>
+      <!-- Journée selector -->
       <div class="flex flex-wrap gap-2 items-center mb-6 reveal delay-1 controls-day">
         <span class="text-sm" style="color:var(--muted)">Journée confirmée :</span>
         <select v-model="selectedDay" class="input w-52">
@@ -65,6 +41,45 @@
                 style="background:#2a0c0c;border-color:#7f1d1d;color:#fecaca">
           Supprimer
         </button>
+      </div>
+
+      <!-- Onglets -->
+      <div class="cl-tabs reveal delay-1">
+        <button class="cl-tab" :class="{ 'cl-tab--on': clTab === 'general' }" @click="selectClTab('general')">
+          <BarChart2Icon class="w-4 h-4" /> Classement général
+        </button>
+        <button class="cl-tab" :class="{ 'cl-tab--on': clTab === 'compare' }" @click="selectClTab('compare')">
+          <ArrowLeftRightIcon class="w-4 h-4" /> Comparateur
+        </button>
+        <button class="cl-tab" :class="{ 'cl-tab--on': clTab === 'tournois' }" @click="selectClTab('tournois')">
+          <TrophyIcon class="w-4 h-4" /> Tournois saison
+        </button>
+        <button class="cl-tab" :class="{ 'cl-tab--on': clTab === 'streak' }" @click="selectClTab('streak')">
+          <FlameIcon class="w-4 h-4" /> Séries
+        </button>
+      </div>
+
+      <!-- Onglet : Classement général -->
+      <div v-if="clTab === 'general'">
+
+      <div class="flex flex-wrap gap-3 items-end mb-4 reveal delay-1">
+        <div>
+          <label class="label">Recherche</label>
+          <input v-model="search" type="text" class="input w-52" placeholder="Nom ou ID joueur…" />
+        </div>
+        <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--muted)">
+          <input type="checkbox" v-model="showWin" class="w-4 h-4" /> Vict. %
+        </label>
+        <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--muted)">
+          <input type="checkbox" v-model="showForm" class="w-4 h-4" /> Forme (5)
+        </label>
+      </div>
+
+      <!-- Seuil -->
+      <div class="flex flex-wrap gap-4 items-center mb-4 reveal delay-1 controls-meta">
+        <p class="text-xs" style="color:var(--muted)">
+          Seuil de classement : <strong>{{ threshold }}</strong> participation(s) (25% des Journées)
+        </p>
       </div>
 
       <div v-if="loading" class="text-center py-12" style="color:var(--muted)">Chargement…</div>
@@ -186,61 +201,11 @@
           </table>
         </div>
       </template>
-    </div>
-
-    <!-- Modal: Journée detail -->
-    <BaseModal :open="dayModal" :title="'Journée — ' + fmtDate(selectedDay)" @close="dayModal = false" size="lg">
-      <div v-if="dayPayloadData">
-        <div v-for="div in ['d1', 'd2']" :key="div" class="mb-5">
-          <h4 class="font-bold mb-2">Division {{ div.toUpperCase() }}</h4>
-          <div v-if="!(dayPayloadData[div]?.length)" class="text-sm" style="color:var(--muted)">
-            Aucune confrontation.
-          </div>
-          <table v-else class="data-table text-sm">
-            <thead>
-              <tr>
-                <th>Joueur 1</th>
-                <th class="text-center">Aller</th>
-                <th class="text-center">Retour</th>
-                <th>Joueur 2</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(m, mi) in dayPayloadData[div]" :key="mi">
-                <td>{{ m.p1 }}</td>
-                <td class="text-center">
-                  {{ m.a1 != null ? m.a1 + ' – ' + m.a2 : '—' }}
-                </td>
-                <td class="text-center">
-                  {{ m.r1 != null ? m.r1 + ' – ' + m.r2 : '—' }}
-                </td>
-                <td>{{ m.p2 }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-if="dayPayloadData.champions?.d1?.id || dayPayloadData.champions?.d2?.id"
-             class="mt-4 p-3 rounded-xl text-sm" style="background:var(--panel);border:1px solid var(--border)">
-          <p v-if="dayPayloadData.champions?.d1?.id">
-            <TrophyIcon class="w-4 h-4 inline" style="color:#eab308" /> Champion D1 : <strong>{{ dayPayloadData.champions.d1.id }}</strong>
-            <span v-if="dayPayloadData.champions.d1.team" style="color:var(--muted)">
-              — {{ dayPayloadData.champions.d1.team }}
-            </span>
-          </p>
-          <p v-if="dayPayloadData.champions?.d2?.id">
-            <TrophyIcon class="w-4 h-4 inline" style="color:#eab308" /> Champion D2 : <strong>{{ dayPayloadData.champions.d2.id }}</strong>
-            <span v-if="dayPayloadData.champions.d2.team" style="color:var(--muted)">
-              — {{ dayPayloadData.champions.d2.team }}
-            </span>
-          </p>
-        </div>
       </div>
-      <div v-else class="text-center py-6" style="color:var(--muted)">Chargement…</div>
-    </BaseModal>
+      <!-- /Onglet : Classement général -->
 
-    <!-- Modal: Comparateur -->
-    <BaseModal :open="compareModal" title="Comparateur de joueurs" @close="compareModal = false" size="lg">
-      <div class="space-y-4">
+      <!-- Onglet : Comparateur -->
+      <div v-if="clTab === 'compare'" class="space-y-4 reveal">
         <!-- Sélecteurs -->
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -387,82 +352,159 @@
 
         </div>
       </div>
-    </BaseModal>
+      <!-- /Onglet : Comparateur -->
 
-    <!-- Modal: Tournois de la saison -->
-    <BaseModal :open="tournamentsModal" title="Tournois de la saison" @close="tournamentsModal = false" size="lg">
-      <div v-if="tournamentsLoading" class="text-center py-8" style="color:var(--muted)">
-        <Loader2Icon class="w-5 h-5 animate-spin inline" /> Chargement…
+      <!-- Onglet : Tournois saison -->
+      <div v-if="clTab === 'tournois'" class="reveal">
+        <div v-if="tournamentsLoading" class="text-center py-8" style="color:var(--muted)">
+          <Loader2Icon class="w-5 h-5 animate-spin inline" /> Chargement…
+        </div>
+        <div v-else-if="!tournamentsList.length" class="text-center py-8 text-sm" style="color:var(--muted)">
+          Aucun tournoi comptant pour le titre dans cette saison.
+        </div>
+        <div v-else class="space-y-4">
+          <p class="text-xs" style="color:var(--muted)">
+            Seuls les tournois <strong>membres comptant pour le titre</strong> sont listés.
+            Points = points gagnés pour le Classement Général.
+          </p>
+
+          <!-- Sélecteur de tournoi (chips) -->
+          <div class="flex gap-1.5 flex-wrap">
+            <button v-for="t in tournamentsOrdered" :key="t.id"
+                    @click="activeTournamentId = t.id"
+                    class="px-3 py-1 rounded-full text-xs font-semibold transition-all"
+                    :style="activeTournamentId === t.id
+                      ? 'background:rgba(37,99,235,.18);color:#60a5fa;border:1px solid rgba(37,99,235,.5)'
+                      : 'background:var(--card);color:var(--muted);border:1px solid var(--border)'">
+              {{ t.name }}
+            </button>
+          </div>
+
+          <!-- Tournoi actif -->
+          <div v-if="activeTournament" :key="activeTournament.id"
+               class="rounded-xl overflow-hidden reveal" style="border:1px solid var(--border)">
+            <!-- En-tête tournoi -->
+            <div class="px-3 py-2 flex flex-wrap items-center justify-between gap-2"
+                 style="background:var(--panel);border-bottom:1px solid var(--border)">
+              <div class="font-bold text-sm flex items-center gap-2">
+                <TrophyIcon class="w-4 h-4" style="color:#eab308" />
+                {{ activeTournament.name }}
+                <span class="text-xs font-normal" style="color:var(--muted)">{{ formatTitleLabel(activeTournament.format) }}</span>
+              </div>
+              <div class="text-xs" style="color:var(--muted)">
+                {{ activeTournament.played_at ? fmtDate(String(activeTournament.played_at).slice(0,10)) : '—' }}
+                · {{ activeTournament.eligible_count }}/{{ activeTournament.participants_count }} classé(s)
+                <span v-if="activeTournament.rows && activeTournament.rows.length"> · <TrophyIcon class="w-3 h-3 inline" style="color:#eab308" /> {{ activeTournament.rows[0].name }}</span>
+              </div>
+            </div>
+
+            <!-- Table participants -->
+            <div class="overflow-x-auto">
+              <table class="data-table text-sm w-full">
+                <thead>
+                  <tr>
+                    <th class="text-center w-10">Rang</th>
+                    <th>Participant</th>
+                    <th class="text-center">Matchs</th>
+                    <th class="text-center">V-N-D</th>
+                    <th class="text-center">Pts saison</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="r in activeTournament.rows" :key="r.rank + '-' + (r.player_id || r.name)"
+                      :style="!r.eligible ? 'opacity:.55' : ''">
+                    <td class="text-center" style="color:var(--muted)">{{ r.rank }}</td>
+                    <td>
+                      {{ r.name }}
+                      <span v-if="!r.eligible" class="text-[10px] px-1.5 py-0.5 rounded ml-1"
+                            style="background:rgba(148,163,184,.18);color:var(--muted)">non classé</span>
+                    </td>
+                    <td class="text-center">{{ r.played }}</td>
+                    <td class="text-center" style="color:var(--muted)">{{ r.wins }}-{{ r.draws }}-{{ r.losses }}</td>
+                    <td class="text-center font-bold">{{ r.season_points != null ? r.season_points : '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
-      <div v-else-if="!tournamentsList.length" class="text-center py-8 text-sm" style="color:var(--muted)">
-        Aucun tournoi comptant pour le titre dans cette saison.
-      </div>
-      <div v-else class="space-y-4">
-        <p class="text-xs" style="color:var(--muted)">
-          Seuls les tournois <strong>membres comptant pour le titre</strong> sont listés.
-          Points = points gagnés pour le Classement Général.
+      <!-- /Onglet : Tournois saison -->
+
+      <!-- Onglet : Séries -->
+      <div v-if="clTab === 'streak'" class="reveal">
+        <p class="text-sm mb-3" style="color:var(--muted)">
+          Plus grand nombre de journées (titre D1) remportées d'affilée, par joueur.
         </p>
-
-        <!-- Sélecteur de tournoi (chips) -->
-        <div class="flex gap-1.5 flex-wrap">
-          <button v-for="t in tournamentsOrdered" :key="t.id"
-                  @click="activeTournamentId = t.id"
-                  class="px-3 py-1 rounded-full text-xs font-semibold transition-all"
-                  :style="activeTournamentId === t.id
-                    ? 'background:rgba(37,99,235,.18);color:#60a5fa;border:1px solid rgba(37,99,235,.5)'
-                    : 'background:var(--card);color:var(--muted);border:1px solid var(--border)'">
-            {{ t.name }}
-          </button>
+        <div v-if="!streakRanking.length" class="text-sm py-4 text-center" style="color:var(--muted)">
+          Aucune donnée de champion de journée pour cette saison.
         </div>
-
-        <!-- Tournoi actif -->
-        <div v-if="activeTournament" :key="activeTournament.id"
-             class="rounded-xl overflow-hidden reveal" style="border:1px solid var(--border)">
-          <!-- En-tête tournoi -->
-          <div class="px-3 py-2 flex flex-wrap items-center justify-between gap-2"
-               style="background:var(--panel);border-bottom:1px solid var(--border)">
-            <div class="font-bold text-sm flex items-center gap-2">
-              <TrophyIcon class="w-4 h-4" style="color:#eab308" />
-              {{ activeTournament.name }}
-              <span class="text-xs font-normal" style="color:var(--muted)">{{ formatTitleLabel(activeTournament.format) }}</span>
+        <div v-else class="streak-list">
+          <div v-for="(r, i) in streakRanking" :key="r.id" class="streak-row">
+            <span class="streak-rank" :class="{ gold: i === 0 }">{{ i + 1 }}</span>
+            <div class="min-w-0 flex-1">
+              <div class="streak-name">{{ r.name }}</div>
+              <div class="streak-id">({{ r.id }})</div>
             </div>
-            <div class="text-xs" style="color:var(--muted)">
-              {{ activeTournament.played_at ? fmtDate(String(activeTournament.played_at).slice(0,10)) : '—' }}
-              · {{ activeTournament.eligible_count }}/{{ activeTournament.participants_count }} classé(s)
-              <span v-if="activeTournament.rows && activeTournament.rows.length"> · <TrophyIcon class="w-3 h-3 inline" style="color:#eab308" /> {{ activeTournament.rows[0].name }}</span>
-            </div>
-          </div>
-
-          <!-- Table participants -->
-          <div class="overflow-x-auto">
-            <table class="data-table text-sm w-full">
-              <thead>
-                <tr>
-                  <th class="text-center w-10">Rang</th>
-                  <th>Participant</th>
-                  <th class="text-center">Matchs</th>
-                  <th class="text-center">V-N-D</th>
-                  <th class="text-center">Pts saison</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="r in activeTournament.rows" :key="r.rank + '-' + (r.player_id || r.name)"
-                    :style="!r.eligible ? 'opacity:.55' : ''">
-                  <td class="text-center" style="color:var(--muted)">{{ r.rank }}</td>
-                  <td>
-                    {{ r.name }}
-                    <span v-if="!r.eligible" class="text-[10px] px-1.5 py-0.5 rounded ml-1"
-                          style="background:rgba(148,163,184,.18);color:var(--muted)">non classé</span>
-                  </td>
-                  <td class="text-center">{{ r.played }}</td>
-                  <td class="text-center" style="color:var(--muted)">{{ r.wins }}-{{ r.draws }}-{{ r.losses }}</td>
-                  <td class="text-center font-bold">{{ r.season_points != null ? r.season_points : '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <span class="streak-val" :class="{ gold: i === 0 }">
+              <FlameIcon v-if="i === 0" class="w-3.5 h-3.5 inline" /> {{ r.streak }}
+              <small>journée{{ r.streak > 1 ? 's' : '' }}</small>
+            </span>
           </div>
         </div>
       </div>
+      <!-- /Onglet : Séries -->
+
+    </div>
+
+    <!-- Modal: Journée detail -->
+    <BaseModal :open="dayModal" :title="'Journée — ' + fmtDate(selectedDay)" @close="dayModal = false" size="lg">
+      <div v-if="dayPayloadData">
+        <div v-for="div in ['d1', 'd2']" :key="div" class="mb-5">
+          <h4 class="font-bold mb-2">Division {{ div.toUpperCase() }}</h4>
+          <div v-if="!(dayPayloadData[div]?.length)" class="text-sm" style="color:var(--muted)">
+            Aucune confrontation.
+          </div>
+          <table v-else class="data-table text-sm">
+            <thead>
+              <tr>
+                <th>Joueur 1</th>
+                <th class="text-center">Aller</th>
+                <th class="text-center">Retour</th>
+                <th>Joueur 2</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(m, mi) in dayPayloadData[div]" :key="mi">
+                <td>{{ m.p1 }}</td>
+                <td class="text-center">
+                  {{ m.a1 != null ? m.a1 + ' – ' + m.a2 : '—' }}
+                </td>
+                <td class="text-center">
+                  {{ m.r1 != null ? m.r1 + ' – ' + m.r2 : '—' }}
+                </td>
+                <td>{{ m.p2 }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-if="dayPayloadData.champions?.d1?.id || dayPayloadData.champions?.d2?.id"
+             class="mt-4 p-3 rounded-xl text-sm" style="background:var(--panel);border:1px solid var(--border)">
+          <p v-if="dayPayloadData.champions?.d1?.id">
+            <TrophyIcon class="w-4 h-4 inline" style="color:#eab308" /> Champion D1 : <strong>{{ dayPayloadData.champions.d1.id }}</strong>
+            <span v-if="dayPayloadData.champions.d1.team" style="color:var(--muted)">
+              — {{ dayPayloadData.champions.d1.team }}
+            </span>
+          </p>
+          <p v-if="dayPayloadData.champions?.d2?.id">
+            <TrophyIcon class="w-4 h-4 inline" style="color:#eab308" /> Champion D2 : <strong>{{ dayPayloadData.champions.d2.id }}</strong>
+            <span v-if="dayPayloadData.champions.d2.team" style="color:var(--muted)">
+              — {{ dayPayloadData.champions.d2.team }}
+            </span>
+          </p>
+        </div>
+      </div>
+      <div v-else class="text-center py-6" style="color:var(--muted)">Chargement…</div>
     </BaseModal>
 
     <!-- Modal: Titres joueur -->
@@ -509,29 +551,6 @@
       </template>
     </BaseModal>
 
-    <!-- Modal: Meilleures séries -->
-    <BaseModal :open="streakModal" title="Meilleures séries" @close="streakModal = false" size="md">
-      <p class="text-sm mb-3" style="color:var(--muted)">
-        Plus grand nombre de journées (titre D1) remportées d'affilée, par joueur.
-      </p>
-      <div v-if="!streakRanking.length" class="text-sm py-4 text-center" style="color:var(--muted)">
-        Aucune donnée de champion de journée pour cette saison.
-      </div>
-      <div v-else class="streak-list">
-        <div v-for="(r, i) in streakRanking" :key="r.id" class="streak-row">
-          <span class="streak-rank" :class="{ gold: i === 0 }">{{ i + 1 }}</span>
-          <div class="min-w-0 flex-1">
-            <div class="streak-name">{{ r.name }}</div>
-            <div class="streak-id">({{ r.id }})</div>
-          </div>
-          <span class="streak-val" :class="{ gold: i === 0 }">
-            <FlameIcon v-if="i === 0" class="w-3.5 h-3.5 inline" /> {{ r.streak }}
-            <small>journée{{ r.streak > 1 ? 's' : '' }}</small>
-          </span>
-        </div>
-      </div>
-    </BaseModal>
-
   </AppLayout>
 </template>
 
@@ -545,7 +564,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSiteSettings } from '@/stores/siteSettings'
 import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
-import { ArrowLeftRightIcon, RefreshCwIcon, PlusIcon, Loader2Icon, PrinterIcon, TrophyIcon, FlameIcon } from 'lucide-vue-next'
+import { ArrowLeftRightIcon, RefreshCwIcon, PlusIcon, Loader2Icon, PrinterIcon, TrophyIcon, FlameIcon, BarChart2Icon } from 'lucide-vue-next'
 
 const api    = useAPI()
 const auth   = useAuthStore()
@@ -574,7 +593,9 @@ const selectedDay    = ref('')
 const dayModal       = ref(false)
 const dayPayloadData = ref(null)
 
-const compareModal = ref(false)
+// Onglets (remplacent les anciennes modales Comparateur/Tournois/Séries)
+const clTab = ref('general') // 'general' | 'compare' | 'tournois' | 'streak'
+
 const cmpA         = ref('')
 const cmpB         = ref('')
 const cmpResult    = ref(null)
@@ -584,8 +605,6 @@ const playersAll   = ref([])   // liste complète /players (inclut les invités)
 const roleById     = ref(new Map())
 const rolesLoaded  = ref(false)
 
-const tournamentsModal    = ref(false)
-const streakModal         = ref(false)
 const tournamentsLoading  = ref(false)
 const tournamentsList     = ref([])
 const activeTournamentId  = ref(null)
@@ -606,7 +625,7 @@ useSessionState('efoot.ui.classement.v1', {
   showForm,
   selectedDay,
   dayModal,
-  compareModal,
+  clTab,
   cmpA,
   cmpB,
   newSeasonModal,
@@ -886,6 +905,8 @@ function fmtDateShort(d) {
 onMounted(async () => {
   await loadPlayerRoles()
   await loadSeasons()
+  // Onglet "Tournois saison" restauré depuis la session : recharge ses données
+  if (clTab.value === 'tournois') await loadTournamentsBreakdown()
 })
 
 async function loadPlayerRoles() {
@@ -933,6 +954,7 @@ async function loadSeasons() {
 
 async function onSeasonChange() {
   await load()
+  if (clTab.value === 'tournois') await loadTournamentsBreakdown()
 }
 
 async function load() {
@@ -1406,9 +1428,10 @@ function sourceBadge(s) {
   return `background:${m.bg};color:${m.fg}`
 }
 
-function openCompareModal() {
-  cmpResult.value = null
-  compareModal.value = true
+/* ====== Onglets Classement ====== */
+function selectClTab(tab) {
+  clTab.value = tab
+  if (tab === 'tournois') loadTournamentsBreakdown()
 }
 
 /* ====== Tournois de la saison ====== */
@@ -1425,8 +1448,7 @@ const tournamentsOrdered = computed(() => [...tournamentsList.value].reverse())
 const activeTournament = computed(() =>
   tournamentsList.value.find(t => t.id === activeTournamentId.value) || null)
 
-async function openTournamentsModal() {
-  tournamentsModal.value = true
+async function loadTournamentsBreakdown() {
   activeTournamentId.value = null
   if (!selectedSeason.value) { tournamentsList.value = []; return }
   tournamentsLoading.value = true
@@ -1709,6 +1731,21 @@ async function createSeason() {
 .rank-gold   { background: #ca8a04; color: #fff; }
 .rank-silver { background: #94a3b8; color: #fff; }
 .rank-bronze { background: #b45309; color: #fff; }
+
+/* Onglets Classement (Classement général / Comparateur / Tournois saison / Séries) */
+.cl-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.cl-tab {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .5rem 1rem; border-radius: 10px;
+  font-size: .82rem; font-weight: 600;
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  cursor: pointer; transition: all .15s;
+}
+.cl-tab:hover { color: var(--text); border-color: rgba(148,163,184,.3); }
+.cl-tab--on {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--accent); color: var(--accent);
+}
 
 /* Meilleures séries */
 .streak-list { display: flex; flex-direction: column; gap: .35rem; }
