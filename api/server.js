@@ -1028,10 +1028,12 @@ app.post('/auth/login', loginRateLimit, async (req,res)=>{
   if(!email||!password) return bad(res,400,'email/password requis');
 
   const r=await q(`SELECT id,email,role,password_hash FROM users WHERE email=$1`,[email]);
-  if(r.rowCount===0) return bad(res,401,'Utilisateur inconnu');
+  // Message générique volontaire dans les deux cas (email inconnu / mot de passe faux) :
+  // évite de révéler si un email est enregistré (énumération de comptes).
+  if(r.rowCount===0) return bad(res,401,'Utilisateur ou mot de passe incorrect');
   const u=r.rows[0];
   const match = await bcrypt.compare(password, u.password_hash);
-  if(!match) return bad(res,401,'Mot de passe incorrect');
+  if(!match) return bad(res,401,'Utilisateur ou mot de passe incorrect');
 
   await q(`UPDATE sessions SET is_active=false, revoked_at=now() WHERE user_id=$1 AND is_active=true`, [u.id]);
 
