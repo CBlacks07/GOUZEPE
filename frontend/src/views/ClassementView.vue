@@ -1283,16 +1283,16 @@ async function printSeasonA4() {
   `
   const logo = await logoDataURL()
 
-  const headRow = () => {
-    let h = '<tr><th>#</th><th>Nom</th><th>ID</th><th>Total</th><th>Particip.</th><th>D1</th><th>D2</th><th>Moyenne</th><th>Titres D1</th><th>Titres D2</th><th>Équipes diff.</th>'
+  const headRow = (showRank = true) => {
+    let h = '<tr>' + (showRank ? '<th>#</th>' : '') + '<th>Nom</th><th>ID</th><th>Total</th><th>Particip.</th><th>D1</th><th>D2</th><th>Moyenne</th><th>Titres D1</th><th>Titres D2</th><th>Équipes diff.</th>'
     if (showWin.value)  h += '<th>Vict. %</th>'
     if (showForm.value) h += '<th>Forme (5)</th>'
     return h + '</tr>'
   }
 
-  const rowsHTML = (rows) => rows.map((p, i) => {
+  const rowsHTML = (rows, showRank = true) => rows.map((p, i) => {
     const a = aggMap.value.get(p.id) || {}
-    let r = `<tr><td>${i + 1}</td><td>${escapeHtml(p.name || p.id || '')}</td><td>${escapeHtml(p.id || '')}</td><td>${p.total ?? 0}</td><td>${p.participations ?? 0}</td><td>${a.d1 || 0}</td><td>${a.d2 || 0}</td><td>${(p.moyenne || 0).toFixed(2)}</td><td>${p.won_d1 ?? 0}</td><td>${p.won_d2 ?? 0}</td><td>${p.teams_used ?? 0}</td>`
+    let r = '<tr>' + (showRank ? `<td>${i + 1}</td>` : '') + `<td>${escapeHtml(p.name || p.id || '')}</td><td>${escapeHtml(p.id || '')}</td><td>${p.total ?? 0}</td><td>${p.participations ?? 0}</td><td>${a.d1 || 0}</td><td>${a.d2 || 0}</td><td>${(p.moyenne || 0).toFixed(2)}</td><td>${p.won_d1 ?? 0}</td><td>${p.won_d2 ?? 0}</td><td>${p.teams_used ?? 0}</td>`
     if (showWin.value)  r += `<td>${winPct(p)}%</td>`
     if (showForm.value) r += `<td>${escapeHtml(formChars(p).join(''))}</td>`
     return r + '</tr>'
@@ -1397,8 +1397,8 @@ async function printSeasonA4() {
   let html = `<!doctype html><html><head><meta charset="utf-8"><title>Classement — ${escapeHtml(seasonLabel)}</title><style>${css}</style></head><body onload="window.print()">`
   html += `<h1>${logo ? `<img src="${logo}" alt="logo">` : ''}Classement Général — ${escapeHtml(seasonLabel)}</h1>`
   html += `<div class="muted">Seuil de classement : ${threshold.value} participations (25% des journées) &bull; Journées: ${daysCount.value}</div>`
-  html += `<h2>Classés</h2><table><thead>${headRow()}</thead><tbody>${rowsHTML(classedRows.value)}</tbody></table>`
-  html += `<h2>Non classés</h2><table><thead>${headRow()}</thead><tbody>${rowsHTML(unclassedForPrint)}</tbody></table>`
+  html += `<h2>Classés</h2><table><thead>${headRow(true)}</thead><tbody>${rowsHTML(classedRows.value, true)}</tbody></table>`
+  html += `<h2>Non classés</h2><table><thead>${headRow(false)}</thead><tbody>${rowsHTML(unclassedForPrint, false)}</tbody></table>`
   html += bilanHtml
   html += '</body></html>'
 
