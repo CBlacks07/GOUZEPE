@@ -1375,12 +1375,30 @@ async function printSeasonA4() {
     bilanHtml += '</div>'
   }
 
+  // Membres du club sans aucune participation cette saison : absents de l'API standings
+  // (donc normalement invisibles même en "non classés") — on les ajoute pour que la feuille
+  // liste bien TOUS les membres du club, pas seulement ceux ayant déjà joué.
+  const standingsIds = new Set(filteredData.value.map(r => r.id))
+  const zeroParticipationMembers = playersAll.value
+    .filter(p => {
+      const pid = String(p.player_id || '')
+      if (!pid || standingsIds.has(pid)) return false
+      const isInv = isInviteId(pid) || String(p.role || '').toUpperCase() === 'INVITE'
+      return !isInv
+    })
+    .map(p => ({
+      id: p.player_id, name: p.name || p.player_id,
+      total: 0, participations: 0, moyenne: 0, won_d1: 0, won_d2: 0, teams_used: 0,
+    }))
+    .sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id), 'fr', { sensitivity: 'base' }))
+  const unclassedForPrint = [...unclassedRows.value, ...zeroParticipationMembers]
+
   const seasonLabel = currentSeasonName.value || 'Saison'
   let html = `<!doctype html><html><head><meta charset="utf-8"><title>Classement — ${escapeHtml(seasonLabel)}</title><style>${css}</style></head><body onload="window.print()">`
   html += `<h1>${logo ? `<img src="${logo}" alt="logo">` : ''}Classement Général — ${escapeHtml(seasonLabel)}</h1>`
   html += `<div class="muted">Seuil de classement : ${threshold.value} participations (25% des journées) &bull; Journées: ${daysCount.value}</div>`
   html += `<h2>Classés</h2><table><thead>${headRow()}</thead><tbody>${rowsHTML(classedRows.value)}</tbody></table>`
-  html += `<h2>Non classés</h2><table><thead>${headRow()}</thead><tbody>${rowsHTML(unclassedRows.value)}</tbody></table>`
+  html += `<h2>Non classés</h2><table><thead>${headRow()}</thead><tbody>${rowsHTML(unclassedForPrint)}</tbody></table>`
   html += bilanHtml
   html += '</body></html>'
 
