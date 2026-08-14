@@ -213,6 +213,26 @@
           </div>
         </section>
 
+        <!-- Contact & réseaux (footer public) -->
+        <section class="card">
+          <h2 class="sec-title">Contact &amp; réseaux</h2>
+          <p class="text-xs mb-3" style="color:var(--muted)">
+            Affichés dans le pied de page du site public. Laisse un champ vide pour le masquer.
+          </p>
+          <div class="grid2">
+            <div><label class="label">Email de contact</label><input v-model="form.contact.email" class="input" placeholder="contact@gouzepe.club" /></div>
+            <div><label class="label">Téléphone</label><input v-model="form.contact.phone" class="input" placeholder="+228 ..." /></div>
+          </div>
+          <div class="grid2 mt-3">
+            <div><label class="label">WhatsApp (lien wa.me)</label><input v-model="form.contact.whatsapp" class="input" placeholder="https://wa.me/228..." /></div>
+            <div><label class="label">Discord</label><input v-model="form.contact.discord" class="input" placeholder="https://discord.gg/..." /></div>
+          </div>
+          <div class="grid2 mt-3">
+            <div><label class="label">Facebook</label><input v-model="form.contact.facebook" class="input" placeholder="https://facebook.com/..." /></div>
+            <div><label class="label">Instagram</label><input v-model="form.contact.instagram" class="input" placeholder="https://instagram.com/..." /></div>
+          </div>
+        </section>
+
       </div>
 
       <p v-if="uploading" class="mt-3 text-sm" style="color:var(--muted)">
