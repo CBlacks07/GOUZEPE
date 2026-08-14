@@ -161,7 +161,6 @@
           <table class="data-table" style="opacity:.8">
             <thead>
               <tr>
-                <th class="text-center w-10">Rang</th>
                 <th>Nom</th>
                 <th class="text-center">ID</th>
                 <th class="text-center">Total</th>
@@ -176,11 +175,10 @@
             </thead>
             <tbody>
               <tr v-if="!unclassedRows.length">
-                <td :colspan="9 + (showWin ? 1 : 0) + (showForm ? 1 : 0)"
+                <td :colspan="8 + (showWin ? 1 : 0) + (showForm ? 1 : 0)"
                     class="text-center py-6" style="color:var(--muted)">Aucun.</td>
               </tr>
-              <tr v-for="(row, i) in unclassedRows" :key="row.id">
-                <td class="text-center" style="color:var(--muted)">{{ i + 1 }}</td>
+              <tr v-for="row in unclassedRows" :key="row.id">
                 <td class="text-sm">{{ row.name || row.id }}</td>
                 <td class="text-center text-sm" style="color:var(--muted)">{{ row.id }}</td>
                 <td class="text-center">{{ row.total }}</td>
@@ -659,8 +657,27 @@ const filteredData = computed(() => {
   )
 })
 
-const classedRows   = computed(() => filteredData.value.filter(r => (r.participations || 0) >= threshold.value))
-const unclassedRows = computed(() => filteredData.value.filter(r => (r.participations || 0) < threshold.value))
+const classedRows = computed(() => filteredData.value.filter(r => (r.participations || 0) >= threshold.value))
+
+// Non classés = membres sous le seuil (via standings) + membres du club sans AUCUNE
+// participation cette saison (absents de l'API standings, donc normalement invisibles).
+const unclassedRows = computed(() => {
+  const belowThreshold = filteredData.value.filter(r => (r.participations || 0) < threshold.value)
+  const knownIds = new Set(filteredData.value.map(r => r.id))
+  const zeroParticipationMembers = playersAll.value
+    .filter(p => {
+      const pid = String(p.player_id || '')
+      if (!pid || knownIds.has(pid)) return false
+      const isInv = isInviteId(pid) || String(p.role || '').toUpperCase() === 'INVITE'
+      return !isInv
+    })
+    .map(p => ({
+      id: p.player_id, name: p.name || p.player_id,
+      total: 0, participations: 0, moyenne: 0, won_d1: 0, won_d2: 0, teams_used: 0,
+    }))
+    .sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id), 'fr', { sensitivity: 'base' }))
+  return [...belowThreshold, ...zeroParticipationMembers]
+})
 
 // Meilleure série de journées (D1) gagnées d'affilée, par joueur
 const streakByPlayerId = computed(() => {
@@ -1375,30 +1392,12 @@ async function printSeasonA4() {
     bilanHtml += '</div>'
   }
 
-  // Membres du club sans aucune participation cette saison : absents de l'API standings
-  // (donc normalement invisibles même en "non classés") — on les ajoute pour que la feuille
-  // liste bien TOUS les membres du club, pas seulement ceux ayant déjà joué.
-  const standingsIds = new Set(filteredData.value.map(r => r.id))
-  const zeroParticipationMembers = playersAll.value
-    .filter(p => {
-      const pid = String(p.player_id || '')
-      if (!pid || standingsIds.has(pid)) return false
-      const isInv = isInviteId(pid) || String(p.role || '').toUpperCase() === 'INVITE'
-      return !isInv
-    })
-    .map(p => ({
-      id: p.player_id, name: p.name || p.player_id,
-      total: 0, participations: 0, moyenne: 0, won_d1: 0, won_d2: 0, teams_used: 0,
-    }))
-    .sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id), 'fr', { sensitivity: 'base' }))
-  const unclassedForPrint = [...unclassedRows.value, ...zeroParticipationMembers]
-
   const seasonLabel = currentSeasonName.value || 'Saison'
   let html = `<!doctype html><html><head><meta charset="utf-8"><title>Classement — ${escapeHtml(seasonLabel)}</title><style>${css}</style></head><body onload="window.print()">`
   html += `<h1>${logo ? `<img src="${logo}" alt="logo">` : ''}Classement Général — ${escapeHtml(seasonLabel)}</h1>`
   html += `<div class="muted">Seuil de classement : ${threshold.value} participations (25% des journées) &bull; Journées: ${daysCount.value}</div>`
   html += `<h2>Classés</h2><table><thead>${headRow(true)}</thead><tbody>${rowsHTML(classedRows.value, true)}</tbody></table>`
-  html += `<h2>Non classés</h2><table><thead>${headRow(false)}</thead><tbody>${rowsHTML(unclassedForPrint, false)}</tbody></table>`
+  html += `<h2>Non classés</h2><table><thead>${headRow(false)}</thead><tbody>${rowsHTML(unclassedRows.value, false)}</tbody></table>`
   html += bilanHtml
   html += '</body></html>'
 
