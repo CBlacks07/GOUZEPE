@@ -2,6 +2,10 @@
   <AppLayout season-label="Apparence du site">
     <div class="page-wrap site-admin">
 
+      <RouterLink to="/admin" class="inline-flex items-center gap-1.5 text-sm font-semibold text-gz-muted hover:text-gz-text mb-4">
+        <ArrowLeftIcon class="w-3.5 h-3.5" /> Console
+      </RouterLink>
+
       <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
           <h1 class="text-xl font-bold" style="font-family:var(--font-title);letter-spacing:.04em;text-transform:uppercase">Apparence &amp; Contenu du site</h1>
@@ -89,6 +93,17 @@
           <div><label class="label">Titre carte</label><input v-model="form.efoot.cardTitle" class="input" /></div>
           <div class="mt-3"><label class="label">Texte carte</label><textarea v-model="form.efoot.cardText" class="input" rows="2" style="resize:vertical" /></div>
           <div class="mt-3">
+            <label class="label">Vignette carte (section "Deux univers")</label>
+            <div class="media-row">
+              <img :src="resolveUrl(form.efoot.cardImage)" alt="" class="media-prev" />
+              <input v-model="form.efoot.cardImage" class="input" placeholder="/fonds/efootball-bg.png" />
+              <label class="btn upload-btn">
+                <UploadIcon class="w-4 h-4" /> Image
+                <input type="file" accept="image/*" hidden @change="onUpload($event, v => form.efoot.cardImage = v)" />
+              </label>
+            </div>
+          </div>
+          <div class="mt-3">
             <label class="label">Vidéo hero</label>
             <div class="media-row">
               <input v-model="form.efoot.heroVideo" class="input" placeholder="/fonds/bg.mp4" />
@@ -147,6 +162,17 @@
           <h2 class="sec-title">Univers Tekken</h2>
           <div><label class="label">Titre carte</label><input v-model="form.tekken.cardTitle" class="input" /></div>
           <div class="mt-3"><label class="label">Texte carte</label><textarea v-model="form.tekken.cardText" class="input" rows="2" style="resize:vertical" /></div>
+          <div class="mt-3">
+            <label class="label">Vignette carte (section "Deux univers")</label>
+            <div class="media-row">
+              <img :src="resolveUrl(form.tekken.cardImage)" alt="" class="media-prev" />
+              <input v-model="form.tekken.cardImage" class="input" placeholder="/fonds/tekken-bg.png" />
+              <label class="btn upload-btn">
+                <UploadIcon class="w-4 h-4" /> Image
+                <input type="file" accept="image/*" hidden @change="onUpload($event, v => form.tekken.cardImage = v)" />
+              </label>
+            </div>
+          </div>
           <div class="mt-3">
             <label class="label">Vidéo hero</label>
             <div class="media-row">
@@ -245,7 +271,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { Loader2Icon, UploadIcon, PlusIcon, XIcon } from 'lucide-vue-next'
+import { Loader2Icon, UploadIcon, PlusIcon, XIcon, ArrowLeftIcon } from 'lucide-vue-next'
 import { useAPI, mediaUrl } from '@/composables/useAPI'
 import { useSiteSettings, DEFAULTS } from '@/stores/siteSettings'
 

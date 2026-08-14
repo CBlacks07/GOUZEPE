@@ -55,7 +55,7 @@ import { useThemeStore } from '@/stores/theme'
 import { useMembershipNotif } from '@/composables/useMembershipNotif'
 import {
   HomeIcon, CalendarDaysIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
-  ShieldIcon, SunIcon, MoonIcon, LogOutIcon, MenuIcon, GamepadIcon, FootprintsIcon
+  ShieldIcon, SunIcon, MoonIcon, LogOutIcon, MenuIcon, GamepadIcon, FootprintsIcon, GlobeIcon
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -110,7 +110,10 @@ const visibleNav = computed(() => {
     if (hasTekken.value) links.push({ to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon })
   }
 
-  if (auth.isAdmin) links.push({ to: '/admin', label: 'Admin', icon: ShieldIcon })
+  if (auth.isAdmin) {
+    links.push({ to: '/admin', label: 'Admin', icon: ShieldIcon, sep: true })
+    links.push({ to: '/', label: 'Site public', icon: GlobeIcon })
+  }
   return links
 })
 

@@ -16,11 +16,13 @@ export const DEFAULTS = {
   efoot: {
     cardTitle: 'Le championnat',
     cardText: 'Journées D1/D2, saisons, classement général, tournois et duels. La gestion complète du championnat du club.',
+    cardImage: '/fonds/efootball-bg.png',
     heroVideo: '/fonds/bg.mp4',
   },
   tekken: {
     cardTitle: "L'arène versus",
     cardText: 'Ladder, duels classés et tournois à élimination. Le pôle combat du club arrive — prépare-toi.',
+    cardImage: '/fonds/tekken-bg.png',
     heroVideo: '/fonds/bg-tekk.mp4',
   },
   // Accueil membre eFootball — listes d'URLs (vide = découverte auto des assets)

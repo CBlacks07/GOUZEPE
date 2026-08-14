@@ -46,7 +46,7 @@
 
       <div class="univers-grid">
         <article class="uni-card uni-efoot" @mouseenter="game.set('efoot')">
-          <img class="uni-media" src="/fonds/efootball-bg.png" alt="eFootball" loading="lazy" />
+          <img class="uni-media" :src="mediaUrl(s.efoot.cardImage) || '/fonds/efootball-bg.png'" alt="eFootball" loading="lazy" />
           <div class="uni-body">
             <span class="uni-tag">eFootball</span>
             <h3>{{ s.efoot.cardTitle }}</h3>
@@ -56,7 +56,7 @@
         </article>
 
         <article class="uni-card uni-tekken" @mouseenter="game.set('tekken')">
-          <img class="uni-media" src="/fonds/tekken-bg.png" alt="Tekken" loading="lazy" />
+          <img class="uni-media" :src="mediaUrl(s.tekken.cardImage) || '/fonds/tekken-bg.png'" alt="Tekken" loading="lazy" />
           <div class="uni-body">
             <span class="uni-tag tekken">Tekken</span>
             <h3>{{ s.tekken.cardTitle }}</h3>
