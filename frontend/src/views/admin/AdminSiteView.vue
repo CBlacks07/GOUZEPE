@@ -21,6 +21,14 @@
 
       <p v-if="msg" class="mb-4 text-sm" :class="msgOk ? 'text-gz-green' : 'text-gz-red'">{{ msg }}</p>
 
+      <div class="upload-warning">
+        <strong>Important :</strong> le bouton <em>Uploader une image</em> enregistre le fichier sur le disque du
+        serveur — en production (hébergement sans stockage persistant), ces fichiers sont <strong>perdus au prochain
+        redéploiement</strong>. Pour tout ce qui doit rester en ligne durablement, colle plutôt un lien externe
+        (ex. <strong>Cloudinary</strong>) directement dans le champ URL : tous les champs image de cette page
+        acceptent une URL complète (https://...) aussi bien qu'un fichier uploadé.
+      </div>
+
       <div class="grid gap-5" style="grid-template-columns:1fr">
 
         <!-- Marque -->
@@ -94,9 +102,12 @@
           <div class="mt-3"><label class="label">Texte carte</label><textarea v-model="form.efoot.cardText" class="input" rows="2" style="resize:vertical" /></div>
           <div class="mt-3">
             <label class="label">Vignette carte (section "Deux univers")</label>
+            <p class="text-xs mb-2" style="color:var(--muted)">
+              En production, colle de préférence une <strong>URL Cloudinary</strong> — l'upload direct ne survit pas à un redéploiement.
+            </p>
             <div class="media-row">
               <img :src="resolveUrl(form.efoot.cardImage)" alt="" class="media-prev" />
-              <input v-model="form.efoot.cardImage" class="input" placeholder="/fonds/efootball-bg.png" />
+              <input v-model="form.efoot.cardImage" class="input" placeholder="https://res.cloudinary.com/... ou /fonds/efootball-bg.png" />
               <label class="btn upload-btn">
                 <UploadIcon class="w-4 h-4" /> Image
                 <input type="file" accept="image/*" hidden @change="onUpload($event, v => form.efoot.cardImage = v)" />
@@ -164,9 +175,12 @@
           <div class="mt-3"><label class="label">Texte carte</label><textarea v-model="form.tekken.cardText" class="input" rows="2" style="resize:vertical" /></div>
           <div class="mt-3">
             <label class="label">Vignette carte (section "Deux univers")</label>
+            <p class="text-xs mb-2" style="color:var(--muted)">
+              En production, colle de préférence une <strong>URL Cloudinary</strong> — l'upload direct ne survit pas à un redéploiement.
+            </p>
             <div class="media-row">
               <img :src="resolveUrl(form.tekken.cardImage)" alt="" class="media-prev" />
-              <input v-model="form.tekken.cardImage" class="input" placeholder="/fonds/tekken-bg.png" />
+              <input v-model="form.tekken.cardImage" class="input" placeholder="https://res.cloudinary.com/... ou /fonds/tekken-bg.png" />
               <label class="btn upload-btn">
                 <UploadIcon class="w-4 h-4" /> Image
                 <input type="file" accept="image/*" hidden @change="onUpload($event, v => form.tekken.cardImage = v)" />
@@ -336,6 +350,13 @@ onMounted(() => {
 
 <style scoped>
 .site-admin { max-width: 60rem; }
+.upload-warning {
+  font-size: .82rem; line-height: 1.5; color: var(--gz-amber, #ca8a04);
+  background: color-mix(in srgb, #eab308 10%, transparent);
+  border: 1px solid color-mix(in srgb, #eab308 40%, transparent);
+  border-radius: 10px; padding: .75rem 1rem; margin-bottom: 1.25rem;
+}
+.upload-warning strong { color: inherit; }
 .sec-title { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: 1rem; margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
 .grid2 { display: grid; gap: .9rem; grid-template-columns: 1fr; }
 .media-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
