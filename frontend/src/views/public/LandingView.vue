@@ -168,6 +168,38 @@
       </template>
     </section>
 
+    <!-- ── Découvrir le club ── -->
+    <section class="section discover">
+      <div class="section-head">
+        <h2>Découvre le club</h2>
+        <p>Champions, records et membres — explore ce que le club a déjà accompli.</p>
+      </div>
+      <div class="discover-grid">
+        <RouterLink to="/palmares" class="discover-card">
+          <TrophyIcon class="discover-ic" />
+          <span class="discover-label">Palmarès</span>
+          <p v-if="discoverChampion" class="discover-detail">Champion actuel : <strong>{{ discoverChampion }}</strong></p>
+          <p v-else class="discover-detail">L'historique des champions de chaque saison</p>
+          <span class="discover-link">Voir le palmarès <ArrowRightIcon class="w-3.5 h-3.5" /></span>
+        </RouterLink>
+
+        <RouterLink to="/records" class="discover-card">
+          <ZapIcon class="discover-ic" />
+          <span class="discover-label">Records</span>
+          <p v-if="discoverRecord" class="discover-detail">{{ discoverRecord }}</p>
+          <p v-else class="discover-detail">Les performances qui marquent l'histoire du club</p>
+          <span class="discover-link">Voir les records <ArrowRightIcon class="w-3.5 h-3.5" /></span>
+        </RouterLink>
+
+        <RouterLink to="/membres" class="discover-card">
+          <UsersIcon class="discover-ic" />
+          <span class="discover-label">Membres</span>
+          <p class="discover-detail">{{ stats.players !== '—' ? stats.players + ' membre(s) actif(s)' : 'La communauté qui fait vivre le club' }}</p>
+          <span class="discover-link">Voir l'annuaire <ArrowRightIcon class="w-3.5 h-3.5" /></span>
+        </RouterLink>
+      </div>
+    </section>
+
     <!-- ── CTA final ── -->
     <section class="section join-band">
       <h2>Prêt à rejoindre la communauté ?</h2>
@@ -183,7 +215,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ArrowRightIcon, TrophyIcon } from 'lucide-vue-next'
+import { ArrowRightIcon, TrophyIcon, ZapIcon, UsersIcon } from 'lucide-vue-next'
 import PublicNav from '@/components/public/PublicNav.vue'
 import PublicFooter from '@/components/public/PublicFooter.vue'
 import NewsAnnouncements from '@/components/NewsAnnouncements.vue'
@@ -216,6 +248,8 @@ const topD2       = ref([])
 const stats       = ref({ players: '—', tournaments: '—' })
 const tkLadder    = ref([])
 const tkDuels     = ref([])
+const discoverChampion = ref('')
+const discoverRecord   = ref('')
 
 const FORMAT_LABELS = {
   single_elimination: 'Élimination',
@@ -264,6 +298,24 @@ onMounted(async () => {
     ])
     tkLadder.value = lr.ladder || []
     tkDuels.value = dr.duels || []
+  } catch (_) {}
+
+  try {
+    const data = await getJSON('/public/members')
+    stats.value.players = (data.members || []).length || '—'
+  } catch (_) {}
+
+  try {
+    const data = await getJSON('/public/palmares')
+    const champ = (data.seasons || []).find(s => s.podium?.length)?.podium?.[0]
+    if (champ) discoverChampion.value = champ.name || champ.id
+  } catch (_) {}
+
+  try {
+    const data = await getJSON('/public/records')
+    const r = data.records || {}
+    if (r.carton) discoverRecord.value = `Plus large victoire : ${r.carton.winner_name} ${r.carton.wScore}-${r.carton.lScore}`
+    else if (r.best_streak) discoverRecord.value = `Meilleure série : ${r.best_streak.name} (${r.best_streak.streak} journées)`
   } catch (_) {}
 })
 </script>
@@ -405,6 +457,21 @@ onMounted(async () => {
 .tk-duel-score { font-family: var(--font-title); font-weight: 800; font-size: 1rem; min-width: 3rem; text-align: center; }
 .tk-duel-winner { color: var(--accent-l); font-weight: 700; }
 
+/* ── Découvrir le club ── */
+.discover-grid { display: grid; gap: 1.1rem; grid-template-columns: 1fr; }
+.discover-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: .3rem;
+  padding: 1.4rem 1.3rem; border: 1px solid var(--border); border-radius: 16px;
+  background: var(--card); text-decoration: none; color: var(--text);
+  transition: transform .18s, border-color .18s, box-shadow .18s;
+}
+.discover-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); box-shadow: 0 14px 30px rgba(3,8,24,.35); }
+.discover-ic { width: 1.7rem; height: 1.7rem; color: var(--accent-l); margin-bottom: .3rem; }
+.discover-label { font-family: var(--font-title); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; font-size: 1.05rem; }
+.discover-detail { color: var(--muted); font-size: .85rem; margin: 0; line-height: 1.4; min-height: 2.6em; }
+.discover-detail strong { color: var(--text); }
+.discover-link { display: inline-flex; align-items: center; gap: .35rem; color: var(--accent-l); font-weight: 700; font-size: .85rem; margin-top: .4rem; }
+
 /* ── Join band ── */
 .join-band { text-align: center; }
 .join-band h2 { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: clamp(1.6rem, 4vw, 2.4rem); margin: 0 0 .6rem; }
@@ -418,6 +485,7 @@ onMounted(async () => {
 /* ── Responsive ── */
 @media (min-width: 720px) {
   .univers-grid { grid-template-columns: 1fr 1fr; }
+  .discover-grid { grid-template-columns: repeat(3, 1fr); }
   .tourn-grid { grid-template-columns: repeat(2, 1fr); }
   .res-grid { grid-template-columns: 1fr 1fr; }
 }
