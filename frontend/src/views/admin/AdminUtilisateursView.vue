@@ -126,7 +126,10 @@
                 </div>
                 <!-- Infos supplémentaires (âge, plateforme, fréquence) -->
                 <div v-if="r.extra" class="flex flex-wrap gap-2 mt-1">
-                  <span v-if="r.extra.age" class="text-xs px-2 py-0.5 rounded-full bg-gz-border/20 text-gz-muted">
+                  <span v-if="r.extra.birthdate" class="text-xs px-2 py-0.5 rounded-full bg-gz-border/20 text-gz-muted">
+                    {{ ageFromBirthdate(r.extra.birthdate) }} ans
+                  </span>
+                  <span v-else-if="r.extra.age" class="text-xs px-2 py-0.5 rounded-full bg-gz-border/20 text-gz-muted">
                     {{ r.extra.age }} ans
                   </span>
                   <span v-if="r.extra.platform" class="text-xs px-2 py-0.5 rounded-full bg-gz-border/20 text-gz-muted">
@@ -135,6 +138,12 @@
                   <span v-if="r.extra.frequency" class="text-xs px-2 py-0.5 rounded-full bg-gz-border/20 text-gz-muted">
                     {{ freqLabel(r.extra.frequency) }}
                   </span>
+                </div>
+                <!-- Coordonnées civiles (bulletin d'adhésion) -->
+                <div v-if="r.extra && (r.extra.phone || r.extra.address || r.extra.profession)" class="text-xs text-gz-muted mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                  <span v-if="r.extra.phone">Tél. {{ r.extra.phone }}</span>
+                  <span v-if="r.extra.profession">{{ r.extra.profession }}</span>
+                  <span v-if="r.extra.address">{{ r.extra.address }}</span>
                 </div>
                 <p v-if="r.message" class="text-xs text-gz-muted mt-1 italic">« {{ r.message }} »</p>
               </div>
@@ -265,6 +274,18 @@ async function reviewRequest(id, status) {
 
 function freqLabel(f) {
   return { daily: 'Tous les jours', several_week: 'Plusieurs fois/sem.', weekly: '1 fois/sem.', occasional: 'Occasionnellement' }[f] || f
+}
+
+function ageFromBirthdate(d) {
+  try {
+    const b = new Date(d)
+    if (Number.isNaN(b.getTime())) return '—'
+    const now = new Date()
+    let age = now.getFullYear() - b.getFullYear()
+    const m = now.getMonth() - b.getMonth()
+    if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--
+    return age
+  } catch (_) { return '—' }
 }
 
 async function loadUsers() {
