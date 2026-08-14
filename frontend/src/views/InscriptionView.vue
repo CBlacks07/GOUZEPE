@@ -69,19 +69,33 @@
             <!-- Identité -->
             <fieldset class="fg">
               <legend>Informations personnelles</legend>
+              <div>
+                <label class="label">Pseudo / Nom en jeu *</label>
+                <input v-model="form.name" class="input" placeholder="Ton pseudo" required maxlength="60" />
+              </div>
               <div class="row-2">
                 <div>
-                  <label class="label">Pseudo / Nom en jeu *</label>
-                  <input v-model="form.name" class="input" placeholder="Ton pseudo" required maxlength="60" />
+                  <label class="label">Email *</label>
+                  <input v-model="form.email" type="email" class="input" placeholder="ton@email.com" required />
                 </div>
                 <div>
-                  <label class="label">Âge *</label>
-                  <input v-model.number="form.age" type="number" class="input" placeholder="Ex: 22" min="13" max="99" required />
+                  <label class="label">Téléphone *</label>
+                  <input v-model="form.phone" type="tel" class="input" placeholder="+228 ..." required />
+                </div>
+              </div>
+              <div class="row-2">
+                <div>
+                  <label class="label">Date de naissance *</label>
+                  <input v-model="form.birthdate" type="date" class="input" required />
+                </div>
+                <div>
+                  <label class="label">Profession / Structure</label>
+                  <input v-model="form.profession" class="input" placeholder="Optionnel" maxlength="80" />
                 </div>
               </div>
               <div>
-                <label class="label">Email *</label>
-                <input v-model="form.email" type="email" class="input" placeholder="ton@email.com" required />
+                <label class="label">Adresse</label>
+                <input v-model="form.address" class="input" placeholder="Quartier, ville…" maxlength="120" />
               </div>
             </fieldset>
 
@@ -120,6 +134,16 @@
               </div>
             </fieldset>
 
+            <!-- Cotisation & pièces à fournir -->
+            <fieldset class="fg">
+              <legend>Cotisation &amp; pièces à fournir</legend>
+              <div class="rules-box">
+                <p><strong>Frais d'adhésion</strong> — 5 000 FCFA (à la validation de ta demande).</p>
+                <p><strong>Cotisation annuelle</strong> — 24 000 FCFA/an, par chèque, espèces, virement ou mobile-money.</p>
+                <p><strong>Pièces à apporter</strong> — photocopie de la CNI/passeport + 2 photos d'identité.</p>
+              </div>
+            </fieldset>
+
             <!-- Règlement -->
             <fieldset class="fg">
               <legend>Règlement du club</legend>
@@ -134,11 +158,15 @@
                 <input type="checkbox" v-model="form.accepted" required />
                 <span>J'ai lu et j'accepte le règlement du GOUZEPE Gaming Club *</span>
               </label>
+              <label class="terms-check">
+                <input type="checkbox" v-model="form.acceptedFees" required />
+                <span>Je m'engage à verser les frais d'adhésion et la cotisation annuelle une fois ma demande validée *</span>
+              </label>
             </fieldset>
 
             <p v-if="error" class="form-error">{{ error }}</p>
 
-            <button type="submit" :disabled="loading || !form.accepted" class="btn-primary reg-submit">
+            <button type="submit" :disabled="loading || !form.accepted || !form.acceptedFees" class="btn-primary reg-submit">
               <Loader2Icon v-if="loading" class="w-4 h-4 animate-spin" />
               {{ loading ? 'Envoi en cours…' : 'Envoyer ma demande' }}
             </button>
@@ -172,7 +200,8 @@ const loading = ref(false)
 const submitted = ref(false)
 const error = ref('')
 const form = reactive({
-  name: '', email: '', age: '', platform: '', frequency: '', message: '', accepted: false, games: [],
+  name: '', email: '', phone: '', birthdate: '', profession: '', address: '',
+  platform: '', frequency: '', message: '', accepted: false, acceptedFees: false, games: [],
 })
 
 const gameOptions = [
@@ -190,12 +219,14 @@ async function submit() {
   error.value = ''
   if (!form.games.length) { error.value = 'Choisis au moins un jeu.'; return }
   if (!form.accepted) { error.value = 'Veuillez accepter le règlement.'; return }
+  if (!form.acceptedFees) { error.value = 'Veuillez confirmer l\'engagement sur la cotisation.'; return }
   loading.value = true
   try {
     await axios.post(`${base}/public/inscription`, {
-      name: form.name, email: form.email,
-      age: form.age || null, platform: form.platform,
-      frequency: form.frequency, message: form.message,
+      name: form.name, email: form.email, phone: form.phone,
+      birthdate: form.birthdate || null,
+      profession: form.profession || null, address: form.address || null,
+      platform: form.platform, frequency: form.frequency, message: form.message,
       games: form.games,
     })
     submitted.value = true
