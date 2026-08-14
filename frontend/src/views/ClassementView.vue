@@ -396,7 +396,7 @@
               </div>
             </div>
 
-            <!-- Table participants -->
+            <!-- Table participants — Classés -->
             <div class="overflow-x-auto">
               <table class="data-table text-sm w-full">
                 <thead>
@@ -409,14 +409,12 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="r in activeTournament.rows" :key="r.rank + '-' + (r.player_id || r.name)"
-                      :style="!r.eligible ? 'opacity:.55' : ''">
+                  <tr v-if="!tournamentEligibleRows(activeTournament).length">
+                    <td colspan="5" class="text-center py-4" style="color:var(--muted)">Aucun participant classé.</td>
+                  </tr>
+                  <tr v-for="r in tournamentEligibleRows(activeTournament)" :key="r.rank + '-' + (r.player_id || r.name)">
                     <td class="text-center" style="color:var(--muted)">{{ r.rank }}</td>
-                    <td>
-                      {{ r.name }}
-                      <span v-if="!r.eligible" class="text-[10px] px-1.5 py-0.5 rounded ml-1"
-                            style="background:rgba(148,163,184,.18);color:var(--muted)">non classé</span>
-                    </td>
+                    <td>{{ r.name }}</td>
                     <td class="text-center">{{ r.played }}</td>
                     <td class="text-center" style="color:var(--muted)">{{ r.wins }}-{{ r.draws }}-{{ r.losses }}</td>
                     <td class="text-center font-bold">{{ r.season_points != null ? r.season_points : '—' }}</td>
@@ -424,6 +422,34 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Table participants — Non classés -->
+            <template v-if="tournamentIneligibleRows(activeTournament).length">
+              <div class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide"
+                   style="background:var(--panel);color:var(--muted);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+                Non classés
+              </div>
+              <div class="overflow-x-auto">
+                <table class="data-table text-sm w-full" style="opacity:.7">
+                  <thead>
+                    <tr>
+                      <th class="text-center w-10">Rang</th>
+                      <th>Participant</th>
+                      <th class="text-center">Matchs</th>
+                      <th class="text-center">V-N-D</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="r in tournamentIneligibleRows(activeTournament)" :key="r.rank + '-' + (r.player_id || r.name)">
+                      <td class="text-center" style="color:var(--muted)">{{ r.rank }}</td>
+                      <td>{{ r.name }}</td>
+                      <td class="text-center">{{ r.played }}</td>
+                      <td class="text-center" style="color:var(--muted)">{{ r.wins }}-{{ r.draws }}-{{ r.losses }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -1258,6 +1284,7 @@ async function printSelectedDay() {
 
 async function printSeasonA4() {
   if (aggPromise) await aggPromise
+  await loadTournamentsBreakdown() // garantit les tournois de la saison même si l'onglet n'a jamais été ouvert
   const css = `
     @page{size:A4;margin:12mm;}
     body{font:12px/1.4 Segoe UI,Roboto,Arial,sans-serif;color:#111;}
@@ -1297,6 +1324,11 @@ async function printSeasonA4() {
     .progress-name{font-size:14px;font-weight:900;color:#312e81;line-height:1.2}
     .progress-id{font-size:10px;color:#4338ca}
     .progress-detail{font-size:10px;color:#4f46e5;margin-top:2px}
+    .tourn-block{margin-top:14px;page-break-inside:avoid}
+    .tourn-block h3{font-size:12px;margin:0 0 4px;font-weight:700}
+    .tourn-fmt{font-weight:400;color:#64748b;font-size:10px}
+    .tourn-inelig{margin-top:4px;opacity:.75}
+    .tourn-inelig th,.tourn-inelig td{font-size:10px}
   `
   const logo = await logoDataURL()
 
@@ -1392,12 +1424,45 @@ async function printSeasonA4() {
     bilanHtml += '</div>'
   }
 
+  // Tournois de la saison : toutes les tables (pas seulement celle sélectionnée à l'écran),
+  // chacune avec son titre, Classés puis Non classés (mêmes participants, même logique que l'écran).
+  let tournamentsHtml = ''
+  if (tournamentsOrdered.value.length) {
+    tournamentsHtml += '<h2>Tournois de la saison</h2>'
+    for (const t of tournamentsOrdered.value) {
+      const elig = tournamentEligibleRows(t)
+      const inelig = tournamentIneligibleRows(t)
+      const dateLabel = t.played_at ? escapeHtml(fmtDate(String(t.played_at).slice(0, 10))) : ''
+      tournamentsHtml += `
+        <div class="tourn-block">
+          <h3>${escapeHtml(t.name)} <span class="tourn-fmt">${escapeHtml(formatTitleLabel(t.format))}${dateLabel ? ' &bull; ' + dateLabel : ''}</span></h3>
+          <table><thead><tr><th>Rang</th><th>Participant</th><th>Matchs</th><th>V-N-D</th><th>Pts saison</th></tr></thead><tbody>`
+      if (!elig.length) {
+        tournamentsHtml += '<tr><td colspan="5">Aucun participant classé.</td></tr>'
+      } else {
+        for (const r of elig) {
+          tournamentsHtml += `<tr><td>${r.rank}</td><td>${escapeHtml(r.name)}</td><td>${r.played}</td><td>${r.wins}-${r.draws}-${r.losses}</td><td><strong>${r.season_points != null ? r.season_points : '—'}</strong></td></tr>`
+        }
+      }
+      tournamentsHtml += '</tbody></table>'
+      if (inelig.length) {
+        tournamentsHtml += '<table class="tourn-inelig"><thead><tr><th>Rang</th><th>Participant (non classé)</th><th>Matchs</th><th>V-N-D</th></tr></thead><tbody>'
+        for (const r of inelig) {
+          tournamentsHtml += `<tr><td>${r.rank}</td><td>${escapeHtml(r.name)}</td><td>${r.played}</td><td>${r.wins}-${r.draws}-${r.losses}</td></tr>`
+        }
+        tournamentsHtml += '</tbody></table>'
+      }
+      tournamentsHtml += '</div>'
+    }
+  }
+
   const seasonLabel = currentSeasonName.value || 'Saison'
   let html = `<!doctype html><html><head><meta charset="utf-8"><title>Classement — ${escapeHtml(seasonLabel)}</title><style>${css}</style></head><body onload="window.print()">`
   html += `<h1>${logo ? `<img src="${logo}" alt="logo">` : ''}Classement Général — ${escapeHtml(seasonLabel)}</h1>`
   html += `<div class="muted">Seuil de classement : ${threshold.value} participations (25% des journées) &bull; Journées: ${daysCount.value}</div>`
   html += `<h2>Classés</h2><table><thead>${headRow(true)}</thead><tbody>${rowsHTML(classedRows.value, true)}</tbody></table>`
   html += `<h2>Non classés</h2><table><thead>${headRow(false)}</thead><tbody>${rowsHTML(unclassedRows.value, false)}</tbody></table>`
+  html += tournamentsHtml
   html += bilanHtml
   html += '</body></html>'
 
@@ -1464,6 +1529,11 @@ function formatTitleLabel(f) { return FORMAT_LABELS[f] || f || '' }
 const tournamentsOrdered = computed(() => [...tournamentsList.value].reverse())
 const activeTournament = computed(() =>
   tournamentsList.value.find(t => t.id === activeTournamentId.value) || null)
+
+// Sépare les participants classés (points saison) des non classés (invités / non éligibles),
+// tout en conservant leur rang réel du tournoi — cohérent avec le pattern Classés/Non classés.
+function tournamentEligibleRows(t) { return (t?.rows || []).filter(r => r.eligible) }
+function tournamentIneligibleRows(t) { return (t?.rows || []).filter(r => !r.eligible) }
 
 async function loadTournamentsBreakdown() {
   activeTournamentId.value = null
