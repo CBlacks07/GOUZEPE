@@ -1,6 +1,9 @@
 ﻿<template>
   <AppLayout season-label="Admin Tournois">
     <div class="page-wrap admin-tournois-wrap">
+      <RouterLink to="/admin" class="inline-flex items-center gap-1.5 text-sm font-semibold text-gz-muted hover:text-gz-text mb-4">
+        <ArrowLeftIcon class="w-3.5 h-3.5" /> Console
+      </RouterLink>
       <div class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-4 md:gap-6 items-start">
         <aside class="space-y-4 reveal admin-sidebar">
           <section class="card">
@@ -502,7 +505,7 @@ import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
 import { onRealtimeEvent, joinRealtimeRoom, leaveRealtimeRoom } from '@/composables/useRealtimeSocket'
 import { applyIdStandings } from '@/utils/tournamentLabels'
-import { PlusIcon, Trash2Icon, XIcon, Loader2Icon, ZapIcon } from 'lucide-vue-next'
+import { PlusIcon, Trash2Icon, XIcon, Loader2Icon, ZapIcon, ArrowLeftIcon } from 'lucide-vue-next'
 
 const api = useAPI()
 const { success, error: toastError } = useToast()
