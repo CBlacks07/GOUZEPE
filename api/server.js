@@ -15,6 +15,8 @@ const multer = require('multer');
 const dayjs = require('dayjs');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
+let vercelBlob = null;
+try { vercelBlob = require('@vercel/blob'); } catch (_) { /* optionnel : dispo seulement si le paquet est installé */ }
 
 /* ====== Config ====== */
 const PORT = parseInt(process.env.PORT || '3005', 10);
@@ -148,17 +150,32 @@ const upload = multer({
 
 const UP_SITE = path.join(UP, 'site');
 fs.mkdirSync(UP_SITE, { recursive: true });
+// En mémoire : le fichier part soit vers Vercel Blob, soit vers le disque local
+// (saveSiteMedia ci-dessous décide), jamais écrit directement par multer.
 const siteUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, UP_SITE),
-    filename: (_req, file, cb) => {
-      const ext = (file.originalname || 'bin').toLowerCase().split('.').pop().replace(/[^a-z0-9]/g, '') || 'bin';
-      cb(null, `site_${Date.now().toString(36)}.${ext}`);
-    }
-  }),
+  storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => cb(/^(image\/(png|jpe?g|webp|gif|svg\+xml)|video\/(mp4|webm))$/i.test(file.mimetype || '') ? null : new Error('image ou vidéo requise'), true),
   limits: { fileSize: 60 * 1024 * 1024 } // 60 MB (vidéos de fond)
 });
+
+// Stockage des médias du site (logo, fond, vignettes, vidéos hero).
+// Utilise Vercel Blob si BLOB_READ_WRITE_TOKEN est configuré (persiste entre les
+// redéploiements — nécessaire en prod sur un hébergement sans disque persistant).
+// Sinon, repli sur le disque local (suffisant en dev / Docker local avec volume).
+async function saveSiteMedia(file) {
+  const ext = (file.originalname || 'bin').toLowerCase().split('.').pop().replace(/[^a-z0-9]/g, '') || 'bin';
+  const filename = `site_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}.${ext}`;
+  if (vercelBlob && process.env.BLOB_READ_WRITE_TOKEN) {
+    const blob = await vercelBlob.put(`site/${filename}`, file.buffer, {
+      access: 'public',
+      contentType: file.mimetype,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+    return blob.url;
+  }
+  fs.writeFileSync(path.join(UP_SITE, filename), file.buffer);
+  return `/uploads/site/${filename}`;
+}
 
 const restoreUpload = multer({
   storage: multer.diskStorage({
@@ -2810,7 +2827,13 @@ app.put('/admin/site-settings', auth, adminOnly, async (req, res) => {
 
 app.post('/admin/site-media', auth, adminOnly, siteUpload.single('file'), async (req, res) => {
   if (!req.file) return bad(res, 400, 'Aucun fichier')
-  ok(res, { url: `/uploads/site/${req.file.filename}` })
+  try {
+    const url = await saveSiteMedia(req.file)
+    ok(res, { url })
+  } catch (e) {
+    console.error('POST /admin/site-media', e)
+    bad(res, 500, 'Upload impossible')
+  }
 })
 
 // ── Actualités / annonces du club ────────────────────────────
