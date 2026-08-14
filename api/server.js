@@ -3148,13 +3148,18 @@ app.get('/public/members', async (_req, res) => {
 })
 
 app.post('/public/inscription', async (req, res) => {
-  const { name, email, age, platform, frequency, message, games } = req.body || {}
+  const { name, email, phone, birthdate, profession, address, platform, frequency, message, games } = req.body || {}
   if (!name || !name.trim()) return bad(res, 400, 'Nom requis')
   if (!email || !email.trim()) return bad(res, 400, 'Email requis')
+  if (!phone || !phone.trim()) return bad(res, 400, 'Téléphone requis')
   const existing = await q(`SELECT id FROM membership_requests WHERE email=$1 AND status='pending'`, [email.trim().toLowerCase()])
   if (existing.rowCount) return bad(res, 409, 'Une demande est déjà en attente pour cet email')
   const gamesArr = Array.isArray(games) ? games.filter(Boolean) : (games ? [games] : [])
-  const extra = JSON.stringify({ age: age||null, platform: platform||null, frequency: frequency||null, games: gamesArr })
+  const extra = JSON.stringify({
+    phone: phone.trim(), birthdate: birthdate || null,
+    profession: (profession || '').trim() || null, address: (address || '').trim() || null,
+    platform: platform||null, frequency: frequency||null, games: gamesArr,
+  })
   const r = await q(`
     INSERT INTO membership_requests(name, email, message, extra)
     VALUES($1, $2, $3, $4) RETURNING id, created_at
@@ -3183,7 +3188,7 @@ app.get('/admin/membership-requests/count', auth, adminOnly, async (_req, res) =
 app.get('/admin/membership-requests', auth, adminOnly, async (req, res) => {
   const status = req.query.status || 'pending'
   const r = await q(`
-    SELECT id, name, email, message, status, created_at, reviewed_at
+    SELECT id, name, email, message, extra, status, created_at, reviewed_at
     FROM membership_requests
     WHERE status=$1
     ORDER BY created_at DESC
