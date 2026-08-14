@@ -2,6 +2,10 @@
   <AppLayout season-label="Actualités">
     <div class="page-wrap news-admin">
 
+      <RouterLink to="/admin" class="inline-flex items-center gap-1.5 text-sm font-semibold text-gz-muted hover:text-gz-text mb-4">
+        <ArrowLeftIcon class="w-3.5 h-3.5" /> Console
+      </RouterLink>
+
       <!-- Créer / modifier -->
       <section class="card mb-4 reveal">
         <h2 class="font-semibold text-gz-text mb-4">{{ editingId ? 'Modifier l\'annonce' : 'Nouvelle annonce' }}</h2>
@@ -82,7 +86,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAPI } from '@/composables/useAPI'
-import { Loader2Icon, PlusIcon, CheckIcon, RefreshCwIcon, PencilIcon, Trash2Icon } from 'lucide-vue-next'
+import { Loader2Icon, PlusIcon, CheckIcon, RefreshCwIcon, PencilIcon, Trash2Icon, ArrowLeftIcon } from 'lucide-vue-next'
 
 const api = useAPI()
 const items = ref([])

@@ -289,7 +289,9 @@ router.beforeEach(async (to, from) => {
     await auth.hydrateFromServer()
   }
 
-  if (auth.isValid && to.meta.public) {
+  // Les membres connectés sont redirigés depuis les pages publiques (landing, inscription)
+  // vers leur espace ; les admins en sont exemptés pour pouvoir prévisualiser le site public.
+  if (auth.isValid && to.meta.public && !auth.isAdmin) {
     return homeRoute()
   }
 

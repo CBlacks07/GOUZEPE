@@ -72,7 +72,7 @@ import { useThemeStore } from '@/stores/theme'
 import { useMembershipNotif } from '@/composables/useMembershipNotif'
 import {
   HomeIcon, CalendarDaysIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
-  ShieldIcon, SunIcon, MoonIcon, LogOutIcon, XIcon, GamepadIcon, FootprintsIcon
+  ShieldIcon, SunIcon, MoonIcon, LogOutIcon, XIcon, GamepadIcon, FootprintsIcon, GlobeIcon
 } from 'lucide-vue-next'
 
 const props = defineProps({ open: Boolean })
@@ -169,7 +169,10 @@ const visibleGroups = computed(() => {
   }
 
   if (auth.isAdmin) {
-    groups.push({ title: '', links: [{ to: '/admin', label: 'Admin', icon: ShieldIcon }] })
+    groups.push({ title: '', links: [
+      { to: '/admin', label: 'Admin', icon: ShieldIcon },
+      { to: '/', label: 'Site public', icon: GlobeIcon },
+    ] })
   }
 
   return groups
