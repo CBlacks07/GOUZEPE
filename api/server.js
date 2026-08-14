@@ -2947,6 +2947,7 @@ app.get('/public/records', async (_req, res) => {
   try {
     const num = v => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) ? null : Number(v)
     const days = (await q(`SELECT day, payload FROM matchday ORDER BY day ASC`)).rows
+    const roles = await getPlayersRoles() // pour exclure les invités des records du club
 
     let carton = null              // plus large victoire (une manche)
     let topJournee = null          // plus de buts sur une journée
@@ -2956,6 +2957,8 @@ app.get('/public/records', async (_req, res) => {
     for (const row of days) {
       const day = dayjs(row.day).format('YYYY-MM-DD')
       const p = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
+      const inviteIds = collectInviteIdsFromPayload(p)
+      const isMember = id => isEligibleMember(id, roles, inviteIds)
       const goalsByPlayer = new Map()
 
       for (const div of ['d1', 'd2']) {
@@ -2967,9 +2970,9 @@ app.get('/public/records', async (_req, res) => {
           ]
           for (const [g1, g2] of legs) {
             if (g1 === null || g2 === null) continue
-            goalsByPlayer.set(m.p1, (goalsByPlayer.get(m.p1) || 0) + g1)
-            goalsByPlayer.set(m.p2, (goalsByPlayer.get(m.p2) || 0) + g2)
-            if (g1 !== g2) {
+            if (isMember(m.p1)) goalsByPlayer.set(m.p1, (goalsByPlayer.get(m.p1) || 0) + g1)
+            if (isMember(m.p2)) goalsByPlayer.set(m.p2, (goalsByPlayer.get(m.p2) || 0) + g2)
+            if (g1 !== g2 && isMember(m.p1) && isMember(m.p2)) {
               const margin = Math.abs(g1 - g2)
               if (!carton || margin > carton.margin) {
                 const p1Win = g1 > g2
@@ -2987,7 +2990,7 @@ app.get('/public/records', async (_req, res) => {
         if (!topJournee || g > topJournee.goals) topJournee = { id: pid, goals: g, date: day }
       }
       const c1 = p?.champions?.d1?.id
-      if (c1) { d1Titles.set(c1, (d1Titles.get(c1) || 0) + 1); d1Seq.push({ id: c1, date: day }) }
+      if (c1 && isMember(c1)) { d1Titles.set(c1, (d1Titles.get(c1) || 0) + 1); d1Seq.push({ id: c1, date: day }) }
     }
 
     // Meilleure série D1
