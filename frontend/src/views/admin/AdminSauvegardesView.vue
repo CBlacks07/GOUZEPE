@@ -1,6 +1,9 @@
 ﻿<template>
   <AppLayout season-label="Sauvegardes">
     <div class="page-wrap backups-wrap space-y-4">
+      <RouterLink to="/admin" class="inline-flex items-center gap-1.5 text-sm font-semibold text-gz-muted hover:text-gz-text">
+        <ArrowLeftIcon class="w-3.5 h-3.5" /> Console
+      </RouterLink>
       <section class="grid grid-cols-1 xl:grid-cols-2 gap-4 reveal">
         <article class="card">
           <h2 class="font-semibold text-gz-text mb-3 flex items-center gap-2">
@@ -149,6 +152,7 @@ import {
   RotateCcwIcon,
   Trash2Icon,
   Loader2Icon,
+  ArrowLeftIcon,
 } from 'lucide-vue-next'
 
 const api = useAPI()
