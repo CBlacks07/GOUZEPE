@@ -56,53 +56,98 @@
           </div>
         </div>
 
-        <div class="overflow-x-auto table-shell">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nom</th>
-                <th>Statut</th>
-                <th>Pole</th>
-                <th>Admission</th>
-                <th>Compte</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="loading">
-                <td colspan="7" class="text-center text-gz-muted py-8">Chargement...</td>
-              </tr>
-              <tr v-else-if="!filtered.length">
-                <td colspan="7" class="text-center text-gz-muted py-8">Aucun joueur.</td>
-              </tr>
-              <tr v-for="p in filtered" :key="p.player_id">
-                <td class="font-mono text-gz-muted text-xs">{{ p.player_id }}</td>
-                <td class="font-medium">{{ p.name || '—' }}</td>
-                <td>
-                  <span :class="['badge text-xs font-bold px-2 py-0.5 rounded-full border',
-                    p.role === 'INVITE'
-                      ? 'bg-gz-amber/15 text-gz-amber border-gz-amber/30'
-                      : 'bg-gz-blue/15 text-gz-blue border-gz-blue/30']">
-                    {{ p.role || 'MEMBRE' }}
-                  </span>
-                </td>
-                <td class="text-xs font-semibold" :style="poleColor(p.main_game)">{{ poleLabel(p.main_game) }}</td>
-                <td class="text-gz-muted text-sm">{{ p.admission_year || '--' }}</td>
-                <td class="text-gz-muted text-sm">{{ p.user_email || '—' }}</td>
-                <td>
-                  <div class="flex gap-1">
-                    <button @click="openEdit(p)" class="btn py-1 px-2 text-xs flex items-center gap-1">
-                      <PencilIcon class="w-3 h-3" /> Modifier
-                    </button>
-                    <button @click="deletePlayer(p.player_id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1">
-                      <Trash2Icon class="w-3 h-3" /> Supprimer
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Membres -->
+        <div class="players-group">
+          <h3 class="players-group-h">
+            <span class="dot dot-member" /> Membres
+            <span class="players-count">{{ filteredMembers.length }}</span>
+          </h3>
+          <div class="overflow-x-auto table-shell">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nom</th>
+                  <th>Pole</th>
+                  <th>Admission</th>
+                  <th>Compte</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="loading">
+                  <td colspan="6" class="text-center text-gz-muted py-8">Chargement...</td>
+                </tr>
+                <tr v-else-if="!filteredMembers.length">
+                  <td colspan="6" class="text-center text-gz-muted py-6">Aucun membre.</td>
+                </tr>
+                <tr v-for="p in filteredMembers" :key="p.player_id">
+                  <td class="font-mono text-gz-muted text-xs">{{ p.player_id }}</td>
+                  <td class="font-medium">{{ p.name || '—' }}</td>
+                  <td class="text-xs font-semibold" :style="poleColor(p.main_game)">{{ poleLabel(p.main_game) }}</td>
+                  <td class="text-gz-muted text-sm">{{ p.admission_year || '--' }}</td>
+                  <td class="text-gz-muted text-sm">{{ p.user_email || '—' }}</td>
+                  <td>
+                    <div class="flex gap-1">
+                      <button @click="openEdit(p)" class="btn py-1 px-2 text-xs flex items-center gap-1">
+                        <PencilIcon class="w-3 h-3" /> Modifier
+                      </button>
+                      <button @click="deletePlayer(p.player_id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1">
+                        <Trash2Icon class="w-3 h-3" /> Supprimer
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Invités -->
+        <div class="players-group">
+          <h3 class="players-group-h">
+            <span class="dot dot-guest" /> Invités
+            <span class="players-count">{{ filteredGuests.length }}</span>
+          </h3>
+          <div class="overflow-x-auto table-shell">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nom</th>
+                  <th>Pole</th>
+                  <th>Admission</th>
+                  <th>Compte</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="loading">
+                  <td colspan="6" class="text-center text-gz-muted py-8">Chargement...</td>
+                </tr>
+                <tr v-else-if="!filteredGuests.length">
+                  <td colspan="6" class="text-center text-gz-muted py-6">Aucun invité.</td>
+                </tr>
+                <tr v-for="p in filteredGuests" :key="p.player_id">
+                  <td class="font-mono text-gz-muted text-xs">{{ p.player_id }}</td>
+                  <td class="font-medium">{{ p.name || '—' }}</td>
+                  <td class="text-xs font-semibold" :style="poleColor(p.main_game)">{{ poleLabel(p.main_game) }}</td>
+                  <td class="text-gz-muted text-sm">{{ p.admission_year || '--' }}</td>
+                  <td class="text-gz-muted text-sm">{{ p.user_email || '—' }}</td>
+                  <td>
+                    <div class="flex gap-1">
+                      <button @click="openEdit(p)" class="btn py-1 px-2 text-xs flex items-center gap-1">
+                        <PencilIcon class="w-3 h-3" /> Modifier
+                      </button>
+                      <button @click="deletePlayer(p.player_id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1">
+                        <Trash2Icon class="w-3 h-3" /> Supprimer
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </div>
@@ -235,6 +280,8 @@ const filtered = computed(() => {
     !q || (p.player_id || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q)
   )
 })
+const filteredMembers = computed(() => filtered.value.filter(p => (p.role || 'MEMBRE').toUpperCase() !== 'INVITE'))
+const filteredGuests  = computed(() => filtered.value.filter(p => (p.role || 'MEMBRE').toUpperCase() === 'INVITE'))
 
 onMounted(() => loadPlayers())
 
@@ -399,6 +446,41 @@ async function deletePlayer(pid) {
   transform: translateY(-1px);
   box-shadow: 0 12px 26px rgba(2, 6, 23, 0.2);
   border-color: color-mix(in srgb, var(--border) 68%, var(--blue) 32%);
+}
+
+.players-group + .players-group {
+  margin-top: 1.5rem;
+}
+
+.players-group-h {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text);
+  margin-bottom: .6rem;
+}
+
+.dot {
+  width: .55rem;
+  height: .55rem;
+  border-radius: 50%;
+  flex: none;
+}
+.dot-member { background: var(--blue); }
+.dot-guest  { background: var(--amber); }
+
+.players-count {
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: .72rem;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--border) 45%, transparent);
+  border-radius: 999px;
+  padding: .1rem .5rem;
 }
 
 .table-shell {
