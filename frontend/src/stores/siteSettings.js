@@ -38,6 +38,15 @@ export const DEFAULTS = {
     slides: [], // bande photos défilante (haut de l'accueil Tekken)
     hero: [],   // image(s) du hero (visuel rotatif)
   },
+  // Contact & réseaux — affichés dans le footer public (vide = masqué)
+  contact: {
+    email: '',
+    phone: '',
+    whatsapp: '',
+    discord: '',
+    facebook: '',
+    instagram: '',
+  },
 }
 
 function isObj(v) { return v && typeof v === 'object' && !Array.isArray(v) }
