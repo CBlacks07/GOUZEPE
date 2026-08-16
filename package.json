@@ -1,7 +1,7 @@
 {
   "name": "gouzepe-efootball",
   "version": "1.0.0",
-  "description": "GOUZEPE eFOOT - Application web",
+  "description": "GOUZEPE Gaming Club - Application web (eFootball & Tekken)",
   "scripts": {
     "start": "npm --prefix api start",
     "dev": "npm --prefix api run dev",
