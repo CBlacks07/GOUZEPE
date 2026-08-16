@@ -57,7 +57,7 @@
             v-model="form.email"
             class="input"
             type="email"
-            placeholder="admin@gz.local"
+            placeholder="ton@email.com"
             autocomplete="email"
           />
 
@@ -97,37 +97,16 @@
             <RouterLink to="/inscription" class="auth-link">Pas encore membre ?</RouterLink>
           </div>
         </form>
-
-        <div class="api-toggle">
-          <button type="button" class="btn-ghost" @click="showApiConfig = !showApiConfig">
-            Configuration API
-          </button>
-        </div>
-
-        <div v-if="showApiConfig" class="api-box">
-          <label class="label" for="apiUrl">Adresse API</label>
-          <div class="api-row">
-            <input
-              id="apiUrl"
-              v-model="apiUrl"
-              class="input"
-              type="text"
-              placeholder="http://192.168.1.122:3005"
-            />
-            <button type="button" class="btn" @click="saveApiUrl">Enregistrer</button>
-          </div>
-          <p class="muted text-xs">Actuel : <span class="font-mono">{{ currentApiUrl }}</span></p>
-        </div>
       </div>
     </main>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeftIcon, CheckIcon, EyeIcon, EyeOffIcon, Loader2Icon, MoonIcon, SunIcon } from 'lucide-vue-next'
-import { useAPI, resolveBaseURL } from '@/composables/useAPI'
+import { useAPI } from '@/composables/useAPI'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 
@@ -138,13 +117,9 @@ const api = useAPI()
 
 const form = ref({ email: '', password: '' })
 const showPwd = ref(false)
-const showApiConfig = ref(false)
-const apiUrl = ref('')
 const loading = ref(false)
 const error = ref('')
 const bootMessage = ref('')
-
-const currentApiUrl = computed(() => resolveBaseURL())
 
 function normalizeEmail(raw) {
   const email = String(raw || '').trim().toLowerCase()
@@ -194,16 +169,8 @@ async function submit() {
   }
 }
 
-function saveApiUrl() {
-  const next = String(apiUrl.value || '').trim().replace(/\/+$/, '')
-  if (!next) return
-  localStorage.setItem('efoot.api', next)
-  location.reload()
-}
-
 onMounted(async () => {
   theme.apply()
-  apiUrl.value = currentApiUrl.value
   await validateExistingSession()
 })
 </script>
@@ -319,17 +286,12 @@ onMounted(async () => {
 .auth-link { color: var(--accent-l); text-decoration: none; font-weight: 600; }
 .auth-link:hover { text-decoration: underline; }
 
-.api-toggle { padding: 0 1.25rem .75rem; text-align: center; }
-.api-box { padding: 0 1.25rem 1.25rem; border-top: 1px solid var(--border); }
-.api-row { display: flex; gap: 8px; margin: .5rem 0; }
-
 @media (min-width: 880px) {
   .auth { grid-template-columns: 1.05fr .95fr; }
   .auth-brand { display: block; }
   .auth-mobi-brand { display: none; }
 }
 @media (max-width: 520px) {
-  .api-row { flex-direction: column; }
   .auth-main { padding: 1rem .85rem; }
   .auth-form { padding: 1.25rem 1rem 1rem; }
 }
