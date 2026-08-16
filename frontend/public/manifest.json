@@ -1,8 +1,8 @@
 {
-  "name": "GOUZEPE eFOOTBALL",
+  "name": "GOUZEPE Gaming Club",
   "short_name": "GOUZEPE",
-  "description": "Championnat eFootball - Classements, duels et gestion de saisons",
-  "start_url": "./login.html",
+  "description": "Club de gaming eFootball & Tekken - Classements, tournois et gestion de saisons",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#0b1119",
   "theme_color": "#16a34a",
@@ -59,21 +59,21 @@
       "name": "Nouveau Duel",
       "short_name": "Duel",
       "description": "Lancer un duel rapide",
-      "url": "./Duel.html",
+      "url": "./duel",
       "icons": [{ "src": "./assets/icons/icon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Classement",
       "short_name": "Classement",
       "description": "Voir le classement général",
-      "url": "./Classement-general.html",
+      "url": "./classement",
       "icons": [{ "src": "./assets/icons/icon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Mon Espace",
       "short_name": "Profil",
       "description": "Accéder à mon espace membre",
-      "url": "./Panel-Membre.html",
+      "url": "./profil",
       "icons": [{ "src": "./assets/icons/icon-96x96.png", "sizes": "96x96" }]
     }
   ],

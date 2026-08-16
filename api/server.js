@@ -1,4 +1,4 @@
-// server.js â€” GOUZEPE eFOOT API (Express + PostgreSQL + Socket.IO)
+// server.js — GOUZEPE Gaming Club API (Express + PostgreSQL + Socket.IO)
 require('dotenv').config();
 
 const express = require('express');
