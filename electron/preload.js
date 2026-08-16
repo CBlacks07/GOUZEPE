@@ -29,7 +29,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 // Injecter des informations utiles pour l'application
 window.addEventListener('DOMContentLoaded', () => {
-  console.log('Application GOUZEPE eFOOT - Version Desktop');
+  console.log('Application GOUZEPE Gaming Club - Version Desktop');
   console.log('Electron:', process.versions.electron);
   console.log('Chrome:', process.versions.chrome);
   console.log('Node:', process.versions.node);

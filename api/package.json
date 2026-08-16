@@ -1,7 +1,7 @@
 {
   "name": "gouzepe-efoot-api",
   "version": "1.0.0",
-  "description": "API GOUZEPE eFOOT (Express + PostgreSQL + Socket.IO)",
+  "description": "API GOUZEPE Gaming Club (Express + PostgreSQL + Socket.IO)",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {

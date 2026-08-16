@@ -278,8 +278,8 @@ router.beforeEach(async (to, from) => {
   }
 
   document.title = to.meta.title
-    ? `${to.meta.title} - GOUZEPE eFOOTBALL`
-    : 'GOUZEPE eFOOTBALL'
+    ? `${to.meta.title} - GOUZEPE Gaming Club`
+    : 'GOUZEPE Gaming Club'
 
   if (to.meta.requiresAuth !== false && !auth.isValid) {
     return '/'
