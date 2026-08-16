@@ -56,16 +56,21 @@ const defaultCorsOrigins = [
   'http://localhost:5173',
   'https://gouzepe.vercel.app'
 ].join(',');
+// Normalise ("https://Exemple.com/" -> "https://exemple.com") pour que les
+// différences de casse/slash final dans CORS_ORIGIN (config Render) ne cassent
+// jamais la comparaison — c'est exactement le genre de faute de frappe qui a
+// bloqué le domaine de prod en silence.
+const stripTrailingSlash = (s) => String(s || '').trim().replace(/\/+$/, '');
 const allowedOrigins = (process.env.CORS_ORIGIN || defaultCorsOrigins)
   .split(',')
-  .map((s) => s.trim())
+  .map(stripTrailingSlash)
   .filter(Boolean);
 
 function isAllowedOrigin(origin) {
   // Pas d'origin = requete serveur-a-serveur, curl, Electron, etc.
   if (!origin) return true;
   if (allowedOrigins.includes('*')) return true;
-  if (allowedOrigins.includes(origin)) return true;
+  if (allowedOrigins.includes(stripTrailingSlash(origin))) return true;
 
   try {
     const originUrl = new URL(origin);
@@ -85,6 +90,11 @@ function isAllowedOrigin(origin) {
 
     // Vercel previews du projet gouzepe (ex: gouzepe-git-main-xxx.vercel.app)
     if (/^gouzepe(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(hostname)) return true;
+
+    // Domaine de production (avec ou sans www) — toujours autorisé, quel que
+    // soit le contenu de CORS_ORIGIN, pour ne plus jamais dépendre d'une
+    // variable d'env correctement recopiée.
+    if (/^(www\.)?gouzepe-gaming\.com$/i.test(hostname)) return true;
   } catch (_e) {
     // Invalid origin URL
   }
