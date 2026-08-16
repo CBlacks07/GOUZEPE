@@ -221,9 +221,9 @@ function createWindow() {
           click: () => {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
-              title: 'À propos de GOUZEPE eFOOT',
-              message: 'GOUZEPE eFOOT',
-              detail: `Version: ${app.getVersion()}\n\nApplication de gestion de tournois eFOOTBALL`,
+              title: 'À propos de GOUZEPE Gaming Club',
+              message: 'GOUZEPE Gaming Club',
+              detail: `Version: ${app.getVersion()}\n\nApplication de gestion de championnats eFootball & Tekken`,
               buttons: ['OK']
             });
           }
