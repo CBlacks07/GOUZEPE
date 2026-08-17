@@ -25,6 +25,94 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('Missing JWT_SECRET env var');
 const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN || 'gz.local';
 
+/* ====== Envoi d'emails (Resend) ====== */
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'GOUZEPE Gaming Club <no-reply@gouzepe-gaming.com>';
+const SITE_URL = String(process.env.SITE_URL || 'https://gouzepe-gaming.com').replace(/\/+$/, '');
+const EMAIL_LOGO_URL = `${SITE_URL}/assets/icons/icon-192x192.png`;
+
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Habillage HTML commun (logo + charte GOUZEPE) pour tous les emails transactionnels.
+function emailShell(title, bodyHtml) {
+  return `<!doctype html>
+<html lang="fr">
+  <body style="margin:0;padding:0;background:#0b1220;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0b1220;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:14px;overflow:hidden;">
+            <tr>
+              <td style="background:#0f1a30;padding:28px 24px;text-align:center;">
+                <img src="${EMAIL_LOGO_URL}" alt="GOUZEPE" width="56" height="56" style="border-radius:12px;display:block;margin:0 auto 10px;" />
+                <div style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:.04em;">GOUZEPE <span style="color:#ff5a1f;">GAMING CLUB</span></div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 24px;color:#1b1b1f;font-size:15px;line-height:1.6;">
+                <h1 style="font-size:18px;margin:0 0 14px;color:#0f1a30;">${escapeHtml(title)}</h1>
+                ${bodyHtml}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 24px;border-top:1px solid #eceff3;color:#8a94a6;font-size:12px;text-align:center;">
+                GOUZEPE Gaming Club &middot; <a href="${SITE_URL}" style="color:#ff5a1f;text-decoration:none;">${SITE_URL.replace(/^https?:\/\//, '')}</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+// Envoi best-effort : n'empêche jamais la requête HTTP appelante d'échouer si l'email ne part pas
+// (clé API absente, service indisponible...). Se dégrade en simple log, comme le fallback Blob.
+async function sendEmail({ to, subject, html }) {
+  if (!RESEND_API_KEY) {
+    console.warn('[email] RESEND_API_KEY manquant — email non envoyé:', subject, '->', to);
+    return false;
+  }
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: EMAIL_FROM, to, subject, html }),
+    });
+    if (!r.ok) {
+      const errText = await r.text().catch(() => '');
+      console.error('[email] échec envoi', r.status, errText);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('[email] erreur envoi', e.message);
+    return false;
+  }
+}
+
+function membershipReceivedEmail(name) {
+  return emailShell('Ta demande a bien été reçue !', `
+    <p>Salut ${escapeHtml(name)},</p>
+    <p>Ta demande d'adhésion au <strong>GOUZEPE Gaming Club</strong> a bien été enregistrée. Un admin va l'examiner et reviendra vers toi rapidement.</p>
+    <p>Merci pour ton intérêt, à très vite dans l'arène !</p>
+  `);
+}
+
+function membershipRejectedEmail(name, message) {
+  return emailShell("Concernant ta demande d'adhésion", `
+    <p>Salut ${escapeHtml(name)},</p>
+    <p>Après examen, nous ne pouvons pas donner suite à ta demande d'adhésion au <strong>GOUZEPE Gaming Club</strong> pour le moment.</p>
+    ${message ? `<p style="background:#f4f5f8;border-radius:10px;padding:12px 14px;margin:14px 0;white-space:pre-wrap;">${escapeHtml(message)}</p>` : ''}
+    <p>N'hésite pas à nous recontacter si ta situation évolue.</p>
+  `);
+}
+
 /* ====== Database ====== */
 const localHosts = new Set(['localhost','127.0.0.1']);
 const parsedDbUrl = (()=>{ try { return process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL) : null; } catch(_) { return null; } })();
@@ -887,6 +975,8 @@ async function ensureSchema(){
   // Trace le joueur créé lors de l'approbation (traçabilité — pas de FK stricte,
   // la demande reste consultable même si le joueur est supprimé plus tard).
   await q(`ALTER TABLE membership_requests ADD COLUMN IF NOT EXISTS player_id TEXT`);
+  // Message de refus renvoyé par mail au demandeur.
+  await q(`ALTER TABLE membership_requests ADD COLUMN IF NOT EXISTS review_message TEXT`);
   await q(`CREATE INDEX IF NOT EXISTS idx_membership_requests_status ON membership_requests(status)`);
 
   /* table réglages du site (mini-CMS apparence/contenu) — un seul document */
@@ -3214,6 +3304,13 @@ app.post('/public/inscription', async (req, res) => {
     pendingCount: Number(count.rows[0].count),
   })
 
+  // Accusé de réception au demandeur (best-effort, ne bloque jamais la réponse HTTP)
+  sendEmail({
+    to: email.trim().toLowerCase(),
+    subject: 'Ta demande d\'adhésion GOUZEPE Gaming Club a bien été reçue',
+    html: membershipReceivedEmail(name.trim()),
+  }).catch(() => {})
+
   ok(res, { id: r.rows[0].id, message: 'Demande envoyée, un admin la traitera prochainement.' })
 })
 
@@ -3227,7 +3324,7 @@ app.get('/admin/membership-requests/count', auth, adminOnly, async (_req, res) =
 app.get('/admin/membership-requests', auth, adminOnly, async (req, res) => {
   const status = req.query.status || 'pending'
   const r = await q(`
-    SELECT id, name, email, message, extra, status, created_at, reviewed_at, player_id
+    SELECT id, name, email, message, extra, status, created_at, reviewed_at, player_id, review_message
     FROM membership_requests
     WHERE status=$1
     ORDER BY created_at DESC
@@ -3242,12 +3339,23 @@ app.patch('/admin/membership-requests/:id', auth, adminOnly, async (req, res) =>
   const { status } = req.body || {}
   if (!['approved', 'rejected'].includes(status)) return bad(res, 400, 'status invalide')
   if (status === 'approved') return bad(res, 400, 'Utilise /admin/membership-requests/:id/approve pour approuver')
+  const reviewMessage = String(req.body?.message || '').trim() || null
   const r = await q(`
     UPDATE membership_requests
-    SET status=$1, reviewed_at=now(), reviewed_by=$2
-    WHERE id=$3 RETURNING id, name, email, status
-  `, [status, req.user.uid, id])
+    SET status=$1, reviewed_at=now(), reviewed_by=$2, review_message=$4
+    WHERE id=$3 RETURNING id, name, email, status, review_message
+  `, [status, req.user.uid, id, reviewMessage])
   if (!r.rowCount) return bad(res, 404, 'Demande introuvable')
+
+  // Message de refus envoyé au demandeur (best-effort, ne bloque jamais la réponse HTTP)
+  if (status === 'rejected') {
+    sendEmail({
+      to: r.rows[0].email,
+      subject: 'Concernant ta demande d\'adhésion GOUZEPE Gaming Club',
+      html: membershipRejectedEmail(r.rows[0].name, reviewMessage),
+    }).catch(() => {})
+  }
+
   ok(res, { request: r.rows[0] })
 })
 
