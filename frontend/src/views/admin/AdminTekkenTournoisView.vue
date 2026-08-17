@@ -30,13 +30,6 @@
                     <option value="home_away">Aller / Retour</option>
                   </select>
                 </div>
-                <div>
-                  <label class="label">Mode classement (Round Robin)</label>
-                  <select v-model="newT.rrStandingsMode" class="input">
-                    <option value="goals">Points + buts (BM/BC/DIFF)</option>
-                    <option value="wins">Victoires uniquement</option>
-                  </select>
-                </div>
               </template>
               <div>
                 <label class="label">Date & heure</label>
@@ -109,7 +102,7 @@
                     <BaseBadge :variant="statusVariant(selected.status)">{{ statusLabel(selected.status) }}</BaseBadge>
                     <span class="text-sm text-gz-muted">{{ formatLabel(selected.format) }}</span>
                     <span v-if="selected.format === 'round_robin'" class="text-sm text-gz-muted">
-                      • {{ rrMatchModeLabel(selected.rr_match_mode) }} • {{ rrStandingsModeLabel(selected.rr_standings_mode) }}
+                      • {{ rrMatchModeLabel(selected.rr_match_mode) }}
                     </span>
                     <span class="text-sm text-gz-muted">
                       <template v-if="selected.counts_for_title">• Tournoi membre <span class="text-gz-green font-medium">· Compte pour le ladder ELO</span></template>
@@ -193,13 +186,6 @@
                       <select v-model="selectedRrMatchMode" class="input">
                         <option value="single">Match simple</option>
                         <option value="home_away">Aller / Retour</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="label">Mode classement (Round Robin)</label>
-                      <select v-model="selectedRrStandingsMode" class="input">
-                        <option value="goals">Points + buts (BM/BC/DIFF)</option>
-                        <option value="wins">Victoires uniquement</option>
                       </select>
                     </div>
                   </template>
@@ -327,7 +313,7 @@
                   <BracketRR
                     :matches="matches"
                     :standings="rrStandings"
-                    :standings-mode="selected.rr_standings_mode || 'goals'"
+                    :standings-mode="selected.rr_standings_mode || 'wins'"
                     :admin-mode="true"
                     @score-saved="onScoreSaved"
                     @show-saisie-rapide="showSaisieRapide = true"
@@ -392,9 +378,6 @@
                                 <th class="text-center">V</th>
                                 <th class="text-center">N</th>
                                 <th class="text-center">D</th>
-                                <th class="text-center">BM</th>
-                                <th class="text-center">BC</th>
-                                <th class="text-center">Diff</th>
                                 <th class="text-center">Pts</th>
                               </tr>
                             </thead>
@@ -406,11 +389,6 @@
                                 <td class="text-center text-gz-green">{{ winOf(s) }}</td>
                                 <td class="text-center text-gz-muted">{{ drawOf(s) }}</td>
                                 <td class="text-center text-gz-red">{{ lossOf(s) }}</td>
-                                <td class="text-center">{{ bfOf(s) }}</td>
-                                <td class="text-center">{{ bcOf(s) }}</td>
-                                <td class="text-center" :class="diffOf(s) > 0 ? 'text-gz-green' : diffOf(s) < 0 ? 'text-gz-red' : 'text-gz-muted'">
-                                  {{ diffOf(s) > 0 ? '+' : '' }}{{ diffOf(s) }}
-                                </td>
                                 <td class="text-center font-semibold">{{ ptsOf(s) }}</td>
                               </tr>
                             </tbody>
@@ -493,7 +471,6 @@ const manualNamesText = ref('')
 const selectedStartsAtInput = ref('')
 const selectedDayComment = ref('')
 const selectedRrMatchMode = ref('single')
-const selectedRrStandingsMode = ref('goals')
 const newT = ref({
   name: '',
   format: 'single_elimination',
@@ -501,7 +478,6 @@ const newT = ref({
   memberTournament: true,
   countsForTitle: false,
   rrMatchMode: 'single',
-  rrStandingsMode: 'goals',
 })
 const selectedTournamentId = ref(null)
 let realtimeOffTournamentChanged = null
@@ -512,7 +488,6 @@ useSessionState('tekken.ui.admin.tournois.v1', {
   selectedStartsAtInput,
   selectedDayComment,
   selectedRrMatchMode,
-  selectedRrStandingsMode,
 })
 
 const groupMatches = computed(() =>
@@ -711,7 +686,6 @@ async function createTournament() {
       member_tournament: true,
       counts_for_title: !!newT.value.countsForTitle,
       rr_match_mode: newT.value.format === 'round_robin' ? newT.value.rrMatchMode : 'single',
-      rr_standings_mode: newT.value.format === 'round_robin' ? newT.value.rrStandingsMode : 'goals',
     })
     const t = data.tournament || data
     tournaments.value.unshift(t)
@@ -722,7 +696,6 @@ async function createTournament() {
       memberTournament: true,
       countsForTitle: false,
       rrMatchMode: 'single',
-      rrStandingsMode: 'goals',
     }
     selectTournament(t)
     success('Tournoi cree')
@@ -758,7 +731,6 @@ async function selectTournament(t) {
     selectedStartsAtInput.value = toDatetimeLocalValue(tournament.starts_at)
     selectedDayComment.value = String(tournament.day_comment || '')
     selectedRrMatchMode.value = String(tournament.rr_match_mode || 'single')
-    selectedRrStandingsMode.value = String(tournament.rr_standings_mode || 'goals')
     matches.value = normalizeMatches(data.matches || [], tournament.format)
 
     if (tournament.format === 'round_robin' || tournament.format === 'groups_knockout') {
@@ -1074,7 +1046,6 @@ async function saveTournamentMeta() {
       ...(selected.value?.format === 'round_robin'
         ? {
           rr_match_mode: selectedRrMatchMode.value === 'home_away' ? 'home_away' : 'single',
-          rr_standings_mode: selectedRrStandingsMode.value === 'wins' ? 'wins' : 'goals',
         }
         : {}),
     }
@@ -1084,7 +1055,6 @@ async function saveTournamentMeta() {
     selectedStartsAtInput.value = toDatetimeLocalValue(tournament.starts_at)
     selectedDayComment.value = String(tournament.day_comment || '')
     selectedRrMatchMode.value = String(tournament.rr_match_mode || 'single')
-    selectedRrStandingsMode.value = String(tournament.rr_standings_mode || 'goals')
     const idx = tournaments.value.findIndex((t) => t.id === selected.value.id)
     if (idx !== -1) tournaments.value[idx] = { ...tournaments.value[idx], ...tournament }
     success('Meta tournoi mise a jour')
@@ -1113,10 +1083,6 @@ function formatLabel(f) {
 
 function rrMatchModeLabel(mode) {
   return mode === 'home_away' ? 'Aller / Retour' : 'Match simple'
-}
-
-function rrStandingsModeLabel(mode) {
-  return mode === 'wins' ? 'Classement: victoires' : 'Classement: points + buts'
 }
 
 const rrPairRows = computed(() => {
@@ -1214,20 +1180,6 @@ function drawOf(s) {
 
 function lossOf(s) {
   return toInt(s.l ?? s.losses)
-}
-
-function bfOf(s) {
-  return toInt(s.bf ?? s.goals_for)
-}
-
-function bcOf(s) {
-  return toInt(s.bc ?? s.goals_against)
-}
-
-function diffOf(s) {
-  const explicit = s.diff
-  if (explicit !== undefined && explicit !== null && explicit !== '') return toInt(explicit)
-  return bfOf(s) - bcOf(s)
 }
 
 function ptsOf(s) {
