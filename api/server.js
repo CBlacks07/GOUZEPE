@@ -28,6 +28,8 @@ const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN || 'gz.local';
 /* ====== Envoi d'emails (Resend) ====== */
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'GOUZEPE Gaming Club <no-reply@gouzepe-gaming.com>';
+// Boîte réelle (Zoho) où atterrissent les réponses aux emails automatiques — vide = pas de Reply-To.
+const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || 'contact@gouzepe-gaming.com';
 const SITE_URL = String(process.env.SITE_URL || 'https://gouzepe-gaming.com').replace(/\/+$/, '');
 const EMAIL_LOGO_URL = `${SITE_URL}/assets/icons/icon-192x192.png`;
 
@@ -82,7 +84,10 @@ async function sendEmail({ to, subject, html }) {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: EMAIL_FROM, to, subject, html }),
+      body: JSON.stringify({
+        from: EMAIL_FROM, to, subject, html,
+        ...(EMAIL_REPLY_TO ? { reply_to: EMAIL_REPLY_TO } : {}),
+      }),
     });
     if (!r.ok) {
       const errText = await r.text().catch(() => '');
