@@ -882,6 +882,9 @@ async function ensureSchema(){
     CONSTRAINT membership_requests_status_chk CHECK (status IN ('pending','approved','rejected'))
   )`);
   await q(`ALTER TABLE membership_requests ADD COLUMN IF NOT EXISTS extra JSONB`);
+  // Trace le joueur créé lors de l'approbation (traçabilité — pas de FK stricte,
+  // la demande reste consultable même si le joueur est supprimé plus tard).
+  await q(`ALTER TABLE membership_requests ADD COLUMN IF NOT EXISTS player_id TEXT`);
   await q(`CREATE INDEX IF NOT EXISTS idx_membership_requests_status ON membership_requests(status)`);
 
   /* table réglages du site (mini-CMS apparence/contenu) — un seul document */
@@ -3221,7 +3224,7 @@ app.get('/admin/membership-requests/count', auth, adminOnly, async (_req, res) =
 app.get('/admin/membership-requests', auth, adminOnly, async (req, res) => {
   const status = req.query.status || 'pending'
   const r = await q(`
-    SELECT id, name, email, message, extra, status, created_at, reviewed_at
+    SELECT id, name, email, message, extra, status, created_at, reviewed_at, player_id
     FROM membership_requests
     WHERE status=$1
     ORDER BY created_at DESC
@@ -3229,11 +3232,13 @@ app.get('/admin/membership-requests', auth, adminOnly, async (req, res) => {
   ok(res, { requests: r.rows })
 })
 
-// Admin : approuver/rejeter une demande
+// Admin : rejeter une demande (l'approbation passe par /approve ci-dessous,
+// qui crée le joueur + le compte en plus de changer le statut)
 app.patch('/admin/membership-requests/:id', auth, adminOnly, async (req, res) => {
   const id = +req.params.id
   const { status } = req.body || {}
   if (!['approved', 'rejected'].includes(status)) return bad(res, 400, 'status invalide')
+  if (status === 'approved') return bad(res, 400, 'Utilise /admin/membership-requests/:id/approve pour approuver')
   const r = await q(`
     UPDATE membership_requests
     SET status=$1, reviewed_at=now(), reviewed_by=$2
@@ -3241,6 +3246,71 @@ app.patch('/admin/membership-requests/:id', auth, adminOnly, async (req, res) =>
   `, [status, req.user.uid, id])
   if (!r.rowCount) return bad(res, 404, 'Demande introuvable')
   ok(res, { request: r.rows[0] })
+})
+
+// Admin : approuver une demande — crée le joueur + le compte de connexion et
+// les lie, en un seul geste (au lieu de tout retaper dans Admin Joueurs puis
+// Admin Utilisateurs). Les champs sont pré-remplis côté front depuis la
+// demande, mais restent modifiables par l'admin avant confirmation.
+app.post('/admin/membership-requests/:id/approve', auth, adminOnly, async (req, res) => {
+  try {
+    const id = +req.params.id
+    const reqRow = (await q(`SELECT * FROM membership_requests WHERE id=$1`, [id])).rows[0]
+    if (!reqRow) return bad(res, 404, 'Demande introuvable')
+    if (reqRow.status !== 'pending') return bad(res, 409, 'Cette demande a déjà été traitée')
+
+    let { player_id, name, main_game, admission_year, email, password } = req.body || {}
+    player_id = String(player_id || '').trim()
+    name = String(name || reqRow.name || '').trim()
+    email = normEmail(email || reqRow.email)
+    main_game = ['efoot', 'tekken', 'both'].includes(main_game) ? main_game : 'efoot'
+    const year = admission_year ? parseInt(admission_year) || new Date().getFullYear() : new Date().getFullYear()
+    password = String(password || '').trim() || '1234'
+
+    if (!player_id) return bad(res, 400, 'ID joueur requis')
+    if (!name) return bad(res, 400, 'Nom requis')
+    if (!email) return bad(res, 400, 'Email requis')
+
+    const existingPlayer = await q(`SELECT player_id FROM players WHERE player_id=$1`, [player_id])
+    if (existingPlayer.rowCount) return bad(res, 409, 'Ce joueur existe déjà')
+
+    // Crée le joueur
+    const playerRow = (await q(
+      `INSERT INTO players (player_id, name, role, admission_year, main_game) VALUES ($1,$2,'MEMBRE',$3,$4) RETURNING *`,
+      [player_id, name, year, main_game]
+    )).rows[0]
+
+    // Crée ou relie le compte de connexion
+    const existingUser = (await q(`SELECT id, player_id FROM users WHERE email=$1`, [email])).rows[0]
+    let userId
+    if (existingUser) {
+      if (existingUser.player_id && existingUser.player_id !== player_id) {
+        return bad(res, 409, `Cet email est déjà lié au joueur ${existingUser.player_id}`)
+      }
+      const hash = await bcrypt.hash(password, 10)
+      await q(`UPDATE users SET password_hash=$2, player_id=$3 WHERE id=$1`, [existingUser.id, hash, player_id])
+      userId = existingUser.id
+    } else {
+      const hash = await bcrypt.hash(password, 10)
+      const newUser = (await q(
+        `INSERT INTO users (email, password_hash, role, player_id) VALUES ($1,$2,'member',$3) RETURNING id`,
+        [email, hash, player_id]
+      )).rows[0]
+      userId = newUser.id
+    }
+
+    const updated = (await q(`
+      UPDATE membership_requests
+      SET status='approved', reviewed_at=now(), reviewed_by=$2, player_id=$3
+      WHERE id=$1 RETURNING id, name, email, status, player_id
+    `, [id, req.user.uid, player_id])).rows[0]
+
+    ok(res, { request: updated, player: playerRow, user: { id: userId, email, password } })
+  } catch (e) {
+    console.error('POST /admin/membership-requests/:id/approve', e)
+    if (e.code === '23505') return bad(res, 409, 'Ce joueur ou ce compte existe déjà')
+    bad(res, 500, 'Approbation impossible')
+  }
 })
 
 app.get('/players/h2h', auth, async (req, res) => {
