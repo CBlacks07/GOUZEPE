@@ -801,6 +801,8 @@ async function ensureSchema(){
   await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS counts_for_title BOOLEAN NOT NULL DEFAULT FALSE`);
   /* migration: pole de jeu (efoot / tekken) */
   await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS game_type TEXT NOT NULL DEFAULT 'efoot'`);
+  // Tekken n'a pas de notion de "buts" : le classement round robin / groupes y est toujours aux victoires.
+  await q(`UPDATE tournaments SET rr_standings_mode='wins' WHERE game_type='tekken' AND rr_standings_mode <> 'wins'`);
   // Backfill winner_name depuis winner_player_id existants
   await q(`UPDATE tournaments t SET winner_name = p.name
     FROM players p WHERE p.player_id = t.winner_player_id AND t.winner_name IS NULL`);
@@ -2099,7 +2101,8 @@ function createTournamentHandler(gameType) {
   const allowedFormats = ['single_elimination','round_robin','double_elimination','groups_knockout'];
   const format = allowedFormats.includes(req.body?.format) ? req.body.format : 'single_elimination';
   const rrMatchMode = req.body?.rr_match_mode === 'home_away' ? 'home_away' : 'single';
-  const rrStandingsMode = req.body?.rr_standings_mode === 'wins' ? 'wins' : 'goals';
+  // Tekken n'a pas de "buts" : le classement y est toujours aux victoires, quoi qu'envoie le client.
+  const rrStandingsMode = gameType === 'tekken' ? 'wins' : (req.body?.rr_standings_mode === 'wins' ? 'wins' : 'goals');
   const memberTournament = gameType === 'tekken' ? true : (req.body?.member_tournament === undefined ? false : !!req.body.member_tournament);
   const countsForTitle = memberTournament ? !!req.body?.counts_for_title : false;
   const dayComment = String(req.body?.day_comment || '').trim() || null;
@@ -3502,6 +3505,8 @@ app.patch('/admin/tekken/tournaments/:id', auth, adminOnly, async (req, res) => 
   if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
   if (!await ensureTekkenTournament(id)) return bad(res, 404, 'Tournoi Tekken introuvable');
   req.params.id = String(id);
+  // Tekken n'a pas de "buts" : le classement y est toujours aux victoires, quoi qu'envoie le client.
+  if (req.body?.rr_standings_mode !== undefined) req.body.rr_standings_mode = 'wins';
   updateTournamentHandler(req, res);
 });
 
