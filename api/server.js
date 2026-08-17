@@ -51,7 +51,7 @@ function emailShell(title, bodyHtml) {
             <tr>
               <td style="background:#0f1a30;padding:28px 24px;text-align:center;">
                 <img src="${EMAIL_LOGO_URL}" alt="GOUZEPE" width="56" height="56" style="border-radius:12px;display:block;margin:0 auto 10px;" />
-                <div style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:.04em;">GOUZEPE <span style="color:#ff5a1f;">GAMING CLUB</span></div>
+                <div style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:.04em;">GOUZEPE <span style="color:#3b82f6;">GAMING CLUB</span></div>
               </td>
             </tr>
             <tr>
@@ -62,7 +62,7 @@ function emailShell(title, bodyHtml) {
             </tr>
             <tr>
               <td style="padding:16px 24px;border-top:1px solid #eceff3;color:#8a94a6;font-size:12px;text-align:center;">
-                GOUZEPE Gaming Club &middot; <a href="${SITE_URL}" style="color:#ff5a1f;text-decoration:none;">${SITE_URL.replace(/^https?:\/\//, '')}</a>
+                GOUZEPE Gaming Club &middot; <a href="${SITE_URL}" style="color:#3b82f6;text-decoration:none;">${SITE_URL.replace(/^https?:\/\//, '')}</a>
               </td>
             </tr>
           </table>
@@ -114,7 +114,7 @@ function membershipRejectedEmail(name, message) {
     <p>Salut ${escapeHtml(name)},</p>
     <p>Après examen, nous ne pouvons pas donner suite à ta demande d'adhésion au <strong>GOUZEPE Gaming Club</strong> pour le moment.</p>
     ${message ? `<p style="background:#f4f5f8;border-radius:10px;padding:12px 14px;margin:14px 0;white-space:pre-wrap;">${escapeHtml(message)}</p>` : ''}
-    <p>N'hésite pas à nous recontacter si ta situation évolue.</p>
+    <p>Merci pour ta demande, et bonne continuation.</p>
   `);
 }
 
