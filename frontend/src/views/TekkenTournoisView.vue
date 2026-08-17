@@ -162,7 +162,7 @@
                     v-else-if="selected.format === 'round_robin'"
                     :matches="matches"
                     :standings="rrStandings"
-                    :standings-mode="selected.rr_standings_mode || 'goals'"
+                    :standings-mode="selected.rr_standings_mode || 'wins'"
                     :admin-mode="false"
                   />
                   <div
@@ -211,9 +211,6 @@
                                   <th class="text-center">V</th>
                                   <th class="text-center">N</th>
                                   <th class="text-center">D</th>
-                                  <th class="text-center">BM</th>
-                                  <th class="text-center">BC</th>
-                                  <th class="text-center">Diff</th>
                                   <th class="text-center">Pts</th>
                                 </tr>
                               </thead>
@@ -225,11 +222,6 @@
                                   <td class="text-center text-gz-green">{{ winOf(s) }}</td>
                                   <td class="text-center text-gz-muted">{{ drawOf(s) }}</td>
                                   <td class="text-center text-gz-red">{{ lossOf(s) }}</td>
-                                  <td class="text-center">{{ bfOf(s) }}</td>
-                                  <td class="text-center">{{ bcOf(s) }}</td>
-                                  <td class="text-center" :class="diffOf(s) > 0 ? 'text-gz-green' : diffOf(s) < 0 ? 'text-gz-red' : 'text-gz-muted'">
-                                    {{ diffOf(s) > 0 ? '+' : '' }}{{ diffOf(s) }}
-                                  </td>
                                   <td class="text-center font-semibold">{{ ptsOf(s) }}</td>
                                 </tr>
                               </tbody>
@@ -533,14 +525,6 @@ function toInt(v) {
 function winOf(s) { return toInt(s.w ?? s.wins) }
 function drawOf(s) { return toInt(s.d ?? s.draws) }
 function lossOf(s) { return toInt(s.l ?? s.losses) }
-function bfOf(s) { return toInt(s.bf ?? s.goals_for) }
-function bcOf(s) { return toInt(s.bc ?? s.goals_against) }
-
-function diffOf(s) {
-  const explicit = s.diff
-  if (explicit !== undefined && explicit !== null && explicit !== '') return toInt(explicit)
-  return bfOf(s) - bcOf(s)
-}
 
 function ptsOf(s) { return toInt(s.pts ?? s.points) }
 
