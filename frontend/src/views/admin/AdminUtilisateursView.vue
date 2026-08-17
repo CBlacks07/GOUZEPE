@@ -152,7 +152,7 @@
                 <p v-if="r.message" class="text-xs text-gz-muted mt-1 italic">« {{ r.message }} »</p>
               </div>
               <div v-if="reqFilter === 'pending'" class="flex gap-1.5 shrink-0">
-                <button @click="reviewRequest(r.id, 'approved')"
+                <button @click="openApprove(r)"
                         class="btn-primary text-xs py-1 px-3">
                   Approuver
                 </button>
@@ -164,6 +164,7 @@
               <span v-else class="text-xs px-2 py-1 rounded-full font-semibold"
                     :class="r.status === 'approved' ? 'bg-gz-green/15 text-gz-green' : 'bg-gz-red/15 text-gz-red'">
                 {{ r.status === 'approved' ? 'Approuvée' : 'Rejetée' }}
+                <span v-if="r.player_id" class="font-mono font-normal opacity-80">· {{ r.player_id }}</span>
               </span>
             </div>
           </div>
@@ -209,6 +210,53 @@
         </button>
       </template>
     </BaseModal>
+
+    <!-- Modal approbation demande : crée le joueur + le compte, liés -->
+    <BaseModal :open="approveModal" title="Approuver la demande" @close="approveModal = false">
+      <div v-if="approveTarget" class="space-y-4">
+        <p class="text-xs text-gz-muted">
+          Ceci crée le joueur et le compte de connexion, déjà liés. Vérifie/ajuste avant de confirmer.
+        </p>
+        <div>
+          <label class="label">ID joueur</label>
+          <input v-model="approveForm.player_id" type="text" class="input font-mono" placeholder="ex: Pseudo_GZ" />
+        </div>
+        <div>
+          <label class="label">Nom</label>
+          <input v-model="approveForm.name" type="text" class="input" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="label">Pôle</label>
+            <select v-model="approveForm.main_game" class="input">
+              <option value="efoot">eFootball</option>
+              <option value="tekken">Tekken</option>
+              <option value="both">Les deux</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Année d'admission</label>
+            <input v-model.number="approveForm.admission_year" type="number" class="input" min="2000" :max="new Date().getFullYear()" />
+          </div>
+        </div>
+        <div>
+          <label class="label">Email (identifiant de connexion)</label>
+          <input v-model="approveForm.email" type="text" class="input" />
+        </div>
+        <div>
+          <label class="label">Mot de passe</label>
+          <input v-model="approveForm.password" type="text" class="input font-mono" />
+        </div>
+        <p v-if="approveErr" class="text-gz-red text-sm">{{ approveErr }}</p>
+      </div>
+      <template #footer>
+        <button @click="approveModal = false" class="btn">Annuler</button>
+        <button @click="confirmApprove" :disabled="approving" class="btn-primary flex items-center gap-1.5">
+          <Loader2Icon v-if="approving" class="w-3.5 h-3.5 animate-spin" />
+          Créer le compte &amp; approuver
+        </button>
+      </template>
+    </BaseModal>
   </AppLayout>
 </template>
 
@@ -218,7 +266,10 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAPI } from '@/composables/useAPI'
 import { useSessionState } from '@/composables/useSessionState'
+import { useToast } from '@/composables/useToast'
 import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon, Loader2Icon, ArrowLeftIcon } from 'lucide-vue-next'
+
+const { success, error: toastError } = useToast()
 
 const api = useAPI()
 
@@ -239,6 +290,12 @@ const form = ref({ email: '', role: 'member', player_id: '', password: '' })
 const requests    = ref([])
 const reqFilter   = ref('pending')
 const loadingReqs = ref(false)
+
+const approveModal  = ref(false)
+const approveTarget = ref(null)
+const approveForm   = ref({ player_id: '', name: '', main_game: 'efoot', admission_year: new Date().getFullYear(), email: '', password: '1234' })
+const approveErr    = ref('')
+const approving     = ref(false)
 
 useSessionState('efoot.ui.admin.utilisateurs.v1', {
   search,
@@ -272,8 +329,53 @@ async function loadRequests() {
 async function reviewRequest(id, status) {
   try {
     await api.patch(`/admin/membership-requests/${id}`, { status })
+    success(status === 'rejected' ? 'Demande rejetée' : 'Demande mise à jour')
     await loadRequests()
-  } catch (_) {}
+  } catch (e) {
+    toastError(e.response?.data?.error || 'Erreur lors du traitement de la demande')
+  }
+}
+
+const DIACRITICS_RE = /[\u0300-\u036f]/g
+function slugifyPlayerId(name) {
+  const base = String(name || '').trim()
+    .normalize('NFD').replace(DIACRITICS_RE, '')
+    .replace(/[^a-zA-Z0-9]+/g, '')
+  return (base || 'Membre') + '_GZ'
+}
+
+function openApprove(r) {
+  approveTarget.value = r
+  approveErr.value = ''
+  const games = r.extra?.games || []
+  const hasEfoot = games.includes('efoot')
+  const hasTekken = games.includes('tekken')
+  approveForm.value = {
+    player_id: slugifyPlayerId(r.name),
+    name: r.name,
+    main_game: hasEfoot && hasTekken ? 'both' : hasTekken ? 'tekken' : 'efoot',
+    admission_year: new Date().getFullYear(),
+    email: r.email,
+    password: '1234',
+  }
+  approveModal.value = true
+}
+
+async function confirmApprove() {
+  if (!approveTarget.value) return
+  approveErr.value = ''
+  approving.value = true
+  try {
+    const { data } = await api.post(`/admin/membership-requests/${approveTarget.value.id}/approve`, approveForm.value)
+    approveModal.value = false
+    success(`Compte créé : ${data.user.email} / ${data.user.password} — à communiquer au nouveau membre`)
+    await loadRequests()
+    await loadPlayers()
+  } catch (e) {
+    approveErr.value = e.response?.data?.error || 'Erreur lors de l\'approbation'
+  } finally {
+    approving.value = false
+  }
 }
 
 function freqLabel(f) {
