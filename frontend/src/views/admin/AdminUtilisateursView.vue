@@ -156,16 +156,21 @@
                         class="btn-primary text-xs py-1 px-3">
                   Approuver
                 </button>
-                <button @click="reviewRequest(r.id, 'rejected')"
+                <button @click="openReject(r)"
                         class="btn text-xs py-1 px-3" style="border-color:rgba(212,60,73,.4);color:#d43c49">
                   Rejeter
                 </button>
               </div>
-              <span v-else class="text-xs px-2 py-1 rounded-full font-semibold"
-                    :class="r.status === 'approved' ? 'bg-gz-green/15 text-gz-green' : 'bg-gz-red/15 text-gz-red'">
-                {{ r.status === 'approved' ? 'Approuvée' : 'Rejetée' }}
-                <span v-if="r.player_id" class="font-mono font-normal opacity-80">· {{ r.player_id }}</span>
-              </span>
+              <div v-else class="flex flex-col items-end gap-1 shrink-0">
+                <span class="text-xs px-2 py-1 rounded-full font-semibold"
+                      :class="r.status === 'approved' ? 'bg-gz-green/15 text-gz-green' : 'bg-gz-red/15 text-gz-red'">
+                  {{ r.status === 'approved' ? 'Approuvée' : 'Rejetée' }}
+                  <span v-if="r.player_id" class="font-mono font-normal opacity-80">· {{ r.player_id }}</span>
+                </span>
+                <span v-if="r.review_message" class="text-xs text-gz-muted italic max-w-xs text-right">
+                  « {{ r.review_message }} »
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -257,6 +262,29 @@
         </button>
       </template>
     </BaseModal>
+
+    <!-- Modal rejet demande : message optionnel renvoyé par mail au demandeur -->
+    <BaseModal :open="rejectModal" title="Rejeter la demande" @close="rejectModal = false">
+      <div v-if="rejectTarget" class="space-y-4">
+        <p class="text-xs text-gz-muted">
+          {{ rejectTarget.name }} ({{ rejectTarget.email }}) recevra un email l'informant du refus.
+          Le message ci-dessous y sera inclus si renseigné.
+        </p>
+        <div>
+          <label class="label">Message au demandeur (optionnel)</label>
+          <textarea v-model="rejectForm.message" class="input min-h-[110px]"
+                    placeholder="ex : Merci pour ta demande, mais nous n'avons plus de place disponible actuellement..." />
+        </div>
+        <p v-if="rejectErr" class="text-gz-red text-sm">{{ rejectErr }}</p>
+      </div>
+      <template #footer>
+        <button @click="rejectModal = false" class="btn">Annuler</button>
+        <button @click="confirmReject" :disabled="rejecting" class="btn-primary flex items-center gap-1.5" style="background:#d43c49;border-color:#d43c49">
+          <Loader2Icon v-if="rejecting" class="w-3.5 h-3.5 animate-spin" />
+          Rejeter &amp; notifier
+        </button>
+      </template>
+    </BaseModal>
   </AppLayout>
 </template>
 
@@ -269,7 +297,7 @@ import { useSessionState } from '@/composables/useSessionState'
 import { useToast } from '@/composables/useToast'
 import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon, Loader2Icon, ArrowLeftIcon } from 'lucide-vue-next'
 
-const { success, error: toastError } = useToast()
+const { success } = useToast()
 
 const api = useAPI()
 
@@ -296,6 +324,12 @@ const approveTarget = ref(null)
 const approveForm   = ref({ player_id: '', name: '', main_game: 'efoot', admission_year: new Date().getFullYear(), email: '', password: '1234' })
 const approveErr    = ref('')
 const approving     = ref(false)
+
+const rejectModal  = ref(false)
+const rejectTarget = ref(null)
+const rejectForm   = ref({ message: '' })
+const rejectErr    = ref('')
+const rejecting    = ref(false)
 
 useSessionState('efoot.ui.admin.utilisateurs.v1', {
   search,
@@ -326,13 +360,29 @@ async function loadRequests() {
   loadingReqs.value = false
 }
 
-async function reviewRequest(id, status) {
+function openReject(r) {
+  rejectTarget.value = r
+  rejectErr.value = ''
+  rejectForm.value = { message: '' }
+  rejectModal.value = true
+}
+
+async function confirmReject() {
+  if (!rejectTarget.value) return
+  rejectErr.value = ''
+  rejecting.value = true
   try {
-    await api.patch(`/admin/membership-requests/${id}`, { status })
-    success(status === 'rejected' ? 'Demande rejetée' : 'Demande mise à jour')
+    await api.patch(`/admin/membership-requests/${rejectTarget.value.id}`, {
+      status: 'rejected',
+      message: rejectForm.value.message.trim(),
+    })
+    rejectModal.value = false
+    success('Demande rejetée, le demandeur a été notifié par mail')
     await loadRequests()
   } catch (e) {
-    toastError(e.response?.data?.error || 'Erreur lors du traitement de la demande')
+    rejectErr.value = e.response?.data?.error || 'Erreur lors du rejet de la demande'
+  } finally {
+    rejecting.value = false
   }
 }
 
