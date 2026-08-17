@@ -420,7 +420,7 @@ const BACKUP_TABLE_ORDER = [
   'tournament_match_attachments','tournament_match_comments',
   'tournament_groups','tournament_participant_stats','tournament_pool_participants',
   'duels','handoff_requests','match_attachments','match_comments','match_games',
-  'tekken_ladder','tekken_duels',
+  'tekken_ladder','tekken_duels','tekken_elo_corrections',
 ];
 
 function escVal(v) {
@@ -1055,6 +1055,29 @@ async function ensureSchema(){
   await q(`CREATE INDEX IF NOT EXISTS idx_tekken_duels_played ON tekken_duels(played_at DESC)`);
   await q(`CREATE INDEX IF NOT EXISTS idx_tekken_duels_p1 ON tekken_duels(p1_id)`);
   await q(`CREATE INDEX IF NOT EXISTS idx_tekken_duels_p2 ON tekken_duels(p2_id)`);
+
+  /* migration : ELO auto depuis les matchs de tournoi Tekken (en plus des duels libres) */
+  await q(`ALTER TABLE tekken_duels ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'duel'`);
+  await q(`DO $$ BEGIN
+    ALTER TABLE tekken_duels ADD CONSTRAINT tekken_duels_source_chk CHECK (source IN ('duel','tournament'));
+  EXCEPTION WHEN duplicate_object THEN NULL; END$$`);
+  await q(`ALTER TABLE tekken_duels ADD COLUMN IF NOT EXISTS tournament_id INTEGER REFERENCES tournaments(id) ON DELETE SET NULL`);
+  await q(`ALTER TABLE tekken_duels ADD COLUMN IF NOT EXISTS tournament_match_id INTEGER REFERENCES tournament_matches(id) ON DELETE SET NULL`);
+  // Un seul enregistrement ELO par match de tournoi (empêche un double-comptage si le hook est rejoué).
+  await q(`CREATE UNIQUE INDEX IF NOT EXISTS uniq_tekken_duels_tournament_match
+           ON tekken_duels(tournament_match_id) WHERE tournament_match_id IS NOT NULL`);
+
+  /* correctifs manuels d'ELO — action explicite tracée, plus de champ ELO libre-service */
+  await q(`CREATE TABLE IF NOT EXISTS tekken_elo_corrections (
+    id           SERIAL PRIMARY KEY,
+    player_id    TEXT NOT NULL REFERENCES players(player_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    elo_before   INTEGER NOT NULL,
+    elo_after    INTEGER NOT NULL,
+    reason       TEXT NOT NULL,
+    corrected_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    corrected_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
+  await q(`CREATE INDEX IF NOT EXISTS idx_tekken_elo_corrections_player ON tekken_elo_corrections(player_id)`);
 
   /* seed admin (optional) */
   const seedAdmin = process.env.SEED_ADMIN_ON_BOOT === 'true';
@@ -3770,11 +3793,12 @@ app.post('/admin/tekken/tournaments/:id/matches/:matchId/result', auth, adminOnl
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const t = await client.query(`SELECT id, status, format FROM tournaments WHERE id=$1 FOR UPDATE`, [tournamentId]);
+    const t = await client.query(`SELECT id, status, format, counts_for_title FROM tournaments WHERE id=$1 FOR UPDATE`, [tournamentId]);
     if (!t.rowCount) { await client.query('ROLLBACK'); return bad(res, 404, 'Tournoi introuvable'); }
     if (t.rows[0].status === 'archived') { await client.query('ROLLBACK'); return bad(res, 400, 'Tournoi archive'); }
     const format = t.rows[0].format;
-    const m = await client.query(`SELECT id, tournament_id, status, p1_participant_id, p2_participant_id, winner_participant_id, next_match_id, next_match_slot, bracket_side, loser_next_match_id, loser_next_match_slot, group_no FROM tournament_matches WHERE id=$1 AND tournament_id=$2 FOR UPDATE`, [matchId, tournamentId]);
+    const countsForTitle = t.rows[0].counts_for_title;
+    const m = await client.query(`SELECT id, tournament_id, status, best_of, p1_participant_id, p2_participant_id, winner_participant_id, next_match_id, next_match_slot, bracket_side, loser_next_match_id, loser_next_match_slot, group_no FROM tournament_matches WHERE id=$1 AND tournament_id=$2 FOR UPDATE`, [matchId, tournamentId]);
     if (!m.rowCount) { await client.query('ROLLBACK'); return bad(res, 404, 'Match introuvable'); }
     const match = m.rows[0];
     if (!match.p1_participant_id || !match.p2_participant_id) { await client.query('ROLLBACK'); return bad(res, 400, 'Match sans 2 participants'); }
@@ -3783,6 +3807,7 @@ app.post('/admin/tekken/tournaments/:id/matches/:matchId/result', auth, adminOnl
     if (format === 'round_robin' || isGroupMatch) {
       const winnerRR = score1 > score2 ? match.p1_participant_id : (score2 > score1 ? match.p2_participant_id : null);
       await client.query(`UPDATE tournament_matches SET score_p1=$1, score_p2=$2, winner_participant_id=$3, status='completed', walkover=false, finished_at=COALESCE(finished_at, now()), updated_at=now() WHERE id=$4`, [score1, score2, winnerRR, match.id]);
+      if (!isReedit && countsForTitle && winnerRR) await applyTekkenTournamentMatchElo(client, tournamentId, match, score1, score2);
       if (format === 'round_robin') { await checkRoundRobinCompletion(client, tournamentId); if (isReedit) await updateRoundRobinStandings(client, tournamentId); }
       else if (format === 'groups_knockout') await checkGroupTournamentCompletion(client, tournamentId);
     } else {
@@ -3792,6 +3817,7 @@ app.post('/admin/tekken/tournaments/:id/matches/:matchId/result', auth, adminOnl
       const oldWinner = match.winner_participant_id;
       const oldLoser = oldWinner ? (oldWinner === match.p1_participant_id ? match.p2_participant_id : match.p1_participant_id) : null;
       await client.query(`UPDATE tournament_matches SET score_p1=$1, score_p2=$2, winner_participant_id=$3, status='completed', walkover=false, finished_at=COALESCE(finished_at, now()), updated_at=now() WHERE id=$4`, [score1, score2, newWinner, match.id]);
+      if (!isReedit && countsForTitle) await applyTekkenTournamentMatchElo(client, tournamentId, match, score1, score2);
       if (!isReedit || newWinner !== oldWinner) {
         if (isReedit && oldWinner && newWinner !== oldWinner) await cascadeResetWinner(client, tournamentId, match.next_match_id, oldWinner);
         await assignWinnerToNextMatch(client, tournamentId, match, newWinner);
@@ -3827,6 +3853,64 @@ function computeElo(rA, rB, scoreA, scoreB, K = 32) {
   };
 }
 
+// Applique le même calcul ELO qu'un duel libre à un match de tournoi Tekken (bracket compté au
+// ladder), uniquement la toute première fois que ce match précis est complété : une correction de
+// score ultérieure sur ce même match ne rejoue pas l'ELO (même limite qu'un duel supprimé, qui ne
+// restaure pas non plus l'ELO). Un écart constaté se corrige via /admin/tekken/ladder/:pid/correct.
+// Appelé par le handler dans une transaction déjà ouverte (client) -- aucun COMMIT ici.
+async function applyTekkenTournamentMatchElo(client, tournamentId, match, score1, score2) {
+  if (score1 === score2) return; // sécurité : pas d'ELO sur un nul (round robin/groupes)
+
+  const parts = await client.query(
+    `SELECT id, player_id FROM tournament_participants WHERE id IN ($1,$2)`,
+    [match.p1_participant_id, match.p2_participant_id]
+  );
+  const byId = new Map(parts.rows.map(r => [r.id, r.player_id]));
+  const p1_id = byId.get(match.p1_participant_id);
+  const p2_id = byId.get(match.p2_participant_id);
+  if (!p1_id || !p2_id) return; // participant libre (non lié à un joueur du club) -> pas d'ELO
+
+  let r1 = await client.query(`SELECT elo FROM tekken_ladder WHERE player_id=$1`, [p1_id]);
+  if (!r1.rowCount) {
+    await client.query(`INSERT INTO tekken_ladder(player_id) VALUES($1) ON CONFLICT DO NOTHING`, [p1_id]);
+    r1 = await client.query(`SELECT elo FROM tekken_ladder WHERE player_id=$1`, [p1_id]);
+  }
+  let r2 = await client.query(`SELECT elo FROM tekken_ladder WHERE player_id=$1`, [p2_id]);
+  if (!r2.rowCount) {
+    await client.query(`INSERT INTO tekken_ladder(player_id) VALUES($1) ON CONFLICT DO NOTHING`, [p2_id]);
+    r2 = await client.query(`SELECT elo FROM tekken_ladder WHERE player_id=$1`, [p2_id]);
+  }
+
+  const eloBefore1 = r1.rows[0].elo;
+  const eloBefore2 = r2.rows[0].elo;
+  const { newA, newB } = computeElo(eloBefore1, eloBefore2, score1, score2);
+  const winnerId = score1 > score2 ? p1_id : p2_id;
+
+  const inserted = await client.query(`
+    INSERT INTO tekken_duels(p1_id, p2_id, score_p1, score_p2, best_of, winner_id,
+      elo_p1_before, elo_p2_before, elo_p1_after, elo_p2_after, played_at,
+      source, tournament_id, tournament_match_id)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now(),'tournament',$11,$12)
+    ON CONFLICT (tournament_match_id) WHERE tournament_match_id IS NOT NULL DO NOTHING
+    RETURNING id
+  `, [p1_id, p2_id, score1, score2, match.best_of || 1, winnerId, eloBefore1, eloBefore2, newA, newB, tournamentId, match.id]);
+  if (!inserted.rowCount) return; // déjà appliqué pour ce match (filet de sécurité anti double-ELO)
+
+  if (winnerId === p1_id) {
+    await client.query(`UPDATE tekken_ladder SET elo=$2, wins=wins+1, streak=GREATEST(streak+1,1),
+             best_streak=GREATEST(best_streak, GREATEST(streak+1,1)), peak_elo=GREATEST(peak_elo,$2), updated_at=now()
+             WHERE player_id=$1`, [p1_id, newA]);
+    await client.query(`UPDATE tekken_ladder SET elo=$2, losses=losses+1, streak=LEAST(streak-1,-1), updated_at=now()
+             WHERE player_id=$1`, [p2_id, newB]);
+  } else {
+    await client.query(`UPDATE tekken_ladder SET elo=$2, losses=losses+1, streak=LEAST(streak-1,-1), updated_at=now()
+             WHERE player_id=$1`, [p1_id, newA]);
+    await client.query(`UPDATE tekken_ladder SET elo=$2, wins=wins+1, streak=GREATEST(streak+1,1),
+             best_streak=GREATEST(best_streak, GREATEST(streak+1,1)), peak_elo=GREATEST(peak_elo,$2), updated_at=now()
+             WHERE player_id=$1`, [p2_id, newB]);
+  }
+}
+
 app.get('/tekken/ladder', async (_req, res) => {
   const r = await q(`
     SELECT tl.player_id, p.name, p.profile_pic_url,
@@ -3843,11 +3927,13 @@ app.get('/tekken/duels', async (req, res) => {
   const r = await q(`
     SELECT d.id, d.p1_id, d.p2_id, d.score_p1, d.score_p2, d.best_of, d.winner_id,
            d.elo_p1_before, d.elo_p2_before, d.elo_p1_after, d.elo_p2_after, d.played_at,
+           d.source, d.tournament_id, t.name AS tournament_name,
            p1.name AS p1_name, p2.name AS p2_name, w.name AS winner_name
     FROM tekken_duels d
     JOIN players p1 ON p1.player_id = d.p1_id
     JOIN players p2 ON p2.player_id = d.p2_id
     LEFT JOIN players w ON w.player_id = d.winner_id
+    LEFT JOIN tournaments t ON t.id = d.tournament_id
     ORDER BY d.played_at DESC
     LIMIT $1
   `, [limit]);
@@ -3858,26 +3944,15 @@ app.get('/tekken/duels/h2h', async (req, res) => {
   const { p1, p2 } = req.query;
   if (!p1 || !p2) return bad(res, 400, 'p1 et p2 requis');
   const r = await q(`
-    SELECT id, p1_id, p2_id, score_p1, score_p2, best_of, winner_id,
-           elo_p1_before, elo_p2_before, elo_p1_after, elo_p2_after, played_at
-    FROM tekken_duels
-    WHERE (p1_id=$1 AND p2_id=$2) OR (p1_id=$2 AND p2_id=$1)
-    ORDER BY played_at DESC
+    SELECT d.id, d.p1_id, d.p2_id, d.score_p1, d.score_p2, d.best_of, d.winner_id,
+           d.elo_p1_before, d.elo_p2_before, d.elo_p1_after, d.elo_p2_after, d.played_at,
+           d.source, d.tournament_id, t.name AS tournament_name
+    FROM tekken_duels d
+    LEFT JOIN tournaments t ON t.id = d.tournament_id
+    WHERE (d.p1_id=$1 AND d.p2_id=$2) OR (d.p1_id=$2 AND d.p2_id=$1)
+    ORDER BY d.played_at DESC
   `, [p1, p2]);
   ok(res, { duels: r.rows });
-});
-
-app.post('/admin/tekken/ladder', auth, adminOnly, async (req, res) => {
-  const { player_id, elo } = req.body || {};
-  if (!player_id) return bad(res, 400, 'player_id requis');
-  const pCheck = await q(`SELECT player_id, main_game FROM players WHERE player_id=$1`, [player_id]);
-  if (!pCheck.rowCount) return bad(res, 404, 'Joueur introuvable');
-  const pg = pCheck.rows[0].main_game || 'efoot';
-  if (pg !== 'tekken' && pg !== 'both') return bad(res, 403, 'Ce joueur n\'est pas rattache au pole Tekken');
-  const startElo = parseInt(elo) || 1200;
-  await q(`INSERT INTO tekken_ladder(player_id, elo, peak_elo) VALUES($1,$2,$2)
-           ON CONFLICT(player_id) DO NOTHING`, [player_id, startElo]);
-  ok(res, { ok: true });
 });
 
 app.delete('/admin/tekken/ladder/:pid', auth, adminOnly, async (req, res) => {
@@ -3885,13 +3960,41 @@ app.delete('/admin/tekken/ladder/:pid', auth, adminOnly, async (req, res) => {
   ok(res, { ok: true });
 });
 
-app.put('/admin/tekken/ladder/:pid', auth, adminOnly, async (req, res) => {
-  const { elo } = req.body || {};
-  if (!elo || isNaN(elo)) return bad(res, 400, 'elo requis');
+// Correctif manuel d'ELO : action explicite et tracée (motif obligatoire, historisé dans
+// tekken_elo_corrections), réservée aux erreurs de saisie / litiges. L'attribution normale des
+// points passe uniquement par les duels et les matchs de tournoi comptant pour le ladder.
+app.post('/admin/tekken/ladder/:pid/correct', auth, adminOnly, async (req, res) => {
+  const { elo, reason } = req.body || {};
+  const pid = req.params.pid;
+  if (elo === undefined || elo === null || isNaN(elo)) return bad(res, 400, 'elo requis');
   const newElo = parseInt(elo);
+  if (!Number.isFinite(newElo)) return bad(res, 400, 'elo invalide');
+  const trimmedReason = String(reason || '').trim();
+  if (!trimmedReason) return bad(res, 400, 'Motif du correctif requis');
+
+  const current = await q(`SELECT elo FROM tekken_ladder WHERE player_id=$1`, [pid]);
+  if (!current.rowCount) return bad(res, 404, 'Joueur absent du ladder');
+  const eloBefore = current.rows[0].elo;
+
   await q(`UPDATE tekken_ladder SET elo=$2, peak_elo=GREATEST(peak_elo,$2), updated_at=now() WHERE player_id=$1`,
-    [req.params.pid, newElo]);
-  ok(res, { ok: true });
+    [pid, newElo]);
+  await q(`
+    INSERT INTO tekken_elo_corrections(player_id, elo_before, elo_after, reason, corrected_by)
+    VALUES ($1,$2,$3,$4,$5)
+  `, [pid, eloBefore, newElo, trimmedReason, req.user.uid]);
+
+  ok(res, { ok: true, elo_before: eloBefore, elo_after: newElo });
+});
+
+app.get('/admin/tekken/ladder/:pid/corrections', auth, adminOnly, async (req, res) => {
+  const r = await q(`
+    SELECT c.id, c.elo_before, c.elo_after, c.reason, c.corrected_at, u.email AS corrected_by_email
+    FROM tekken_elo_corrections c
+    LEFT JOIN users u ON u.id = c.corrected_by
+    WHERE c.player_id=$1
+    ORDER BY c.corrected_at DESC
+  `, [req.params.pid]);
+  ok(res, { corrections: r.rows });
 });
 
 app.post('/admin/tekken/duels', auth, adminOnly, async (req, res) => {
@@ -3964,10 +4067,12 @@ app.get('/tekken/player/:pid/stats', async (req, res) => {
   const recent = await q(`
     SELECT d.id, d.p1_id, d.p2_id, d.score_p1, d.score_p2, d.winner_id,
            d.elo_p1_before, d.elo_p2_before, d.elo_p1_after, d.elo_p2_after, d.played_at,
+           d.source, d.tournament_id, t.name AS tournament_name,
            p1.name AS p1_name, p2.name AS p2_name
     FROM tekken_duels d
     JOIN players p1 ON p1.player_id = d.p1_id
     JOIN players p2 ON p2.player_id = d.p2_id
+    LEFT JOIN tournaments t ON t.id = d.tournament_id
     WHERE d.p1_id=$1 OR d.p2_id=$1
     ORDER BY d.played_at DESC LIMIT 20
   `, [pid]);

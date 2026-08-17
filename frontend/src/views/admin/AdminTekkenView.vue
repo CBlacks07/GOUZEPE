@@ -22,32 +22,15 @@
       <!-- TAB: Ladder -->
       <section v-if="tab === 'ladder'" class="card">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <h2 class="font-semibold">Classement ELO</h2>
-          <div class="flex gap-2">
-            <button @click="loadLadder" class="btn text-xs flex items-center gap-1">
-              <RefreshCwIcon class="w-3.5 h-3.5" /> Rafraichir
-            </button>
+          <div>
+            <h2 class="font-semibold">Classement ELO</h2>
+            <p class="text-xs text-gz-muted mt-0.5">
+              Un joueur rejoint le ladder automatiquement des son premier duel ou match de tournoi
+              compte pour le ladder -- aucun ajout ni ELO de depart manuel.
+            </p>
           </div>
-        </div>
-
-        <!-- Ajouter un joueur -->
-        <div class="flex flex-wrap gap-2 items-end mb-4 p-3 border border-gz-border rounded-lg bg-gz-panel/30">
-          <div class="flex-1 min-w-[200px]">
-            <label class="label">Joueur</label>
-            <select v-model="addPid" class="input">
-              <option value="">-- Choisir --</option>
-              <option v-for="p in availablePlayers" :key="p.player_id" :value="p.player_id">
-                {{ p.player_id }} ({{ p.name }})
-              </option>
-            </select>
-          </div>
-          <div class="w-24">
-            <label class="label">ELO</label>
-            <input v-model.number="addElo" type="number" class="input" />
-          </div>
-          <button @click="addToLadder" :disabled="!addPid || addingLadder" class="btn-primary text-xs py-2 px-3 flex items-center gap-1">
-            <Loader2Icon v-if="addingLadder" class="w-3.5 h-3.5 animate-spin" />
-            <PlusIcon v-else class="w-3.5 h-3.5" /> Ajouter
+          <button @click="loadLadder" class="btn text-xs flex items-center gap-1">
+            <RefreshCwIcon class="w-3.5 h-3.5" /> Rafraichir
           </button>
         </div>
 
@@ -70,7 +53,9 @@
                 <td colspan="8" class="text-center text-gz-muted py-8">Chargement...</td>
               </tr>
               <tr v-else-if="!ladder.length">
-                <td colspan="8" class="text-center text-gz-muted py-8">Aucun joueur dans le ladder.</td>
+                <td colspan="8" class="text-center text-gz-muted py-8">
+                  Aucun joueur dans le ladder -- il se peuple des le premier duel ou match de tournoi joue.
+                </td>
               </tr>
               <tr v-for="(p, i) in ladder" :key="p.player_id">
                 <td class="text-gz-muted font-bold">{{ i + 1 }}</td>
@@ -86,6 +71,9 @@
                 <td class="text-center text-gz-muted">{{ p.peak_elo }}</td>
                 <td>
                   <div class="flex gap-1">
+                    <button @click="openCorrect(p)" class="btn py-1 px-2 text-xs flex items-center gap-1" title="Corriger l'ELO (erreur de saisie, litige...)">
+                      <WrenchIcon class="w-3 h-3" /> Corriger
+                    </button>
                     <button @click="removeLadder(p.player_id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1">
                       <Trash2Icon class="w-3 h-3" /> Retirer
                     </button>
@@ -111,6 +99,7 @@
             <thead>
               <tr>
                 <th>Date</th>
+                <th>Origine</th>
                 <th>Joueur 1</th>
                 <th class="text-center">Score</th>
                 <th>Joueur 2</th>
@@ -120,13 +109,19 @@
             </thead>
             <tbody>
               <tr v-if="duelsLoading">
-                <td colspan="6" class="text-center text-gz-muted py-8">Chargement...</td>
+                <td colspan="7" class="text-center text-gz-muted py-8">Chargement...</td>
               </tr>
               <tr v-else-if="!duels.length">
-                <td colspan="6" class="text-center text-gz-muted py-8">Aucun duel enregistre.</td>
+                <td colspan="7" class="text-center text-gz-muted py-8">Aucun duel enregistre.</td>
               </tr>
               <tr v-for="d in duels" :key="d.id">
                 <td class="text-gz-muted text-xs whitespace-nowrap">{{ fmtDate(d.played_at) }}</td>
+                <td class="text-xs">
+                  <span v-if="d.source === 'tournament'" class="origin-badge origin-tournament" :title="d.tournament_name || ''">
+                    Tournoi<span v-if="d.tournament_name"> -- {{ d.tournament_name }}</span>
+                  </span>
+                  <span v-else class="origin-badge origin-duel">Duel libre</span>
+                </td>
                 <td :class="{ 'font-bold': d.winner_id === d.p1_id }">{{ d.p1_name }}</td>
                 <td class="text-center font-mono font-bold">{{ d.score_p1 }} - {{ d.score_p2 }}</td>
                 <td :class="{ 'font-bold': d.winner_id === d.p2_id }">{{ d.p2_name }}</td>
@@ -136,9 +131,10 @@
                   <span :class="eloDelta(d, d.p2_id) >= 0 ? 'text-gz-green' : 'text-gz-red'">{{ eloDelta(d, d.p2_id) > 0 ? '+' : '' }}{{ eloDelta(d, d.p2_id) }}</span>
                 </td>
                 <td>
-                  <button @click="deleteDuel(d.id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1">
+                  <button v-if="d.source !== 'tournament'" @click="deleteDuel(d.id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1">
                     <Trash2Icon class="w-3 h-3" />
                   </button>
+                  <span v-else class="text-gz-muted text-xs" title="Corrige via le bouton Corriger du ladder si besoin">--</span>
                 </td>
               </tr>
             </tbody>
@@ -156,8 +152,8 @@
               <label class="label">Joueur 1</label>
               <select v-model="dForm.p1_id" class="input">
                 <option value="">-- Choisir --</option>
-                <option v-for="p in ladder" :key="p.player_id" :value="p.player_id">
-                  {{ p.name }} ({{ p.elo }})
+                <option v-for="p in tekkenPlayers" :key="p.player_id" :value="p.player_id">
+                  {{ p.name }} ({{ eloOf(p.player_id) }})
                 </option>
               </select>
             </div>
@@ -166,8 +162,8 @@
               <label class="label">Joueur 2</label>
               <select v-model="dForm.p2_id" class="input">
                 <option value="">-- Choisir --</option>
-                <option v-for="p in ladder.filter(x => x.player_id !== dForm.p1_id)" :key="p.player_id" :value="p.player_id">
-                  {{ p.name }} ({{ p.elo }})
+                <option v-for="p in tekkenPlayers.filter(x => x.player_id !== dForm.p1_id)" :key="p.player_id" :value="p.player_id">
+                  {{ p.name }} ({{ eloOf(p.player_id) }})
                 </option>
               </select>
             </div>
@@ -217,6 +213,34 @@
         </div>
       </section>
     </div>
+
+    <!-- Modal correction ELO -->
+    <BaseModal :open="correctModal" title="Corriger l'ELO" @close="correctModal = false">
+      <div v-if="correctTarget" class="space-y-4">
+        <p class="text-xs text-gz-muted">
+          {{ correctTarget.name }} ({{ correctTarget.player_id }}) -- ELO actuel : <strong>{{ correctTarget.elo }}</strong>.
+          Reserve aux erreurs de saisie ou litiges : l'attribution normale passe par les duels et les
+          matchs de tournoi. Cette action est tracee.
+        </p>
+        <div>
+          <label class="label">Nouvel ELO</label>
+          <input v-model.number="correctForm.elo" type="number" class="input" />
+        </div>
+        <div>
+          <label class="label">Motif (obligatoire)</label>
+          <textarea v-model="correctForm.reason" class="input min-h-[90px]"
+                    placeholder="ex : score de duel mal saisi le 12/08, corrige suite a verification..." />
+        </div>
+        <p v-if="correctErr" class="text-gz-red text-sm">{{ correctErr }}</p>
+      </div>
+      <template #footer>
+        <button @click="correctModal = false" class="btn">Annuler</button>
+        <button @click="confirmCorrect" :disabled="correcting || !correctForm.reason.trim()" class="btn-primary flex items-center gap-1.5">
+          <Loader2Icon v-if="correcting" class="w-3.5 h-3.5 animate-spin" />
+          Appliquer le correctif
+        </button>
+      </template>
+    </BaseModal>
   </AppLayout>
 </template>
 
@@ -224,10 +248,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAPI } from '@/composables/useAPI'
-import { ListOrderedIcon, SwordsIcon, PlusIcon, RefreshCwIcon, Trash2Icon, Loader2Icon } from 'lucide-vue-next'
+import { useToast } from '@/composables/useToast'
+import { ListOrderedIcon, SwordsIcon, PlusIcon, RefreshCwIcon, Trash2Icon, Loader2Icon, WrenchIcon } from 'lucide-vue-next'
 
 const api = useAPI()
+const { success, error: toastError } = useToast()
 const tab = ref('ladder')
 
 const ladder = ref([])
@@ -236,24 +263,32 @@ const duels = ref([])
 const duelsLoading = ref(false)
 const allPlayers = ref([])
 
-const addPid = ref('')
-const addElo = ref(1200)
-const addingLadder = ref(false)
-
 const dForm = ref({ p1_id: '', p2_id: '', score_p1: 0, score_p2: 0, best_of: 3 })
 const submittingDuel = ref(false)
 const duelMsg = ref('')
 const duelOk = ref(true)
 const lastResult = ref(null)
 
+const correctModal  = ref(false)
+const correctTarget = ref(null)
+const correctForm   = ref({ elo: 1200, reason: '' })
+const correctErr    = ref('')
+const correcting    = ref(false)
+
 const tekkenPlayers = computed(() => {
   return allPlayers.value.filter(p => p.main_game === 'tekken' || p.main_game === 'both')
 })
 
-const availablePlayers = computed(() => {
-  const inLadder = new Set(ladder.value.map(p => p.player_id))
-  return tekkenPlayers.value.filter(p => !inLadder.has(p.player_id))
-})
+// ELO d'un joueur : celui du ladder s'il y est deja, sinon 1200 par defaut (pas encore joue).
+function eloOf(pid) {
+  return ladder.value.find(p => p.player_id === pid)?.elo ?? 1200
+}
+
+function playerName(pid) {
+  return ladder.value.find(p => p.player_id === pid)?.name
+    || allPlayers.value.find(p => p.player_id === pid)?.name
+    || pid
+}
 
 const canSubmitDuel = computed(() => {
   const f = dForm.value
@@ -296,16 +331,27 @@ async function loadPlayers() {
   } catch (_) {}
 }
 
-async function addToLadder() {
-  if (!addPid.value) return
-  addingLadder.value = true
+function openCorrect(p) {
+  correctTarget.value = p
+  correctErr.value = ''
+  correctForm.value = { elo: p.elo, reason: '' }
+  correctModal.value = true
+}
+
+async function confirmCorrect() {
+  if (!correctTarget.value) return
+  correctErr.value = ''
+  correcting.value = true
   try {
-    await api.post('/admin/tekken/ladder', { player_id: addPid.value, elo: addElo.value })
-    addPid.value = ''
-    addElo.value = 1200
+    await api.post(`/admin/tekken/ladder/${encodeURIComponent(correctTarget.value.player_id)}/correct`, correctForm.value)
+    correctModal.value = false
+    success('ELO corrige')
     await loadLadder()
-  } catch (e) { alert(e.response?.data?.error || 'Erreur') }
-  addingLadder.value = false
+  } catch (e) {
+    correctErr.value = e.response?.data?.error || 'Erreur lors du correctif'
+  } finally {
+    correcting.value = false
+  }
 }
 
 async function removeLadder(pid) {
@@ -322,13 +368,10 @@ async function submitDuel() {
   lastResult.value = null
   try {
     const { data } = await api.post('/admin/tekken/duels', dForm.value)
-    const p1 = ladder.value.find(p => p.player_id === dForm.value.p1_id)
-    const p2 = ladder.value.find(p => p.player_id === dForm.value.p2_id)
-    const winner = ladder.value.find(p => p.player_id === data.winner_id)
     lastResult.value = {
-      winner_name: winner?.name || data.winner_id || 'Egalite',
-      p1_name: p1?.name || dForm.value.p1_id,
-      p2_name: p2?.name || dForm.value.p2_id,
+      winner_name: data.winner_id ? playerName(data.winner_id) : 'Egalite',
+      p1_name: playerName(dForm.value.p1_id),
+      p2_name: playerName(dForm.value.p2_id),
       elo: data.elo,
     }
     duelMsg.value = 'Duel enregistre'
@@ -374,4 +417,8 @@ onMounted(async () => {
 .duel-vs { font-family: var(--font-title); font-weight: 700; font-size: 1.2rem; color: var(--accent); padding-bottom: .5rem; }
 .duel-scores { display: flex; align-items: flex-end; gap: 1rem; }
 .duel-scores > div { flex: 1; }
+
+.origin-badge { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+.origin-duel { background: color-mix(in srgb, var(--muted) 16%, transparent); color: var(--muted); }
+.origin-tournament { background: rgba(var(--accent-rgb), .15); color: var(--accent-l, var(--accent)); }
 </style>
