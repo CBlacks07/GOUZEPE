@@ -13,8 +13,8 @@
         <p>
           Le site <strong>gouzepe-gaming.com</strong> est édité par <strong>GOUZEPE GAMING CLUB</strong>,
           association apolitique, laïque et à but non lucratif régie par la loi du 1<sup>er</sup> juillet 1901
-          et le décret du 16 août 1901, dont la déclaration est en cours auprès des autorités togolaises
-          compétentes (dossier n° 879OLA474NMP).
+          et le décret du 16 août 1901, déclarée auprès des autorités togolaises compétentes sous le
+          récépissé n° 879OLA474NMP.
         </p>
         <ul class="legal-list">
           <li><strong>Siège social :</strong> Agbalépédogan, Commune Golfe 5, Préfecture du Golfe, 07 BP 76 04, Lomé — Togo</li>
