@@ -90,6 +90,18 @@ const routes = [
     meta: { requiresAuth: false, title: 'Profil joueur' },
   },
   {
+    path: '/mentions-legales',
+    name: 'MentionsLegales',
+    component: () => import('@/views/public/MentionsLegalesView.vue'),
+    meta: { requiresAuth: false, title: 'Mentions légales' },
+  },
+  {
+    path: '/confidentialite',
+    name: 'PolitiqueConfidentialite',
+    component: () => import('@/views/public/PolitiqueConfidentialiteView.vue'),
+    meta: { requiresAuth: false, title: 'Politique de confidentialité' },
+  },
+  {
     path: '/inscription',
     name: 'Inscription',
     component: () => import('@/views/InscriptionView.vue'),
