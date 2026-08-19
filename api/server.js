@@ -794,6 +794,10 @@ async function ensureSchema(){
   await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS admission_year INT`);
   await q(`UPDATE players SET admission_year = EXTRACT(YEAR FROM created_at)::INT WHERE admission_year IS NULL`);
   await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS main_game TEXT NOT NULL DEFAULT 'efoot'`);
+  // Date de promotion invité -> membre. NULL = toujours membre (aucun filtrage rétroactif).
+  // Sert à exclure définitivement les journées jouées en tant qu'invité des stats/classements/records,
+  // même après la promotion (sans ça, un invité promu voit tout son historique de guest recompté d'un coup).
+  await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS member_since TIMESTAMPTZ`);
 
   /* tournaments (single elimination v1) */
   await q(`CREATE TABLE IF NOT EXISTS tournaments(
@@ -2895,8 +2899,8 @@ app.get('/public/latest-day', async (_req, res) => {
 
   const buildStandings = (matches, invites) => {
     const all = computeStandings(matches)
-    const members = all.filter(r => isEligibleMember(r.id, roles, invites))
-    const guests  = all.filter(r => !isEligibleMember(r.id, roles, invites))
+    const members = all.filter(r => isEligibleMember(r.id, roles, invites, row.day))
+    const guests  = all.filter(r => !isEligibleMember(r.id, roles, invites, row.day))
     const toRow = (r, i) => ({ rank: i+1, id: r.id, J: r.J, V: r.V, N: r.N, D: r.D, BP: r.BP, BC: r.BC, PTS: r.PTS, DIFF: r.DIFF })
     return {
       members: members.map(toRow),
@@ -3115,7 +3119,7 @@ app.get('/public/records', async (_req, res) => {
       const day = dayjs(row.day).format('YYYY-MM-DD')
       const p = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload
       const inviteIds = collectInviteIdsFromPayload(p)
-      const isMember = id => isEligibleMember(id, roles, inviteIds)
+      const isMember = id => isEligibleMember(id, roles, inviteIds, row.day)
       const goalsByPlayer = new Map()
 
       for (const div of ['d1', 'd2']) {
@@ -4099,6 +4103,15 @@ app.put('/admin/players/:oldId', auth, adminOnly, async (req, res) => {
   const updatedYear = admission_year !== undefined ? (parseInt(admission_year) || null) : player.admission_year;
   const updatedGame = main_game !== undefined ? String(main_game) : (player.main_game || 'efoot');
 
+  // Un passage invité -> membre fige la date de promotion : les journées jouées avant restent
+  // exclues du classement/records même après le changement de statut (voir isEligibleMember).
+  // Un retour en invité efface cette date, pour qu'une repromotion future reparte proprement.
+  const oldRoleUpper = String(player.role || 'MEMBRE').toUpperCase();
+  const newRoleUpper = String(updatedRole || 'MEMBRE').toUpperCase();
+  const promotedToMember = oldRoleUpper === 'INVITE' && newRoleUpper !== 'INVITE';
+  const demotedToInvite = oldRoleUpper !== 'INVITE' && newRoleUpper === 'INVITE';
+  const memberSinceClause = promotedToMember ? `, member_since = now()` : (demotedToInvite ? `, member_since = NULL` : '');
+
   // Si l'ID change
   if (newId && newId !== oldId) {
     // Vérifier que le nouvel ID n'existe pas déjÃ 
@@ -4160,7 +4173,7 @@ app.put('/admin/players/:oldId', auth, adminOnly, async (req, res) => {
     }
 
     // Mettre Ã  jour la table players (CASCADE vers users et champion_result)
-    await q(`UPDATE players SET player_id = $1, name = $2, role = $3, main_game = $4 WHERE player_id = $5`,
+    await q(`UPDATE players SET player_id = $1, name = $2, role = $3, main_game = $4${memberSinceClause} WHERE player_id = $5`,
       [newId, updatedName, updatedRole, updatedGame, oldId]);
 
     // Mettre Ã  jour la présence
@@ -4173,7 +4186,7 @@ app.put('/admin/players/:oldId', auth, adminOnly, async (req, res) => {
     ok(res, { player: { player_id: newId, name: updatedName, role: updatedRole } });
   } else {
     // Mise Ã  jour simple sans changement d'ID
-    await q(`UPDATE players SET name = $1, role = $2, admission_year = $3, main_game = $4 WHERE player_id = $5`,
+    await q(`UPDATE players SET name = $1, role = $2, admission_year = $3, main_game = $4${memberSinceClause} WHERE player_id = $5`,
       [updatedName, updatedRole, updatedYear, updatedGame, oldId]);
     ok(res, { player: { player_id: oldId, name: updatedName, role: updatedRole, admission_year: updatedYear, main_game: updatedGame } });
   }
@@ -4374,8 +4387,13 @@ async function resolveSeasonId(qv){
   return r.rowCount ? r.rows[0].id : await currentSeasonId();
 }
 async function getPlayersRoles(){
-  const r=await q(`SELECT player_id,role FROM players`);
-  const map=new Map(); r.rows.forEach(p=>map.set(p.player_id,(p.role||'MEMBRE').toUpperCase())); return map;
+  const r=await q(`SELECT player_id,role,member_since FROM players`);
+  const map=new Map();
+  r.rows.forEach(p=>map.set(p.player_id, {
+    role: (p.role||'MEMBRE').toUpperCase(),
+    memberSince: p.member_since || null,
+  }));
+  return map;
 }
 function collectInviteIdsFromPayload(payload){
   const ids = new Set();
@@ -4396,13 +4414,30 @@ function collectInviteIdsFromPayload(payload){
   scan(p.d2 || []);
   return ids;
 }
-function isEligibleMember(id, roles, inviteIds){
+// Compare deux dates au jour près (pas à la milliseconde) : une journée n'a qu'une date, sans heure,
+// alors que member_since a une heure précise -- comparer les timestamps bruts exclurait à tort une
+// journée jouée le jour même de la promotion si elle a été enregistrée avant l'heure exacte du switch.
+function toDateOnly(d){
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt.toISOString().slice(0, 10);
+}
+// asOfDate (optionnel) : date de la journée/du tournoi évalué. Un joueur promu invité -> membre ne
+// compte qu'à partir de sa date de promotion (member_since) -- ses journées jouées comme invité
+// restent exclues pour toujours, même après la promotion.
+function isEligibleMember(id, roles, inviteIds, asOfDate){
   const pid = String(id || '').trim();
   if (!pid || pid === '-' || pid === 'â€”') return false;
   if (inviteIds?.has(pid)) return false;
   if (pid.startsWith('G_')) return false;
-  if (!roles.has(pid)) return false; // inconnu => considÃ¨re comme invité/éphémÃ¨re
-  return (roles.get(pid) || 'MEMBRE') !== 'INVITE';
+  const info = roles.get(pid);
+  if (!info) return false; // inconnu => considÃ¨re comme invité/éphémÃ¨re
+  if (info.role === 'INVITE') return false;
+  if (info.memberSince && asOfDate) {
+    const asOfDay = toDateOnly(asOfDate), sinceDay = toDateOnly(info.memberSince);
+    if (asOfDay && sinceDay && asOfDay < sinceDay) return false;
+  }
+  return true;
 }
 function computeStandings(matches){
   const agg={};
@@ -4451,11 +4486,17 @@ function normalizeTournamentBracketSide(raw, format, roundNo){
   }
   return 'W';
 }
-function isEligibleTournamentMember(playerId, roles){
+function isEligibleTournamentMember(playerId, roles, asOfDate){
   const pid = String(playerId || '').trim();
   if (!pid || pid.startsWith('G_')) return false;
-  if (!roles.has(pid)) return false;
-  return (roles.get(pid) || 'MEMBRE') !== 'INVITE';
+  const info = roles.get(pid);
+  if (!info) return false;
+  if (info.role === 'INVITE') return false;
+  if (info.memberSince && asOfDate) {
+    const asOfDay = toDateOnly(asOfDate), sinceDay = toDateOnly(info.memberSince);
+    if (asOfDay && sinceDay && asOfDay < sinceDay) return false;
+  }
+  return true;
 }
 function rankTournamentParticipants(tournament, participants, matches){
   const rrWinsOnly = tournament?.format === 'round_robin' && String(tournament?.rr_standings_mode || 'goals') === 'wins';
@@ -4635,8 +4676,8 @@ async function computeSeasonStandings(seasonId){
     const st1Full=computeStandings(p.d1||[]);
     const st2Full=computeStandings(p.d2||[]);
 
-    const st1 = st1Full.filter(r => isEligibleMember(r.id, roles, inviteIds));
-    const st2 = st2Full.filter(r => isEligibleMember(r.id, roles, inviteIds));
+    const st1 = st1Full.filter(r => isEligibleMember(r.id, roles, inviteIds, row.day));
+    const st2 = st2Full.filter(r => isEligibleMember(r.id, roles, inviteIds, row.day));
 
     const n1=st1.length, n2=st2.length;
 
@@ -4644,12 +4685,12 @@ async function computeSeasonStandings(seasonId){
     st2.forEach((r,idx)=>{ const o=ensure(r.id); o.total += pointsD2(idx+1);   o.participations+=1; });
 
     const champD1=p?.champions?.d1?.id||null;
-    if(champD1 && isEligibleMember(champD1, roles, inviteIds)){ ensure(champD1).total += BONUS_D1_CHAMPION; ensure(champD1).won_d1++; }
+    if(champD1 && isEligibleMember(champD1, roles, inviteIds, row.day)){ ensure(champD1).total += BONUS_D1_CHAMPION; ensure(champD1).won_d1++; }
     const champD2=p?.champions?.d2?.id||null;
-    if(champD2 && isEligibleMember(champD2, roles, inviteIds)){ ensure(champD2).won_d2++; }
+    if(champD2 && isEligibleMember(champD2, roles, inviteIds, row.day)){ ensure(champD2).won_d2++; }
 
     const teamD1 = p?.champions?.d1?.team;
-    if (champD1 && teamD1 && isEligibleMember(champD1, roles, inviteIds)){ const k = teamKey(teamD1); if (k) ensure(champD1).teams.add(k); }
+    if (champD1 && teamD1 && isEligibleMember(champD1, roles, inviteIds, row.day)){ const k = teamKey(teamD1); if (k) ensure(champD1).teams.add(k); }
     // D2 teams intentionally excluded from teams_used count
   }
 
@@ -4657,7 +4698,8 @@ async function computeSeasonStandings(seasonId){
   // - ajout de points selon le barème D1
   // - impact sur TOTAL, PARTICIP. et donc MOYENNE
   const tournaments = await q(`
-    SELECT id, format, winner_name, rr_standings_mode
+    SELECT id, format, winner_name, rr_standings_mode,
+           COALESCE(ended_at, updated_at, created_at) AS played_at
     FROM tournaments
     WHERE season_id=$1
       AND status='completed'
@@ -4687,7 +4729,7 @@ async function computeSeasonStandings(seasonId){
 
     let ranking = rankTournamentParticipants(t, parts.rows, matches.rows);
     ranking = await attachPlayerIdsByDisplayName(ranking);
-    const eligible = ranking.filter((row) => isEligibleTournamentMember(row.player_id, roles));
+    const eligible = ranking.filter((row) => isEligibleTournamentMember(row.player_id, roles, t.played_at));
     const n = eligible.length;
     if (!n) continue;
 
@@ -5034,7 +5076,7 @@ app.get('/seasons/:id/tournaments-breakdown', auth, async (req, res) => {
       ranking = await attachPlayerIdsByDisplayName(ranking);
 
       // Points saison : barème D1 sur le sous-classement des membres éligibles
-      const eligible = ranking.filter(r => isEligibleTournamentMember(r.player_id, roles));
+      const eligible = ranking.filter(r => isEligibleTournamentMember(r.player_id, roles, t.played_at));
       const nElig = eligible.length;
       const ptsByPid = new Map();
       eligible.forEach((row, idx) => ptsByPid.set(row.participant_id, pointsD1(nElig, idx + 1)));
