@@ -2,7 +2,7 @@
   <footer class="lfoot">
     <div class="lfoot-top">
       <div class="lfoot-brand">
-        <span class="brand"><img class="brand-logo" :src="logo" alt="logo" /> {{ brand.name }} {{ brand.tagline }}</span>
+        <RouterLink to="/" class="brand"><img class="brand-logo" :src="logo" alt="logo" /> {{ brand.name }} {{ brand.tagline }}</RouterLink>
         <p class="lfoot-tag">Communauté eSport basée à Lomé (Togo), dédiée à la compétition eFootball &amp; Tekken.</p>
         <RouterLink to="/inscription" class="btn-primary lfoot-join">Devenir membre</RouterLink>
       </div>
@@ -84,7 +84,8 @@ const hasContact = computed(() => Object.values(contact.value).some(v => String(
   display: grid; gap: 2.2rem; grid-template-columns: 1fr;
 }
 .lfoot-brand { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; }
-.brand { display: inline-flex; align-items: center; gap: .5rem; font-family: var(--font-title); font-weight: 700; letter-spacing: .05em; }
+.brand { display: inline-flex; align-items: center; gap: .5rem; font-family: var(--font-title); font-weight: 700; letter-spacing: .05em; color: var(--text); text-decoration: none; transition: color .15s; }
+.brand:hover { color: var(--accent-l); }
 .brand-logo { width: 28px; height: 28px; border-radius: 7px; object-fit: cover; }
 .lfoot-tag { color: var(--muted); font-size: .85rem; line-height: 1.55; margin: 0; max-width: 26rem; }
 .lfoot-join { font-size: .82rem; padding: .5rem 1.1rem; margin-top: .2rem; }
