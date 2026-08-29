@@ -20,7 +20,7 @@
         <RouterLink to="/classements">Classements</RouterLink>
         <RouterLink to="/palmares">Palmarès</RouterLink>
         <RouterLink to="/records">Records</RouterLink>
-        <RouterLink to="/reglement-championnat">Règlement</RouterLink>
+        <RouterLink to="/reglement-championnat">Règlement eFootball</RouterLink>
       </div>
 
       <div v-if="hasContact" class="lfoot-col">
