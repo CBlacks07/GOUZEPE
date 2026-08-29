@@ -102,6 +102,12 @@ const routes = [
     meta: { requiresAuth: false, title: 'Politique de confidentialité' },
   },
   {
+    path: '/reglement-championnat',
+    name: 'ReglementChampionnat',
+    component: () => import('@/views/public/ReglementChampionnatView.vue'),
+    meta: { requiresAuth: false, title: 'Règlement du championnat eFootball' },
+  },
+  {
     path: '/inscription',
     name: 'Inscription',
     component: () => import('@/views/InscriptionView.vue'),
