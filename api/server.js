@@ -5999,7 +5999,10 @@ setInterval(()=>{
 }, BACKUP_TICK_MS);
 
 /* ====== Janitor ====== */
-const JANITOR_EVERY_MS = 60*1000;
+// Toutes les 60s en continu empêchait Neon de jamais suspendre le compute
+// (autosuspend), ce qui a épuisé le quota de compute mensuel avant la fin
+// du mois. Le nettoyage des sessions n'a pas besoin d'une telle précision.
+const JANITOR_EVERY_MS = 15*60*1000;
 setInterval(async ()=>{
   try{
     await q(`UPDATE sessions
