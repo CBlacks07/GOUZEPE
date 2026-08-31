@@ -403,9 +403,9 @@
                   <tr>
                     <th class="text-center w-10">Rang</th>
                     <th>Participant</th>
-                    <th class="text-center">Matchs</th>
-                    <th class="text-center">V-N-D</th>
-                    <th class="text-center">Pts saison</th>
+                    <th class="text-center w-24">Matchs</th>
+                    <th class="text-center w-24">V-N-D</th>
+                    <th class="text-center w-28">Pts saison</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -435,8 +435,8 @@
                     <tr>
                       <th class="text-center w-10">Rang</th>
                       <th>Participant</th>
-                      <th class="text-center">Matchs</th>
-                      <th class="text-center">V-N-D</th>
+                      <th class="text-center w-24">Matchs</th>
+                      <th class="text-center w-24">V-N-D</th>
                     </tr>
                   </thead>
                   <tbody>
