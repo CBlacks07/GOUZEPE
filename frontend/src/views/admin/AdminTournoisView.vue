@@ -1009,6 +1009,11 @@ async function onScoreSaved({ matchId, score1, score2, done, fail }) {
     })
     lastLocalSaveAt = Date.now()
     const { data } = await api.get(`/tournaments/${selected.value.id}`)
+    if (data.tournament) {
+      selected.value = { ...selected.value, ...data.tournament }
+      const idx = tournaments.value.findIndex((x) => x.id === selected.value.id)
+      if (idx !== -1) tournaments.value[idx] = { ...tournaments.value[idx], ...data.tournament }
+    }
     matches.value = normalizeMatches(data.matches || [], selected.value.format)
     if (selected.value.format === 'round_robin' || selected.value.format === 'groups_knockout') {
       const { data: s } = await api.get(`/tournaments/${selected.value.id}/standings`)
@@ -1034,25 +1039,28 @@ async function onScoreSaved({ matchId, score1, score2, done, fail }) {
   }
 }
 
-// Sauvegarde en rafale (saisie rapide) : les scores partent en parallele (matchs independants,
-// pas de raison de les serialiser) et un seul re-fetch a la fin -- au lieu d'un aller-retour
-// sequentiel par score, ce qui rendait la saisie de tout un round robin lente et saccadee.
+// Sauvegarde en rafale (saisie rapide) : un seul appel vers l'endpoint de lot, qui traite tous
+// les scores dans UNE transaction cote serveur. Envoyer N requetes (meme en parallele) se heurtait
+// toutes au meme verrou de ligne sur le tournoi cote base -- avec un gros lot (40+ scores), ca
+// epuisait le pool de connexions et la saisie semblait bloquee indefiniment.
 async function onBatchScoresSaved({ edits, done, fail }) {
   const scrollPos = capturePageScroll()
   try {
     lastLocalSaveAt = Date.now()
-    await Promise.all(edits.map((edit) =>
-      api.post(`/admin/tournaments/${selected.value.id}/matches/${edit.matchId}/result`, {
-        score_p1: edit.score1,
-        score_p2: edit.score2,
-      })
-    ))
+    await api.post(`/admin/tournaments/${selected.value.id}/matches/batch-result`, {
+      results: edits.map((edit) => ({ matchId: edit.matchId, score_p1: edit.score1, score_p2: edit.score2 })),
+    })
     lastLocalSaveAt = Date.now()
 
     // Load data once after all saves
     const { data } = await api.get(`/tournaments/${selected.value.id}`)
+    if (data.tournament) {
+      selected.value = { ...selected.value, ...data.tournament }
+      const idx = tournaments.value.findIndex((x) => x.id === selected.value.id)
+      if (idx !== -1) tournaments.value[idx] = { ...tournaments.value[idx], ...data.tournament }
+    }
     matches.value = normalizeMatches(data.matches || [], selected.value.format)
-    
+
     if (selected.value.format === 'round_robin' || selected.value.format === 'groups_knockout') {
       const { data: s } = await api.get(`/tournaments/${selected.value.id}/standings`)
       if (selected.value.format === 'round_robin') {

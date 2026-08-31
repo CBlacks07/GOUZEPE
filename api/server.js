@@ -2816,6 +2816,91 @@ app.post('/admin/tournaments/:id/matches/:matchId/result', auth, adminOnly, asyn
   }
 });
 
+// Sauvegarde en lot (saisie rapide round robin / groupes) : un seul BEGIN/COMMIT et un seul
+// verrou sur la ligne du tournoi pour tous les scores, au lieu d'une requête + un verrou par
+// match. Une rafale de N requêtes individuelles (même en parallèle côté client) se heurtait de
+// toute façon à ce même verrou une par une -- avec un gros lot (ex. 42 scores) ça épuisait en
+// prime le pool de connexions (chaque requête bloquée sur le verrou gardait sa connexion
+// ouverte), d'où des saisies qui semblaient bloquées indéfiniment. Limité au round robin /
+// phase de groupes : ce sont les seuls formats sans logique de progression de bracket
+// (next_match_id, etc.) qui dépendrait de l'ordre de traitement des matchs du lot.
+app.post('/admin/tournaments/:id/matches/batch-result', auth, adminOnly, async (req, res) => {
+  const tournamentId = Number(req.params.id);
+  if (!Number.isInteger(tournamentId) || tournamentId <= 0) return bad(res, 400, 'id tournoi invalide');
+
+  const raw = Array.isArray(req.body?.results) ? req.body.results : [];
+  if (!raw.length) return bad(res, 400, 'Aucun résultat à enregistrer');
+  if (raw.length > 300) return bad(res, 400, 'Trop de résultats en un seul envoi');
+
+  const MAX_SCORE = 99;
+  const parsed = [];
+  for (const r of raw) {
+    const matchId = Number(r?.matchId);
+    const score1 = parseScoreValue(r?.score_p1);
+    const score2 = parseScoreValue(r?.score_p2);
+    if (!Number.isInteger(matchId) || matchId <= 0) return bad(res, 400, 'id match invalide');
+    if (score1 === null || score2 === null) return bad(res, 400, 'Scores invalides');
+    if (score1 < 0 || score2 < 0 || score1 > MAX_SCORE || score2 > MAX_SCORE) {
+      return bad(res, 400, `Scores doivent être entre 0 et ${MAX_SCORE}`);
+    }
+    parsed.push({ matchId, score1, score2 });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const t = await client.query(`SELECT id, status, format FROM tournaments WHERE id=$1 FOR UPDATE`, [tournamentId]);
+    if (!t.rowCount) { await client.query('ROLLBACK'); return bad(res, 404, 'Tournoi introuvable'); }
+    if (t.rows[0].status === 'archived') { await client.query('ROLLBACK'); return bad(res, 400, 'Tournoi archivé'); }
+    const format = t.rows[0].format;
+    if (format !== 'round_robin' && format !== 'groups_knockout') {
+      await client.query('ROLLBACK');
+      return bad(res, 400, 'La sauvegarde en lot n\'est disponible que pour le round robin et les groupes');
+    }
+
+    for (const { matchId, score1, score2 } of parsed) {
+      const m = await client.query(`
+        SELECT id, p1_participant_id, p2_participant_id, group_no
+        FROM tournament_matches WHERE id=$1 AND tournament_id=$2 FOR UPDATE
+      `, [matchId, tournamentId]);
+      if (!m.rowCount) { await client.query('ROLLBACK'); return bad(res, 404, `Match ${matchId} introuvable`); }
+      const match = m.rows[0];
+      if (!match.p1_participant_id || !match.p2_participant_id) {
+        await client.query('ROLLBACK');
+        return bad(res, 400, `Match ${matchId} sans 2 participants`);
+      }
+      const winnerRR = score1 > score2 ? match.p1_participant_id : (score2 > score1 ? match.p2_participant_id : null);
+      await client.query(`
+        UPDATE tournament_matches
+        SET score_p1=$1, score_p2=$2, winner_participant_id=$3, status='completed',
+            walkover=false, finished_at=COALESCE(finished_at, now()), updated_at=now()
+        WHERE id=$4
+      `, [score1, score2, winnerRR, match.id]);
+    }
+
+    if (format === 'round_robin') {
+      await checkRoundRobinCompletion(client, tournamentId);
+      await updateRoundRobinStandings(client, tournamentId);
+    } else {
+      await checkGroupTournamentCompletion(client, tournamentId);
+      await client.query(`UPDATE tournaments SET status = CASE WHEN status='draft' THEN 'live' ELSE status END, updated_at=now() WHERE id=$1`, [tournamentId]);
+    }
+
+    await client.query('COMMIT');
+    const bundle = await getTournamentBundle(tournamentId);
+    emitTournamentRealtime(bundle, 'score');
+    if (bundle?.tournament?.member_tournament && bundle?.tournament?.status === 'completed') {
+      io.emit('season:changed');
+    }
+    ok(res, bundle);
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    bad(res, 500, e.message || 'Enregistrement en lot impossible');
+  } finally {
+    client.release();
+  }
+});
+
 /* ====== Players ====== */
 function markOnlineField(rows){
   const now=Date.now();
@@ -3847,6 +3932,85 @@ app.post('/admin/tekken/tournaments/:id/matches/:matchId/result', auth, adminOnl
     try { await client.query('ROLLBACK'); } catch (_) {}
     bad(res, 500, e.message);
   } finally { client.release(); }
+});
+
+// Sauvegarde en lot Tekken (voir la version eFootball juste au-dessus pour le contexte complet
+// du fix) : un seul BEGIN/COMMIT et un seul verrou de tournoi pour tout le lot de scores.
+app.post('/admin/tekken/tournaments/:id/matches/batch-result', auth, adminOnly, async (req, res) => {
+  const tournamentId = Number(req.params.id);
+  if (!Number.isInteger(tournamentId) || tournamentId <= 0) return bad(res, 400, 'id invalide');
+  if (!await ensureTekkenTournament(tournamentId)) return bad(res, 404, 'Tournoi Tekken introuvable');
+
+  const raw = Array.isArray(req.body?.results) ? req.body.results : [];
+  if (!raw.length) return bad(res, 400, 'Aucun résultat à enregistrer');
+  if (raw.length > 300) return bad(res, 400, 'Trop de résultats en un seul envoi');
+
+  const MAX_SCORE = 99;
+  const parsed = [];
+  for (const r of raw) {
+    const matchId = Number(r?.matchId);
+    const score1 = parseScoreValue(r?.score_p1);
+    const score2 = parseScoreValue(r?.score_p2);
+    if (!Number.isInteger(matchId) || matchId <= 0) return bad(res, 400, 'id match invalide');
+    if (score1 === null || score2 === null) return bad(res, 400, 'Scores invalides');
+    if (score1 < 0 || score2 < 0 || score1 > MAX_SCORE || score2 > MAX_SCORE) {
+      return bad(res, 400, `Scores doivent être entre 0 et ${MAX_SCORE}`);
+    }
+    parsed.push({ matchId, score1, score2 });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const t = await client.query(`SELECT id, status, format, counts_for_title FROM tournaments WHERE id=$1 FOR UPDATE`, [tournamentId]);
+    if (!t.rowCount) { await client.query('ROLLBACK'); return bad(res, 404, 'Tournoi introuvable'); }
+    if (t.rows[0].status === 'archived') { await client.query('ROLLBACK'); return bad(res, 400, 'Tournoi archive'); }
+    const format = t.rows[0].format;
+    const countsForTitle = t.rows[0].counts_for_title;
+    if (format !== 'round_robin' && format !== 'groups_knockout') {
+      await client.query('ROLLBACK');
+      return bad(res, 400, 'La sauvegarde en lot n\'est disponible que pour le round robin et les groupes');
+    }
+
+    for (const { matchId, score1, score2 } of parsed) {
+      const m = await client.query(`
+        SELECT id, best_of, p1_participant_id, p2_participant_id, group_no
+        FROM tournament_matches WHERE id=$1 AND tournament_id=$2 FOR UPDATE
+      `, [matchId, tournamentId]);
+      if (!m.rowCount) { await client.query('ROLLBACK'); return bad(res, 404, `Match ${matchId} introuvable`); }
+      const match = m.rows[0];
+      if (!match.p1_participant_id || !match.p2_participant_id) {
+        await client.query('ROLLBACK');
+        return bad(res, 400, `Match ${matchId} sans 2 participants`);
+      }
+      const winnerRR = score1 > score2 ? match.p1_participant_id : (score2 > score1 ? match.p2_participant_id : null);
+      await client.query(`
+        UPDATE tournament_matches
+        SET score_p1=$1, score_p2=$2, winner_participant_id=$3, status='completed',
+            walkover=false, finished_at=COALESCE(finished_at, now()), updated_at=now()
+        WHERE id=$4
+      `, [score1, score2, winnerRR, match.id]);
+      if (countsForTitle && winnerRR) await applyTekkenTournamentMatchElo(client, tournamentId, match, score1, score2);
+    }
+
+    if (format === 'round_robin') {
+      await checkRoundRobinCompletion(client, tournamentId);
+      await updateRoundRobinStandings(client, tournamentId);
+    } else {
+      await checkGroupTournamentCompletion(client, tournamentId);
+      await client.query(`UPDATE tournaments SET status = CASE WHEN status='draft' THEN 'live' ELSE status END, updated_at=now() WHERE id=$1`, [tournamentId]);
+    }
+
+    await client.query('COMMIT');
+    const bundle = await getTournamentBundle(tournamentId);
+    emitTournamentRealtime(bundle, 'score');
+    ok(res, bundle);
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    bad(res, 500, e.message || 'Enregistrement en lot impossible');
+  } finally {
+    client.release();
+  }
 });
 
 /* ====== Tekken : Ladder ELO + Duels ====== */
