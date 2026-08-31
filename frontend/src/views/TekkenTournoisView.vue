@@ -563,6 +563,41 @@ function matchPhaseLabel(m, format) {
   return ''
 }
 
+// Construit les lignes du tableau imprimable "Résultats des matchs" : en round robin aller/retour,
+// les deux manches d'une même confrontation sont fusionnées sur une seule ligne ("2-1 / 0-3") au lieu
+// d'une ligne par tour -- un score normalisé sur l'ordre du 1er match de la paire (pas celui, potentiellement
+// inversé, du match retour) pour ne pas mélanger les perspectives.
+function buildResultRows(playedMatches, format, rrMatchMode) {
+  if (format === 'round_robin' && rrMatchMode === 'home_away') {
+    const pairs = new Map()
+    for (const m of playedMatches) {
+      const a = m.p1_name || 'TBD'
+      const b = m.p2_name || 'TBD'
+      const key = [a, b].slice().sort().join('||')
+      if (!pairs.has(key)) pairs.set(key, [])
+      pairs.get(key).push(m)
+    }
+    const rows = []
+    for (const list of pairs.values()) {
+      list.sort((x, y) => x.round_no - y.round_no)
+      const p1 = list[0].p1_name || 'TBD'
+      const p2 = list[0].p2_name || 'TBD'
+      const score = list.map((m) => {
+        const sameOrder = (m.p1_name || 'TBD') === p1
+        return sameOrder ? `${m.score1}-${m.score2}` : `${m.score2}-${m.score1}`
+      }).join(' / ')
+      rows.push({ phase: '', p1, p2, score })
+    }
+    return rows
+  }
+  return playedMatches.map((m) => ({
+    phase: matchPhaseLabel(m, format),
+    p1: m.p1_name || 'TBD',
+    p2: m.p2_name || 'TBD',
+    score: `${m.score1} - ${m.score2}`,
+  }))
+}
+
 async function logoDataURL() {
   const tryFetch = async (path) => {
     if (!path) return null
@@ -636,10 +671,11 @@ async function printTournamentResults() {
       .filter((m) => m.score1 != null && m.score2 != null)
       .slice()
       .sort((a, b) => (a.round_no - b.round_no) || (a.slot_no - b.slot_no))
-    if (played.length) {
-      html += '<h2>Résultats des matchs</h2><table><thead><tr><th>Tour</th><th>Phase</th><th class="name">Joueur 1</th><th>Score</th><th class="name">Joueur 2</th><th>Vainqueur</th></tr></thead><tbody>'
-      for (const m of played) {
-        html += `<tr><td>${m.round_no}</td><td>${escapeHtml(matchPhaseLabel(m, format))}</td><td class="name">${escapeHtml(m.p1_name || 'TBD')}</td><td><b>${m.score1} - ${m.score2}</b></td><td class="name">${escapeHtml(m.p2_name || 'TBD')}</td><td>${escapeHtml(m.winner_name || '')}</td></tr>`
+    const resultRows = buildResultRows(played, format, t.rr_match_mode)
+    if (resultRows.length) {
+      html += '<h2>Résultats des matchs</h2><table><thead><tr><th>Phase</th><th class="name">Joueur 1</th><th>Score</th><th class="name">Joueur 2</th></tr></thead><tbody>'
+      for (const r of resultRows) {
+        html += `<tr><td>${escapeHtml(r.phase)}</td><td class="name">${escapeHtml(r.p1)}</td><td><b>${escapeHtml(r.score)}</b></td><td class="name">${escapeHtml(r.p2)}</td></tr>`
       }
       html += '</tbody></table>'
     }
