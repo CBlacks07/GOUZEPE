@@ -949,6 +949,11 @@ async function onScoreSaved({ matchId, score1, score2, done, fail }) {
     })
     lastLocalSaveAt = Date.now()
     const { data } = await api.get(`/tekken/tournaments/${selected.value.id}`)
+    if (data.tournament) {
+      selected.value = { ...selected.value, ...data.tournament }
+      const idx = tournaments.value.findIndex((x) => x.id === selected.value.id)
+      if (idx !== -1) tournaments.value[idx] = { ...tournaments.value[idx], ...data.tournament }
+    }
     matches.value = normalizeMatches(data.matches || [], selected.value.format)
     if (selected.value.format === 'round_robin' || selected.value.format === 'groups_knockout') {
       const { data: s } = await api.get(`/tekken/tournaments/${selected.value.id}/standings`)
@@ -974,19 +979,24 @@ async function onScoreSaved({ matchId, score1, score2, done, fail }) {
   }
 }
 
+// Un seul appel vers l'endpoint de lot (voir AdminTournoisView.vue pour le contexte complet) --
+// N requetes individuelles se heurtaient toutes au meme verrou de ligne sur le tournoi cote base,
+// et un gros lot epuisait le pool de connexions au lieu d'aller plus vite.
 async function onBatchScoresSaved({ edits, done, fail }) {
   const scrollPos = capturePageScroll()
   try {
     lastLocalSaveAt = Date.now()
-    await Promise.all(edits.map((edit) =>
-      api.post(`/admin/tekken/tournaments/${selected.value.id}/matches/${edit.matchId}/result`, {
-        score_p1: edit.score1,
-        score_p2: edit.score2,
-      })
-    ))
+    await api.post(`/admin/tekken/tournaments/${selected.value.id}/matches/batch-result`, {
+      results: edits.map((edit) => ({ matchId: edit.matchId, score_p1: edit.score1, score_p2: edit.score2 })),
+    })
     lastLocalSaveAt = Date.now()
 
     const { data } = await api.get(`/tekken/tournaments/${selected.value.id}`)
+    if (data.tournament) {
+      selected.value = { ...selected.value, ...data.tournament }
+      const idx = tournaments.value.findIndex((x) => x.id === selected.value.id)
+      if (idx !== -1) tournaments.value[idx] = { ...tournaments.value[idx], ...data.tournament }
+    }
     matches.value = normalizeMatches(data.matches || [], selected.value.format)
 
     if (selected.value.format === 'round_robin' || selected.value.format === 'groups_knockout') {
