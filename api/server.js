@@ -138,6 +138,12 @@ const pgOpts = process.env.DATABASE_URL
     };
 
 const pool = new Pool(pgOpts);
+// Sans ce handler, une connexion inactive coupée par la base (ex: Neon qui
+// ferme les connexions idle) fait planter tout le process Node ("Unhandled
+// 'error' event"). On journalise et on laisse le pool recréer une connexion.
+pool.on('error', (err) => {
+  console.error('[pg pool] erreur sur une connexion inactive:', err.message);
+});
 
 /* ====== App ====== */
 const app = express();
