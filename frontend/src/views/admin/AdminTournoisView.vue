@@ -172,6 +172,18 @@
                     Archiver
                   </button>
 
+                  <button
+                    v-if="selected.status === 'completed' || selected.status === 'archived'"
+                    @click="printTournamentResults"
+                    :disabled="printing"
+                    class="btn w-full sm:w-auto justify-center"
+                    title="Télécharger les résultats en PDF"
+                  >
+                    <Loader2Icon v-if="printing" class="w-3.5 h-3.5 animate-spin" />
+                    <DownloadIcon v-else class="w-3.5 h-3.5" />
+                    Télécharger les résultats
+                  </button>
+
                   <button @click="deleteTournament" class="btn-danger w-full sm:w-auto justify-center" title="Supprimer ce tournoi">
                     <Trash2Icon class="w-3.5 h-3.5" />
                     Supprimer
@@ -500,15 +512,25 @@ import BracketSE from '@/components/tournament/BracketSE.vue'
 import BracketDE from '@/components/tournament/BracketDE.vue'
 import BracketRR from '@/components/tournament/BracketRR.vue'
 import ScoreSaisieRapide from '@/components/tournament/ScoreSaisieRapide.vue'
-import { useAPI } from '@/composables/useAPI'
+import { useAPI, mediaUrl } from '@/composables/useAPI'
 import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
+import { useSiteSettings } from '@/stores/siteSettings'
 import { onRealtimeEvent, joinRealtimeRoom, leaveRealtimeRoom } from '@/composables/useRealtimeSocket'
 import { applyIdStandings } from '@/utils/tournamentLabels'
-import { PlusIcon, Trash2Icon, XIcon, Loader2Icon, ZapIcon, ArrowLeftIcon } from 'lucide-vue-next'
+import { PlusIcon, Trash2Icon, XIcon, Loader2Icon, ZapIcon, ArrowLeftIcon, DownloadIcon } from 'lucide-vue-next'
 
 const api = useAPI()
 const { success, error: toastError } = useToast()
+const site = useSiteSettings()
+const printing = ref(false)
+
+// Écho temps réel de nos propres sauvegardes : le serveur rediffuse "tournament:changed" a tout le
+// monde dans le salon, nous y compris. Sans ce garde-fou, chaque score enregistre (surtout en rafale
+// via la saisie rapide) declenchait un re-fetch complet + saut de scroll en plus de la mise a jour deja
+// faite localement par onScoreSaved/onBatchScoresSaved -- d'ou le rafraichissement visible "en boucle".
+let lastLocalSaveAt = 0
+const REALTIME_ECHO_GRACE_MS = 4000
 
 const tournaments = ref([])
 const selected = ref(null)
@@ -677,6 +699,7 @@ function bindRealtimeListeners() {
   realtimeOffTournamentChanged = onRealtimeEvent('tournament:changed', async (event = {}) => {
     const tournamentId = Number(event.tournamentId || 0)
     if (!Number.isInteger(tournamentId) || tournamentId <= 0) return
+    if (Date.now() - lastLocalSaveAt < REALTIME_ECHO_GRACE_MS) return
     try {
       const { data } = await api.get('/tournaments')
       tournaments.value = data.tournaments || []
@@ -979,10 +1002,12 @@ async function deleteTournament() {
 async function onScoreSaved({ matchId, score1, score2, done, fail }) {
   const scrollPos = capturePageScroll()
   try {
+    lastLocalSaveAt = Date.now()
     await api.post(`/admin/tournaments/${selected.value.id}/matches/${matchId}/result`, {
       score_p1: score1,
       score_p2: score2,
     })
+    lastLocalSaveAt = Date.now()
     const { data } = await api.get(`/tournaments/${selected.value.id}`)
     matches.value = normalizeMatches(data.matches || [], selected.value.format)
     if (selected.value.format === 'round_robin' || selected.value.format === 'groups_knockout') {
@@ -1009,18 +1034,21 @@ async function onScoreSaved({ matchId, score1, score2, done, fail }) {
   }
 }
 
-// 🔧 FEATURE: Handle batch score saves in a single request
+// Sauvegarde en rafale (saisie rapide) : les scores partent en parallele (matchs independants,
+// pas de raison de les serialiser) et un seul re-fetch a la fin -- au lieu d'un aller-retour
+// sequentiel par score, ce qui rendait la saisie de tout un round robin lente et saccadee.
 async function onBatchScoresSaved({ edits, done, fail }) {
   const scrollPos = capturePageScroll()
   try {
-    // Save all scores together via new endpoint or loop efficiently
-    for (const edit of edits) {
-      await api.post(`/admin/tournaments/${selected.value.id}/matches/${edit.matchId}/result`, {
+    lastLocalSaveAt = Date.now()
+    await Promise.all(edits.map((edit) =>
+      api.post(`/admin/tournaments/${selected.value.id}/matches/${edit.matchId}/result`, {
         score_p1: edit.score1,
         score_p2: edit.score2,
       })
-    }
-    
+    ))
+    lastLocalSaveAt = Date.now()
+
     // Load data once after all saves
     const { data } = await api.get(`/tournaments/${selected.value.id}`)
     matches.value = normalizeMatches(data.matches || [], selected.value.format)
@@ -1273,6 +1301,145 @@ function playedOf(s) {
   const explicit = s.played
   if (explicit !== undefined && explicit !== null && explicit !== '') return toInt(explicit)
   return winOf(s) + drawOf(s) + lossOf(s)
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (m) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[m]))
+}
+
+function matchPhaseLabel(m, format) {
+  if (format === 'groups_knockout') {
+    if (m.group_no !== null && m.group_no !== undefined) return `Groupe ${groupLabel(m.group_no)}`
+    return 'Phase finale'
+  }
+  if (format === 'double_elimination') {
+    if (m.bracket_side === 'GF') return 'Grande finale'
+    if (m.bracket_side === 'L') return 'Repêchage'
+    return 'Tableau principal'
+  }
+  return ''
+}
+
+// Fusionne aller/retour sur une ligne (voir TournoisView.vue) plutôt qu'une ligne par tour.
+function buildResultRows(playedMatches, format, rrMatchMode) {
+  if (format === 'round_robin' && rrMatchMode === 'home_away') {
+    const pairs = new Map()
+    for (const m of playedMatches) {
+      const a = m.p1_name || 'TBD'
+      const b = m.p2_name || 'TBD'
+      const key = [a, b].slice().sort().join('||')
+      if (!pairs.has(key)) pairs.set(key, [])
+      pairs.get(key).push(m)
+    }
+    const rows = []
+    for (const list of pairs.values()) {
+      list.sort((x, y) => x.round_no - y.round_no)
+      const p1 = list[0].p1_name || 'TBD'
+      const p2 = list[0].p2_name || 'TBD'
+      const score = list.map((m) => {
+        const sameOrder = (m.p1_name || 'TBD') === p1
+        return sameOrder ? `${m.score1}-${m.score2}` : `${m.score2}-${m.score1}`
+      }).join(' / ')
+      rows.push({ phase: '', p1, p2, score })
+    }
+    return rows
+  }
+  return playedMatches.map((m) => ({
+    phase: matchPhaseLabel(m, format),
+    p1: m.p1_name || 'TBD',
+    p2: m.p2_name || 'TBD',
+    score: `${m.score1} - ${m.score2}`,
+  }))
+}
+
+async function logoDataURL() {
+  const tryFetch = async (path) => {
+    if (!path) return null
+    try {
+      const r = await fetch(path, { cache: 'no-store' })
+      if (!r.ok) return null
+      const blob = await r.blob()
+      return await new Promise((resolve) => {
+        const fr = new FileReader()
+        fr.onload = () => resolve(fr.result)
+        fr.onerror = () => resolve(null)
+        fr.readAsDataURL(blob)
+      })
+    } catch (_) {
+      return null
+    }
+  }
+  const logoPath = mediaUrl(site.settings.brand.logo)
+  return (await tryFetch(logoPath))
+    || (await tryFetch('/assets/logo.png'))
+    || (await tryFetch('/assets/icons/apple-touch-icon.png'))
+}
+
+// Même mécanisme que la page publique (TournoisView.vue), accessible ici une fois le tournoi
+// termine/archive -- sans le résumé "classement final" (l'admin voit déjà le bracket complet
+// à l'écran, pas besoin de dupliquer les données de participants bruts pour ça ici).
+async function printTournamentResults() {
+  if (!selected.value) return
+  printing.value = true
+  try {
+    const t = selected.value
+    const format = t.format
+    const logo = await logoDataURL()
+    const css = '@page{size:A4 landscape;margin:12mm;}body{font:12px/1.4 "Segoe UI",Roboto,Arial,sans-serif;color:#111;}h1{font-size:20px;margin:0 0 4px;display:flex;align-items:center;gap:8px}h1 img{height:30px}h2{font-size:14px;margin:16px 0 6px;font-weight:700}h3{font-size:12px;margin:10px 0 4px;font-weight:700}.meta{color:#555;font-size:11px;margin-bottom:10px}table{width:100%;border-collapse:collapse;border:1px solid #ccc;margin-bottom:10px}th,td{border:1px solid #ccc;padding:4px 8px;text-align:center}thead th{background:#f0f0f0;font-weight:700}td.name{text-align:left}.winner-box{text-align:center;margin:8px 0 14px;padding:10px;border-radius:8px;background:#fffbeb;border:2px solid #ca8a04;font-weight:900;color:#78350f;font-size:16px}'
+
+    let html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>${escapeHtml(t.name)}</title><style>${css}</style></head><body onload="window.print()">`
+    html += `<h1>${logo ? `<img src="${logo}" alt="logo">` : ''}GOUZEPE GAMING CLUB — ${escapeHtml(t.name)}</h1>`
+    html += `<div class="meta">${escapeHtml(formatLabel(format))} · ${escapeHtml(statusLabel(t.status))}${t.participants?.length ? ` · ${t.participants.length} participants` : ''}</div>`
+
+    if (t.winner_name && (t.status === 'completed' || t.status === 'archived')) {
+      html += `<div class="winner-box">🏆 Vainqueur : ${escapeHtml(t.winner_name)}</div>`
+    }
+
+    const standingsTable = (rows) => {
+      let h = '<table><thead><tr><th>#</th><th class="name">Joueur</th><th>J</th><th>V</th><th>N</th><th>D</th><th>BM</th><th>BC</th><th>Diff</th><th>Pts</th></tr></thead><tbody>'
+      rows.forEach((s, idx) => {
+        h += `<tr><td>${idx + 1}</td><td class="name">${escapeHtml(s.name)}</td><td>${playedOf(s)}</td><td>${winOf(s)}</td><td>${drawOf(s)}</td><td>${lossOf(s)}</td><td>${bfOf(s)}</td><td>${bcOf(s)}</td><td>${diffOf(s)}</td><td><b>${ptsOf(s)}</b></td></tr>`
+      })
+      return h + '</tbody></table>'
+    }
+
+    if (format === 'round_robin' && rrStandings.value.length) {
+      html += '<h2>Classement</h2>' + standingsTable(rrStandings.value)
+    }
+
+    if (format === 'groups_knockout' && groupStandings.value.length) {
+      html += '<h2>Classements des groupes</h2>'
+      for (const grp of groupStandings.value) {
+        html += `<h3>Groupe ${groupLabel(grp.group_no)}</h3>` + standingsTable(grp.standings || [])
+      }
+    }
+
+    const played = matches.value
+      .filter((m) => m.score1 != null && m.score2 != null)
+      .slice()
+      .sort((a, b) => (a.round_no - b.round_no) || (a.slot_no - b.slot_no))
+    const resultRows = buildResultRows(played, format, t.rr_match_mode)
+    if (resultRows.length) {
+      html += '<h2>Résultats des matchs</h2><table><thead><tr><th>Phase</th><th class="name">Joueur 1</th><th>Score</th><th class="name">Joueur 2</th></tr></thead><tbody>'
+      for (const r of resultRows) {
+        html += `<tr><td>${escapeHtml(r.phase)}</td><td class="name">${escapeHtml(r.p1)}</td><td><b>${escapeHtml(r.score)}</b></td><td class="name">${escapeHtml(r.p2)}</td></tr>`
+      }
+      html += '</tbody></table>'
+    }
+
+    html += '</body></html>'
+
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }))
+    const w = window.open(url, '_blank')
+    if (!w) { toastError('Popup bloquée. Autorise les popups pour télécharger les résultats.'); return }
+    w.addEventListener('unload', () => URL.revokeObjectURL(url), { once: true })
+  } catch (_) {
+    toastError('Erreur lors de la génération du document')
+  } finally {
+    printing.value = false
+  }
 }
 </script>
 
