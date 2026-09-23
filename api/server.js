@@ -904,6 +904,10 @@ async function ensureSchema(){
   await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS counts_for_title BOOLEAN NOT NULL DEFAULT FALSE`);
   /* migration: pole de jeu (efoot / tekken) */
   await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS game_type TEXT NOT NULL DEFAULT 'efoot'`);
+  /* migration: journées Tekken = tournois « kind=journee » rattachés à une saison, avec barème de points */
+  await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'tournament'`);
+  await q(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS scoring JSONB`);
+  await q(`CREATE INDEX IF NOT EXISTS tournaments_game_kind_season_idx ON tournaments(game_type, kind, season_id)`);
   // Tekken n'a pas de notion de "buts" : le classement round robin / groupes y est toujours aux victoires.
   await q(`UPDATE tournaments SET rr_standings_mode='wins' WHERE game_type='tekken' AND rr_standings_mode <> 'wins'`);
   // Backfill winner_name depuis winner_player_id existants
@@ -1464,6 +1468,7 @@ async function getTournamentBundle(tournamentId) {
       t.winner_name, t.member_tournament, t.counts_for_title, t.day_comment, t.season_id,
       t.rr_match_mode, t.rr_standings_mode,
       t.nb_groups, t.qualifiers_per_group,
+      t.game_type, t.kind, t.scoring,
       t.created_at, t.updated_at,
       (SELECT COUNT(*)::int FROM tournament_participants tp WHERE tp.tournament_id=t.id) AS participants_count
     FROM tournaments t
@@ -2192,15 +2197,15 @@ function listTournamentsHandler(gameType) {
         SELECT
           t.id, t.slug, t.name, t.format, t.status, t.starts_at, t.ended_at,
           t.winner_name, t.winner_player_id, t.member_tournament, t.counts_for_title, t.day_comment, t.season_id,
-          t.rr_match_mode, t.rr_standings_mode,
+          t.rr_match_mode, t.rr_standings_mode, t.kind,
           t.created_at, t.updated_at,
           (SELECT COUNT(*)::int FROM tournament_participants tp WHERE tp.tournament_id=t.id) AS participants_count
         FROM tournaments t
-        WHERE t.game_type=$1 ${includeArchived ? '' : `AND t.status <> 'archived'`}
+        WHERE t.game_type=$1 AND t.kind=$2 ${includeArchived ? '' : `AND t.status <> 'archived'`}
         ORDER BY
           CASE t.status WHEN 'live' THEN 0 WHEN 'draft' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END,
           t.created_at DESC
-      `, [gameType]);
+      `, [gameType, req.query.kind === 'journee' ? 'journee' : 'tournament']);
       ok(res, { tournaments: rows.rows });
     } catch (e) {
       bad(res, 500, e.message || 'Impossible de charger les tournois');
@@ -2232,7 +2237,10 @@ function createTournamentHandler(gameType) {
   // Tekken n'a pas de "buts" : le classement y est toujours aux victoires, quoi qu'envoie le client.
   const rrStandingsMode = gameType === 'tekken' ? 'wins' : (req.body?.rr_standings_mode === 'wins' ? 'wins' : 'goals');
   const memberTournament = gameType === 'tekken' ? true : (req.body?.member_tournament === undefined ? false : !!req.body.member_tournament);
-  const countsForTitle = memberTournament ? !!req.body?.counts_for_title : false;
+  const kind = gameType === 'tekken' && req.body?.kind === 'journee' ? 'journee' : 'tournament';
+  // Journée Tekken : chaque match met à jour l'ELO (le hook ELO s'appuie sur counts_for_title).
+  const countsForTitle = kind === 'journee' ? true : (memberTournament ? !!req.body?.counts_for_title : false);
+  const scoring = kind === 'journee' ? normalizeTekkenDayScoring(req.body?.scoring) : null;
   const dayComment = String(req.body?.day_comment || '').trim() || null;
   const slug = slugifyTournamentName(name);
   try {
@@ -2247,10 +2255,10 @@ function createTournamentHandler(gameType) {
     }
 
     const created = await q(`
-      INSERT INTO tournaments(slug,name,format,status,starts_at,created_by,member_tournament,counts_for_title,season_id,day_comment,rr_match_mode,rr_standings_mode,game_type)
-      VALUES($1,$2,$3,'draft',$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      INSERT INTO tournaments(slug,name,format,status,starts_at,created_by,member_tournament,counts_for_title,season_id,day_comment,rr_match_mode,rr_standings_mode,game_type,kind,scoring)
+      VALUES($1,$2,$3,'draft',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
       RETURNING id
-    `, [slug, name, format, (startsAt && !Number.isNaN(startsAt.getTime())) ? startsAt.toISOString() : null, req.user.uid, memberTournament, countsForTitle, seasonId, dayComment, rrMatchMode, rrStandingsMode, gameType]);
+    `, [slug, name, format, (startsAt && !Number.isNaN(startsAt.getTime())) ? startsAt.toISOString() : null, req.user.uid, memberTournament, countsForTitle, seasonId, dayComment, rrMatchMode, rrStandingsMode, gameType, kind, scoring ? JSON.stringify(scoring) : null]);
     const bundle = await getTournamentBundle(created.rows[0].id);
     emitTournamentRealtime(bundle, 'created');
     ok(res, bundle);
@@ -2950,7 +2958,7 @@ function publicTournamentsHandler(gameType) {
            t.rr_match_mode, t.member_tournament, t.counts_for_title,
            (SELECT COUNT(*) FROM tournament_participants tp WHERE tp.tournament_id = t.id) AS participants_count
     FROM tournaments t
-    WHERE t.status IN ('live','completed') AND t.game_type=$1
+    WHERE t.status IN ('live','completed') AND t.game_type=$1 AND t.kind='tournament'
     ORDER BY COALESCE(t.starts_at, t.created_at) DESC
     LIMIT 12
   `, [gameType])
@@ -4024,6 +4032,157 @@ app.post('/admin/tekken/tournaments/:id/matches/batch-result', auth, adminOnly, 
   } finally {
     client.release();
   }
+});
+
+/* ====== Tekken : Journées (championnat) ======
+   Une journée est un tournoi Tekken kind='journee', rattaché à une saison. Ses points ne sont
+   pas stockés : ils sont recalculés depuis les matchs et le barème de la journée, si bien
+   qu'une correction de score ou de barème se répercute partout (journée et saison). */
+const TEKKEN_DAY_SCORING_DEFAULT = Object.freeze({ groupWin: 1, bracketWin: 2, losersWin: 1, championBonus: 3 });
+
+function normalizeTekkenDayScoring(raw) {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const out = {};
+  for (const key of Object.keys(TEKKEN_DAY_SCORING_DEFAULT)) {
+    const v = Number(src[key]);
+    // Pas de 0,25, borné à [0, 50] : un barème absurde ne doit pas écraser le championnat.
+    out[key] = Number.isFinite(v) && src[key] !== '' && src[key] !== null
+      ? Math.min(50, Math.max(0, Math.round(v * 4) / 4))
+      : TEKKEN_DAY_SCORING_DEFAULT[key];
+  }
+  return out;
+}
+
+// Phase d'un match, qui fixe les points de la victoire.
+function tekkenMatchStage(format, m) {
+  if (format === 'round_robin') return 'group';
+  if (m.bracket_side === 'G' || (m.group_no !== null && m.group_no !== undefined)) return 'group';
+  if (m.bracket_side === 'L') return 'losers';
+  return 'bracket';
+}
+
+function computeTekkenDayPoints(tournament, participants, matches) {
+  const scoring = normalizeTekkenDayScoring(tournament.scoring);
+  const perStage = { group: scoring.groupWin, bracket: scoring.bracketWin, losers: scoring.losersWin };
+  const rows = new Map();
+  for (const p of participants) {
+    rows.set(p.id, {
+      participant_id: p.id, player_id: p.player_id || null, name: p.name || p.display_name,
+      points: 0, wins: 0, losses: 0, rounds_diff: 0, champion: false,
+    });
+  }
+  for (const m of matches) {
+    // Exemptions et forfaits ne rapportent rien : il faut un vrai match joué entre deux joueurs.
+    if (m.status !== 'completed' || m.walkover || !m.p1_participant_id || !m.p2_participant_id) continue;
+    const a = rows.get(m.p1_participant_id);
+    const b = rows.get(m.p2_participant_id);
+    if (!a || !b) continue;
+    const s1 = Number(m.score_p1) || 0;
+    const s2 = Number(m.score_p2) || 0;
+    a.rounds_diff += s1 - s2;
+    b.rounds_diff += s2 - s1;
+    if (!m.winner_participant_id) continue; // nul (round robin) : aucun point
+    const winner = m.winner_participant_id === a.participant_id ? a : b;
+    const loser = winner === a ? b : a;
+    winner.wins += 1;
+    loser.losses += 1;
+    winner.points += perStage[tekkenMatchStage(tournament.format, m)] || 0;
+  }
+  if (tournament.status === 'completed' || tournament.status === 'archived') {
+    const champ = [...rows.values()].find((r) => r.name && r.name === tournament.winner_name);
+    if (champ) { champ.champion = true; champ.points += scoring.championBonus; }
+  }
+  const list = [...rows.values()].map((r) => ({ ...r, points: Math.round(r.points * 100) / 100 }));
+  list.sort((x, y) => (y.champion - x.champion) || (y.points - x.points) || (y.wins - x.wins)
+    || (y.rounds_diff - x.rounds_diff) || String(x.name).localeCompare(String(y.name), 'fr'));
+  return { scoring, standings: list.map((r, i) => ({ rank: i + 1, ...r })) };
+}
+
+async function resolveTekkenSeasonId(raw) {
+  const n = Number(raw);
+  if (Number.isInteger(n) && n > 0) return n;
+  return currentSeasonId();
+}
+
+async function computeTekkenSeasonStandings(seasonId) {
+  const days = await q(`
+    SELECT id
+    FROM tournaments
+    WHERE game_type='tekken' AND kind='journee' AND season_id=$1 AND status IN ('completed','archived')
+    ORDER BY COALESCE(starts_at, created_at) ASC
+  `, [seasonId]);
+  const totals = new Map();
+  for (const d of days.rows) {
+    const bundle = await getTournamentBundle(d.id);
+    if (!bundle) continue;
+    const { standings } = computeTekkenDayPoints(bundle.tournament, bundle.participants, bundle.matches);
+    for (const r of standings) {
+      // Clé joueur du club si elle existe, sinon le nom (participant libre).
+      const key = r.player_id ? `p:${r.player_id}` : `n:${String(r.name).toLowerCase()}`;
+      if (!totals.has(key)) {
+        totals.set(key, { player_id: r.player_id, name: r.name, points: 0, journees: 0, titles: 0, wins: 0, losses: 0, rounds_diff: 0 });
+      }
+      const t = totals.get(key);
+      t.points += r.points; t.journees += 1; t.wins += r.wins; t.losses += r.losses; t.rounds_diff += r.rounds_diff;
+      if (r.champion) t.titles += 1;
+    }
+  }
+  const list = [...totals.values()].map((t) => ({ ...t, points: Math.round(t.points * 100) / 100 }));
+  list.sort((x, y) => (y.points - x.points) || (y.titles - x.titles) || (y.wins - x.wins) || (y.rounds_diff - x.rounds_diff));
+  return { journees_count: days.rowCount, standings: list.map((t, i) => ({ rank: i + 1, ...t })) };
+}
+
+// Lecture publique (visiteurs compris) : liste des journées, détail en direct, classement de saison.
+app.get('/tekken/journees', async (req, res) => {
+  try {
+    const seasonId = await resolveTekkenSeasonId(req.query.season_id);
+    const r = await q(`
+      SELECT t.id, t.name, t.format, t.status, t.starts_at, t.ended_at, t.winner_name, t.season_id,
+             t.rr_match_mode, t.day_comment, t.scoring,
+             (SELECT COUNT(*)::int FROM tournament_participants tp WHERE tp.tournament_id=t.id) AS participants_count
+      FROM tournaments t
+      WHERE t.game_type='tekken' AND t.kind='journee' AND t.season_id=$1 AND t.status <> 'archived'
+      ORDER BY CASE t.status WHEN 'live' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END,
+               COALESCE(t.starts_at, t.created_at) DESC
+    `, [seasonId]);
+    ok(res, { season_id: seasonId, journees: r.rows });
+  } catch (e) { bad(res, 500, e.message || 'Impossible de charger les journées'); }
+});
+
+app.get('/tekken/journees/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
+  try {
+    const bundle = await getTournamentBundle(id);
+    if (!bundle || bundle.tournament.game_type !== 'tekken' || bundle.tournament.kind !== 'journee') {
+      return bad(res, 404, 'Journée introuvable');
+    }
+    const day = computeTekkenDayPoints(bundle.tournament, bundle.participants, bundle.matches);
+    ok(res, { ...bundle, day_scoring: day.scoring, day_standings: day.standings });
+  } catch (e) { bad(res, 500, e.message || 'Impossible de charger la journée'); }
+});
+
+app.get('/tekken/season-standings', async (req, res) => {
+  try {
+    const seasonId = await resolveTekkenSeasonId(req.query.season_id);
+    if (!seasonId) return ok(res, { season_id: null, journees_count: 0, standings: [] });
+    const data = await computeTekkenSeasonStandings(seasonId);
+    ok(res, { season_id: seasonId, ...data });
+  } catch (e) { bad(res, 500, e.message || 'Classement indisponible'); }
+});
+
+app.put('/admin/tekken/journees/:id/scoring', auth, adminOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
+  try {
+    const scoring = normalizeTekkenDayScoring(req.body?.scoring || req.body);
+    const r = await q(`UPDATE tournaments SET scoring=$2, updated_at=now()
+                       WHERE id=$1 AND game_type='tekken' AND kind='journee' RETURNING id`, [id, JSON.stringify(scoring)]);
+    if (!r.rowCount) return bad(res, 404, 'Journée introuvable');
+    const bundle = await getTournamentBundle(id);
+    emitTournamentRealtime(bundle, 'scoring');
+    ok(res, { scoring });
+  } catch (e) { bad(res, 500, e.message || 'Mise à jour du barème impossible'); }
 });
 
 /* ====== Tekken : Ladder ELO + Duels ====== */
