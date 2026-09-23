@@ -1,9 +1,6 @@
 <template>
   <AppLayout season-label="Admin Tournois Tekken">
     <div class="page-wrap admin-tournois-wrap">
-      <div class="mb-4">
-        <RouterLink to="/admin/tekken" class="text-sm text-gz-muted hover:text-gz-text transition-colors">&larr; Admin Tekken</RouterLink>
-      </div>
       <div class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-4 md:gap-6 items-start">
         <aside class="space-y-4 reveal admin-sidebar">
           <section class="card">

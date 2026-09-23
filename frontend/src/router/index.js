@@ -188,6 +188,19 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true, title: 'Administration' },
   },
   {
+    // Même vue que /journees, mais en mode saisie (voir canEdit dans JourneesView).
+    path: '/admin/journees',
+    name: 'AdminJournees',
+    component: () => import('@/views/JourneesView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, adminEdit: true, title: 'Admin - Journées' },
+  },
+  {
+    path: '/admin/saisons',
+    name: 'AdminSaisons',
+    component: () => import('@/views/admin/AdminSaisonsView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin - Saisons' },
+  },
+  {
     path: '/admin/tekken',
     name: 'AdminTekken',
     component: () => import('@/views/admin/AdminTekkenView.vue'),
@@ -203,7 +216,7 @@ const routes = [
     path: '/admin/joueurs',
     name: 'AdminJoueurs',
     component: () => import('@/views/admin/AdminJoueursView.vue'),
-    meta: { requiresAuth: true, title: 'Admin - Joueurs' },
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin - Joueurs' },
   },
   {
     path: '/admin/utilisateurs',

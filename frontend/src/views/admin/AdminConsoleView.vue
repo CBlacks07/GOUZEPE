@@ -2,44 +2,18 @@
   <AppLayout season-label="Administration">
     <div class="page-wrap console">
       <div class="mb-6">
-        <h1 class="title">Console d'administration</h1>
+        <h1 class="title">Tableau de bord</h1>
         <p class="sub">Gère les deux pôles du club et les réglages communs.</p>
       </div>
 
-      <!-- eFootball -->
-      <section class="grp">
-        <div class="grp-head efoot"><span class="dot"></span> eFootball</div>
+      <section v-for="g in ADMIN_GROUPS" :key="g.key" class="grp">
+        <div :class="['grp-head', g.key]"><span class="dot"></span> {{ g.title }}</div>
         <div class="cards">
-          <RouterLink v-for="c in efootCards" :key="c.to" :to="c.to" class="ac">
-            <component :is="c.icon" class="ac-ic" />
-            <div><strong>{{ c.label }}</strong><span>{{ c.desc }}</span></div>
-          </RouterLink>
-        </div>
-      </section>
-
-      <!-- Tekken -->
-      <section class="grp">
-        <div class="grp-head tekken"><span class="dot"></span> Tekken</div>
-        <div class="cards">
-          <RouterLink v-for="c in tekkenCards" :key="c.label" :to="c.to" class="ac">
-            <component :is="c.icon" class="ac-ic" />
-            <div>
-              <strong>{{ c.label }} <span v-if="c.soon" class="soon-tag">bientôt</span></strong>
-              <span>{{ c.desc }}</span>
-            </div>
-          </RouterLink>
-        </div>
-      </section>
-
-      <!-- Commun -->
-      <section class="grp">
-        <div class="grp-head common"><span class="dot"></span> Commun</div>
-        <div class="cards">
-          <RouterLink v-for="c in commonCards" :key="c.to" :to="c.to" class="ac">
+          <RouterLink v-for="c in g.links" :key="c.to" :to="c.to" class="ac">
             <component :is="c.icon" class="ac-ic" />
             <div>
               <strong>{{ c.label }}
-                <span v-if="c.to === '/admin/utilisateurs' && pendingCount > 0" class="badge-count">{{ pendingCount > 9 ? '9+' : pendingCount }}</span>
+                <span v-if="c.badge === 'membership' && pendingCount > 0" class="badge-count">{{ pendingCount > 9 ? '9+' : pendingCount }}</span>
               </strong>
               <span>{{ c.desc }}</span>
             </div>
@@ -54,32 +28,9 @@
 import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useMembershipNotif } from '@/composables/useMembershipNotif'
-import {
-  UsersIcon, TrophyIcon, CalendarDaysIcon, BarChart2Icon, SwordsIcon,
-  ShieldIcon, DatabaseIcon, PaletteIcon, GamepadIcon, ListOrderedIcon, MegaphoneIcon,
-} from 'lucide-vue-next'
+import { ADMIN_GROUPS } from '@/composables/useNavigation'
 
 const { pendingCount } = useMembershipNotif()
-
-const efootCards = [
-  { to: '/admin/joueurs',  label: 'Joueurs',     desc: 'Gérer les joueurs du club',        icon: UsersIcon },
-  { to: '/admin/tournois', label: 'Tournois',    desc: 'Créer & gérer les tournois eFoot', icon: TrophyIcon },
-  { to: '/accueil',        label: 'Journées',    desc: 'Saisir & confirmer les journées',  icon: CalendarDaysIcon },
-  { to: '/classement',     label: 'Classement',  desc: 'Saisons, classement & bilans',     icon: BarChart2Icon },
-]
-
-const tekkenCards = [
-  { to: '/admin/tekken', label: 'Ladder',   desc: 'Classement ELO des duels classes', icon: ListOrderedIcon },
-  { to: '/admin/tekken', label: 'Duels',    desc: 'Duels classes Tekken',              icon: SwordsIcon },
-  { to: '/admin/tekken/tournois', label: 'Tournois', desc: 'Tournois Tekken',          icon: GamepadIcon },
-]
-
-const commonCards = [
-  { to: '/admin/utilisateurs', label: 'Utilisateurs & demandes', desc: 'Comptes et demandes d\'adhésion', icon: ShieldIcon },
-  { to: '/admin/news',         label: 'Actualités',              desc: 'Annonces du club',                icon: MegaphoneIcon },
-  { to: '/admin/site',         label: 'Apparence du site',       desc: 'Textes, logo, fond, couleurs',    icon: PaletteIcon },
-  { to: '/admin/sauvegardes',  label: 'Sauvegardes',             desc: 'Backups & restauration',          icon: DatabaseIcon },
-]
 </script>
 
 <style scoped>
@@ -92,7 +43,7 @@ const commonCards = [
 .grp-head .dot { width: .7rem; height: .7rem; border-radius: 50%; }
 .grp-head.efoot .dot { background: #3b82f6; }
 .grp-head.tekken .dot { background: #ff5a2c; }
-.grp-head.common .dot { background: var(--muted); }
+.grp-head.club .dot { background: var(--muted); }
 
 .cards { display: grid; gap: .9rem; grid-template-columns: 1fr; }
 .ac { display: flex; align-items: center; gap: .9rem; padding: 1rem 1.1rem; background: var(--card); border: 1px solid var(--border); border-radius: 14px; text-decoration: none; color: var(--text); transition: transform .15s, border-color .15s; }

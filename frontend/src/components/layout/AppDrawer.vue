@@ -33,7 +33,7 @@
             @click="$emit('close')"
             class="relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gz-muted
                    hover:text-gz-text hover:bg-gz-border/20 transition-colors mb-0.5"
-            active-class="nav-on"
+            :class="{ 'nav-on': activeLink?.to === link.to || (link.to === '/admin' && route.path.startsWith('/admin')) }"
           >
             <component :is="link.icon" class="w-4 h-4 shrink-0" />
             {{ link.label }}
@@ -57,7 +57,7 @@
         <button @click="handleLogout" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
                text-sm text-gz-red hover:bg-gz-red/10 transition-colors">
           <LogOutIcon class="w-4 h-4" />
-          Se deconnecter
+          Se déconnecter
         </button>
       </div>
     </aside>
@@ -70,10 +70,8 @@ import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useMembershipNotif } from '@/composables/useMembershipNotif'
-import {
-  HomeIcon, CalendarDaysIcon, SwordsIcon, BarChart2Icon, UserIcon, TrophyIcon,
-  ShieldIcon, SunIcon, MoonIcon, LogOutIcon, XIcon, GamepadIcon, FootprintsIcon, GlobeIcon
-} from 'lucide-vue-next'
+import { EFOOT_LINKS, TEKKEN_LINKS, bestMatch, useMemberNav } from '@/composables/useNavigation'
+import { UserIcon, ShieldIcon, SunIcon, MoonIcon, LogOutIcon, XIcon, GlobeIcon } from 'lucide-vue-next'
 
 const props = defineProps({ open: Boolean })
 const emit = defineEmits(['close'])
@@ -118,65 +116,23 @@ const theme  = useThemeStore()
 const router = useRouter()
 const route  = useRoute()
 
-const mg = computed(() => auth.mainGame || 'efoot')
-const hasEfoot  = computed(() => mg.value === 'efoot' || mg.value === 'both')
-const hasTekken = computed(() => mg.value === 'tekken' || mg.value === 'both')
-const hasBoth   = computed(() => mg.value === 'both')
+const { showEfoot, showTekken } = useMemberNav()
 
-const efootRoutes = ['/journees', '/duel', '/classement', '/tournois', '/accueil']
-const tekkenRoutes = ['/tekken-ladder', '/tekken-tournois', '/accueil-tekken']
-
-const activePole = computed(() => {
-  const p = route.path
-  if (efootRoutes.some(r => p === r || (r !== '/accueil' && p.startsWith(r)))) return 'efoot'
-  if (tekkenRoutes.some(r => p === r || p.startsWith(r))) return 'tekken'
-  return null
-})
-
+// Même structure que le header desktop, quelle que soit la page.
 const visibleGroups = computed(() => {
-  const pole = activePole.value
-  const groups = []
-
-  groups.push({ title: '', links: [{ to: '/profil', label: 'Mon espace', icon: UserIcon }] })
-
-  if (pole === 'efoot') {
-    groups.push({
-      title: 'eFootball',
-      links: [
-        { to: '/accueil', label: 'Accueil', icon: HomeIcon },
-        { to: '/journees', label: 'Journees', icon: CalendarDaysIcon },
-        { to: '/duel', label: 'Duel', icon: SwordsIcon },
-        { to: '/classement', label: 'Classements', icon: BarChart2Icon },
-        { to: '/tournois', label: 'Tournois', icon: TrophyIcon },
-      ],
-    })
-    if (hasBoth.value) groups.push({ title: '', links: [{ to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon }] })
-  } else if (pole === 'tekken') {
-    groups.push({
-      title: 'Tekken',
-      links: [
-        { to: '/accueil-tekken', label: 'Accueil', icon: HomeIcon },
-        { to: '/tekken-ladder', label: 'Ladder', icon: GamepadIcon },
-        { to: '/tekken-tournois', label: 'Tournois', icon: TrophyIcon },
-      ],
-    })
-    if (hasBoth.value) groups.push({ title: '', links: [{ to: '/accueil', label: 'eFootball', icon: FootprintsIcon }] })
-  } else if (!route.path.startsWith('/admin') && !auth.isAdmin) {
-    const poleLinks = []
-    if (hasEfoot.value) poleLinks.push({ to: '/accueil', label: 'eFootball', icon: FootprintsIcon })
-    if (hasTekken.value) poleLinks.push({ to: '/accueil-tekken', label: 'Tekken', icon: GamepadIcon })
-    if (poleLinks.length) groups.push({ title: 'Poles', links: poleLinks })
-  }
-
+  const groups = [{ title: '', links: [{ to: '/profil', label: 'Mon espace', icon: UserIcon }] }]
+  if (showEfoot.value) groups.push({ title: 'eFootball', links: EFOOT_LINKS })
+  if (showTekken.value) groups.push({ title: 'Tekken', links: TEKKEN_LINKS })
   if (auth.isAdmin) {
-    groups.push({ title: '', links: [
-      { to: '/admin', label: 'Admin', icon: ShieldIcon },
-      { to: '/', label: 'Site public', icon: GlobeIcon },
+    groups.push({ title: 'Administration', links: [
+      { to: '/admin', label: 'Espace admin', icon: ShieldIcon },
+      { to: '/', label: 'Voir le site public', icon: GlobeIcon },
     ] })
   }
-
   return groups
 })
+
+const activeLink = computed(() => bestMatch(route.path, visibleGroups.value.flatMap((g) => g.links)))
 
 async function handleLogout() {
   if (!confirm('Voulez-vous vraiment vous deconnecter ?')) return

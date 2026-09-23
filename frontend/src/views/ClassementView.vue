@@ -12,9 +12,6 @@
             </option>
           </select>
         </div>
-        <button v-if="auth.isAdmin" @click="newSeasonModal = true" class="btn-primary text-sm">
-          <PlusIcon class="w-3.5 h-3.5" /> Créer saison
-        </button>
         <button @click="printSeasonA4" class="btn text-sm" title="Imprimer le classement saison au format A4">
           <PrinterIcon class="w-4 h-4" /> Imprimer saison
         </button>
@@ -31,16 +28,13 @@
           <option v-for="d in confirmedDays" :key="d" :value="d">{{ fmtDate(d) }}</option>
         </select>
         <button :disabled="!selectedDay" @click="viewDay" class="btn text-sm">Afficher</button>
-        <button v-if="auth.isAdmin" :disabled="!selectedDay" @click="goEditDay" class="btn-primary text-sm">
-          Modifier
-        </button>
         <button :disabled="!selectedDay" @click="printSelectedDay" class="btn text-sm" title="Imprimer cette journée au format PDF">
           Imprimer cette journée
         </button>
-        <button v-if="auth.isAdmin" :disabled="!selectedDay" @click="deleteDay" class="btn text-sm"
-                style="background:#2a0c0c;border-color:#7f1d1d;color:#fecaca">
-          Supprimer
-        </button>
+        <RouterLink v-if="auth.isAdmin && selectedDay" :to="{ path: '/admin/journees', query: { day: selectedDay } }"
+                    class="btn-primary text-sm" title="Ouvrir cette journée dans l'espace admin">
+          Modifier
+        </RouterLink>
       </div>
 
       <!-- Onglets -->
@@ -558,29 +552,13 @@
       </div>
     </BaseModal>
 
-    <!-- Modal: Créer saison -->
-    <BaseModal :open="newSeasonModal" title="Créer une saison" @close="newSeasonModal = false" size="sm">
-      <div>
-        <label class="label">Nom de la saison</label>
-        <input v-model="newSeasonName" type="text" class="input" placeholder="ex: Saison 1 — 2025" />
-        <p class="text-xs mt-2" style="color:var(--amber,#f59e0b)">
-          Démarrer une nouvelle saison <strong>clôture la saison en cours</strong> (elle reste consultable, mais ses journées ne sont plus modifiables comme « courante »).
-        </p>
-      </div>
-      <template #footer>
-        <button @click="newSeasonModal = false" class="btn">Annuler</button>
-        <button @click="createSeason" class="btn-primary" :disabled="!newSeasonName.trim() || creatingSeason">
-          <Loader2Icon v-if="creatingSeason" class="w-3.5 h-3.5 animate-spin" /> Créer
-        </button>
-      </template>
-    </BaseModal>
 
   </AppLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAPI, mediaUrl } from '@/composables/useAPI'
@@ -588,12 +566,11 @@ import { useAuthStore } from '@/stores/auth'
 import { useSiteSettings } from '@/stores/siteSettings'
 import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
-import { ArrowLeftRightIcon, RefreshCwIcon, PlusIcon, Loader2Icon, PrinterIcon, TrophyIcon, FlameIcon, BarChart2Icon } from 'lucide-vue-next'
+import { ArrowLeftRightIcon, RefreshCwIcon, Loader2Icon, PrinterIcon, TrophyIcon, FlameIcon, BarChart2Icon } from 'lucide-vue-next'
 
 const api    = useAPI()
 const auth   = useAuthStore()
 const site   = useSiteSettings()
-const router = useRouter()
 const { success, error: toastError } = useToast()
 
 /* ====== State ====== */
@@ -636,9 +613,6 @@ const activeTournamentId  = ref(null)
 const playerTitles  = ref(null)
 const titlesFilter  = ref('all')
 
-const newSeasonModal  = ref(false)
-const newSeasonName   = ref('')
-const creatingSeason  = ref(false)
 let aggBuildVersion   = 0
 let aggPromise        = null
 
@@ -652,7 +626,6 @@ useSessionState('efoot.ui.classement.v1', {
   clTab,
   cmpA,
   cmpB,
-  newSeasonModal,
 })
 
 /* ====== Computed ====== */
@@ -1126,11 +1099,6 @@ async function viewDay() {
   } catch (_) {}
 }
 
-function goEditDay() {
-  if (!selectedDay.value) return
-  router.push({ path: '/', query: { day: selectedDay.value } })
-}
-
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (m) => ({
     '&': '&amp;',
@@ -1472,19 +1440,6 @@ async function printSeasonA4() {
   w.addEventListener('unload', () => URL.revokeObjectURL(url), { once: true })
 }
 
-async function deleteDay() {
-  if (!selectedDay.value) return
-  if (!confirm(`Supprimer définitivement la Journée du ${fmtDate(selectedDay.value)} ?`)) return
-  try {
-    await api.delete(`/matchdays/${selectedDay.value}`)
-    success('Journée supprimée')
-    selectedDay.value = ''
-    await load()
-  } catch (_) {
-    toastError('Erreur lors de la suppression')
-  }
-}
-
 /* ====== Compare ====== */
 const SOURCE_META = {
   journee: { label: 'Journées', short: 'Journée', bg: 'rgba(37,99,235,.15)',  fg: '#60a5fa' },
@@ -1606,22 +1561,6 @@ async function runCompare() {
 function openPlayerTitles(row) {
   titlesFilter.value = 'all'
   playerTitles.value = row
-}
-
-/* ====== Create season ====== */
-async function createSeason() {
-  if (!newSeasonName.value.trim()) return
-  creatingSeason.value = true
-  try {
-    await api.post('/seasons', { name: newSeasonName.value.trim() })
-    success('Saison créée')
-    newSeasonName.value = ''
-    newSeasonModal.value = false
-    await loadSeasons()
-  } catch (e) {
-    toastError('Erreur lors de la création')
-  }
-  creatingSeason.value = false
 }
 </script>
 
