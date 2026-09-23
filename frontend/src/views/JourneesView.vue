@@ -43,8 +43,15 @@
               <RefreshCwIcon class="w-3.5 h-3.5" />
             </button>
 
+            <RouterLink v-if="auth.isAdmin && !canEdit"
+                        :to="{ path: '/admin/journees', query: selectedDate ? { day: selectedDate } : {} }"
+                        class="btn-primary text-xs gap-1" title="Saisir / modifier cette journée">
+              <PencilIcon class="w-3.5 h-3.5" />
+              <span>Modifier</span>
+            </RouterLink>
+
             <!-- Actions admin -->
-            <template v-if="auth.isAdmin">
+            <template v-if="canEdit">
               <button @click="openParticipantsModal" class="btn-primary text-xs gap-1">
                 <UsersIcon class="w-3.5 h-3.5" />
                 <span class="hidden md:inline">Participants</span>
@@ -221,7 +228,7 @@
               <div class="day-div-badge">D1</div>
               <h4 class="day-div-title">Division 1</h4>
               <span class="day-div-count">{{ d1Matches.length }} confrontation(s)</span>
-              <button v-if="auth.isAdmin" @click="addMatch('d1')" class="btn text-xs ml-auto" title="Ajouter une ligne">+ Ajouter</button>
+              <button v-if="canEdit" @click="addMatch('d1')" class="btn text-xs ml-auto" title="Ajouter une ligne">+ Ajouter</button>
             </div>
             <div class="overflow-x-auto table-shell" style="max-height:480px;overflow-y:auto;-webkit-overflow-scrolling:touch">
               <table class="w-full text-sm matches-table" style="border-collapse:separate;border-spacing:0 4px">
@@ -234,7 +241,7 @@
                     <th class="p-2 text-left sortable-col" @click="onSortHeader('d1', 'p2')" :title="sortTitle('d1', 'p2')">
                       Joueur 2 <span class="sort-indicator">{{ sortIndicator('d1', 'p2') }}</span>
                     </th>
-                    <th v-if="auth.isAdmin" class="p-2 w-8"></th>
+                    <th v-if="canEdit" class="p-2 w-8"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -246,7 +253,7 @@
                       class="transition-colors"
                       :style="highlightSet.has('d1-'+i) ? 'outline:2px solid #3b82f6;border-radius:8px' : ''">
                     <td class="p-1">
-                      <input v-if="auth.isAdmin" v-model="m.p1" list="players-dl"
+                      <input v-if="canEdit" v-model="m.p1" list="players-dl"
                              class="input text-sm px-2 py-1 player-id-input" placeholder="ID"
                              @input="onMatchInput" />
                       <span v-else class="font-medium player-id-text">{{ m.p1 || '—' }}</span>
@@ -254,36 +261,36 @@
                     <td class="p-1 text-center">
                       <!-- Aller row -->
                       <div class="flex items-center gap-1 justify-center mb-1">
-                        <input v-if="auth.isAdmin" v-model="m.a1" type="number" min="0"
+                        <input v-if="canEdit" v-model="m.a1" type="number" min="0"
                                class="input text-sm text-center px-1 py-1" style="width:44px"
                                @input="onMatchInput" />
                         <span v-else class="text-center" style="width:24px">{{ m.a1 ?? '—' }}</span>
                         <span class="text-xs" style="color:var(--muted)">–</span>
-                        <input v-if="auth.isAdmin" v-model="m.a2" type="number" min="0"
+                        <input v-if="canEdit" v-model="m.a2" type="number" min="0"
                                class="input text-sm text-center px-1 py-1" style="width:44px"
                                @input="onMatchInput" />
                         <span v-else class="text-center" style="width:24px">{{ m.a2 ?? '—' }}</span>
                       </div>
                       <!-- Retour row -->
                       <div class="flex items-center gap-1 justify-center" style="opacity:.7">
-                        <input v-if="auth.isAdmin" v-model="m.r1" type="number" min="0"
+                        <input v-if="canEdit" v-model="m.r1" type="number" min="0"
                                class="input text-sm text-center px-1 py-1" style="width:44px"
                                @input="onMatchInput" />
                         <span v-else class="text-center" style="width:24px">{{ m.r1 ?? '—' }}</span>
                         <span class="text-xs" style="color:var(--muted)">–</span>
-                        <input v-if="auth.isAdmin" v-model="m.r2" type="number" min="0"
+                        <input v-if="canEdit" v-model="m.r2" type="number" min="0"
                                class="input text-sm text-center px-1 py-1" style="width:44px"
                                @input="onMatchInput" />
                         <span v-else class="text-center" style="width:24px">{{ m.r2 ?? '—' }}</span>
                       </div>
                     </td>
                     <td class="p-1">
-                      <input v-if="auth.isAdmin" v-model="m.p2" list="players-dl"
+                      <input v-if="canEdit" v-model="m.p2" list="players-dl"
                              class="input text-sm px-2 py-1 player-id-input" placeholder="ID"
                              @input="onMatchInput" />
                       <span v-else class="font-medium player-id-text">{{ m.p2 || '—' }}</span>
                     </td>
-                    <td v-if="auth.isAdmin" class="p-1 text-center">
+                    <td v-if="canEdit" class="p-1 text-center">
                       <button @click="removeMatch('d1', i)" title="Supprimer"
                               style="background:none;border:none;cursor:pointer;color:#ef4444;padding:4px">
                         <Trash2Icon class="w-4 h-4" />
@@ -345,7 +352,7 @@
               <div class="day-div-badge day-div-badge--d2">D2</div>
               <h4 class="day-div-title">Division 2</h4>
               <span class="day-div-count">{{ d2Matches.length }} confrontation(s)</span>
-              <button v-if="auth.isAdmin" @click="addMatch('d2')" class="btn text-xs ml-auto" title="Ajouter une ligne">+ Ajouter</button>
+              <button v-if="canEdit" @click="addMatch('d2')" class="btn text-xs ml-auto" title="Ajouter une ligne">+ Ajouter</button>
             </div>
             <div class="overflow-x-auto table-shell" style="max-height:480px;overflow-y:auto;-webkit-overflow-scrolling:touch">
               <table class="w-full text-sm matches-table" style="border-collapse:separate;border-spacing:0 4px">
@@ -358,7 +365,7 @@
                     <th class="p-2 text-left sortable-col" @click="onSortHeader('d2', 'p2')" :title="sortTitle('d2', 'p2')">
                       Joueur 2 <span class="sort-indicator">{{ sortIndicator('d2', 'p2') }}</span>
                     </th>
-                    <th v-if="auth.isAdmin" class="p-2 w-8"></th>
+                    <th v-if="canEdit" class="p-2 w-8"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -370,42 +377,42 @@
                       class="transition-colors"
                       :style="highlightSet.has('d2-'+i) ? 'outline:2px solid #3b82f6;border-radius:8px' : ''">
                     <td class="p-1">
-                      <input v-if="auth.isAdmin" v-model="m.p1" list="players-dl"
+                      <input v-if="canEdit" v-model="m.p1" list="players-dl"
                              class="input text-sm px-2 py-1 player-id-input" placeholder="ID"
                              @input="onMatchInput" />
                       <span v-else class="font-medium player-id-text">{{ m.p1 || '—' }}</span>
                     </td>
                     <td class="p-1 text-center">
                       <div class="flex items-center gap-1 justify-center mb-1">
-                        <input v-if="auth.isAdmin" v-model="m.a1" type="number" min="0"
+                        <input v-if="canEdit" v-model="m.a1" type="number" min="0"
                                class="input text-sm text-center px-1 py-1" style="width:44px"
                                @input="onMatchInput" />
                         <span v-else class="text-center" style="width:24px">{{ m.a1 ?? '—' }}</span>
                         <span class="text-xs" style="color:var(--muted)">–</span>
-                        <input v-if="auth.isAdmin" v-model="m.a2" type="number" min="0"
+                        <input v-if="canEdit" v-model="m.a2" type="number" min="0"
                                class="input text-sm text-center px-1 py-1" style="width:44px"
                                @input="onMatchInput" />
                         <span v-else class="text-center" style="width:24px">{{ m.a2 ?? '—' }}</span>
                       </div>
                       <div class="flex items-center gap-1 justify-center" style="opacity:.7">
-                        <input v-if="auth.isAdmin" v-model="m.r1" type="number" min="0"
+                        <input v-if="canEdit" v-model="m.r1" type="number" min="0"
                                class="input text-sm text-center px-1 py-1" style="width:44px"
                                @input="onMatchInput" />
                         <span v-else class="text-center" style="width:24px">{{ m.r1 ?? '—' }}</span>
                         <span class="text-xs" style="color:var(--muted)">–</span>
-                        <input v-if="auth.isAdmin" v-model="m.r2" type="number" min="0"
+                        <input v-if="canEdit" v-model="m.r2" type="number" min="0"
                                class="input text-sm text-center px-1 py-1" style="width:44px"
                                @input="onMatchInput" />
                         <span v-else class="text-center" style="width:24px">{{ m.r2 ?? '—' }}</span>
                       </div>
                     </td>
                     <td class="p-1">
-                      <input v-if="auth.isAdmin" v-model="m.p2" list="players-dl"
+                      <input v-if="canEdit" v-model="m.p2" list="players-dl"
                              class="input text-sm px-2 py-1 player-id-input" placeholder="ID"
                              @input="onMatchInput" />
                       <span v-else class="font-medium player-id-text">{{ m.p2 || '—' }}</span>
                     </td>
-                    <td v-if="auth.isAdmin" class="p-1 text-center">
+                    <td v-if="canEdit" class="p-1 text-center">
                       <button @click="removeMatch('d2', i)" title="Supprimer"
                               style="background:none;border:none;cursor:pointer;color:#ef4444;padding:4px">
                         <Trash2Icon class="w-4 h-4" />
@@ -463,7 +470,7 @@
         </div>
 
         <!-- Barrage -->
-        <div v-if="auth.isAdmin" class="day-barrage-card">
+        <div v-if="canEdit" class="day-barrage-card">
           <div class="day-division-header" style="border-bottom:1px solid rgba(59,130,246,.2);background:rgba(59,130,246,.06)">
             <div class="day-div-badge" style="background:rgba(59,130,246,.15);color:#3b82f6">B</div>
             <h4 class="day-div-title">Barrage D2 ↔ D1</h4>
@@ -638,8 +645,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, reactive, computed, onMounted, onUnmounted, onActivated } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -648,7 +655,7 @@ import { useSiteSettings } from '@/stores/siteSettings'
 import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
 import { onRealtimeEvent, joinRealtimeRoom, leaveRealtimeRoom } from '@/composables/useRealtimeSocket'
-import { Loader2Icon, Trash2Icon, RefreshCcwIcon, SearchIcon, PrinterIcon, SaveIcon, UsersIcon, MoreVerticalIcon, RefreshCwIcon, TrophyIcon } from 'lucide-vue-next'
+import { Loader2Icon, Trash2Icon, RefreshCcwIcon, SearchIcon, PrinterIcon, SaveIcon, UsersIcon, MoreVerticalIcon, RefreshCwIcon, TrophyIcon, PencilIcon } from 'lucide-vue-next'
 
 const SVG_TROPHY = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>'
 
@@ -657,6 +664,12 @@ const api    = useAPI()
 const site   = useSiteSettings()
 const route  = useRoute()
 const router = useRouter()
+// La saisie n'est possible que depuis l'espace admin (/admin/journees) ;
+// /journees reste en consultation pour tout le monde, admin compris.
+// Mode figé à la création : la page est gardée en cache (KeepAlive) par route,
+// et `route` suit la route courante globale.
+const isAdminEditRoute = route.meta.adminEdit === true
+const canEdit = computed(() => auth.isAdmin && isAdminEditRoute)
 const { success, error: toastError, info: toastInfo } = useToast()
 const MATCH_SORT_STORAGE_KEY = 'gz_journees_match_sort_v1'
 
@@ -951,7 +964,7 @@ function onSortHeader(div, key) {
   }
   sortMatches(div)
   saveSortPreferences()
-  if (auth.isAdmin) onMatchInput()
+  if (canEdit.value) onMatchInput()
 }
 
 function sortIndicator(div, key) {
@@ -1085,6 +1098,19 @@ function unbindRealtimeListeners() {
 }
 
 /* ====== Lifecycle ====== */
+// Page gardée en cache : un lien ?day=… (ex. « Modifier » depuis le classement)
+// doit charger la journée demandée même si la page était déjà ouverte.
+let activatedOnce = false
+onActivated(() => {
+  // La 1re activation suit le montage, qui gère déjà ?day.
+  if (!activatedOnce) { activatedOnce = true; return }
+  const day = typeof route.query.day === 'string' ? route.query.day : ''
+  if (day && day !== selectedDate.value) {
+    selectedDate.value = day
+    onDateChange()
+  }
+})
+
 onMounted(async () => {
   await Promise.all([loadSeason(), loadPlayers()])
   loadSortPreferences()
@@ -1215,13 +1241,13 @@ async function loadDayTournaments() {
 function onMatchInput() {
   lastEditAt.value = Date.now()
   clearTimeout(autoSaveTimer)
-  if (auth.isAdmin) {
+  if (canEdit.value) {
     autoSaveTimer = setTimeout(() => saveDraft(true), 2000)
   }
 }
 
 async function saveDraft(silent = false) {
-  if (!auth.isAdmin) return
+  if (!canEdit.value) return
   saving.value = true
   try {
     await api.put(`/matchdays/draft/${selectedDate.value}`, buildPayload())
@@ -1382,7 +1408,7 @@ async function syncCycle() {
   if (loadingDay.value || publishing.value || saving.value) return
 
   const recentlyEditing = (Date.now() - lastEditAt.value) < 20000
-  if (auth.isAdmin && dayStatusDisplay.value !== 'confirmed' && recentlyEditing) {
+  if (canEdit.value && dayStatusDisplay.value !== 'confirmed' && recentlyEditing) {
     await saveDraft(true)
     return
   }
