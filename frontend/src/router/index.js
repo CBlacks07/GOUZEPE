@@ -66,6 +66,18 @@ const routes = [
     meta: { requiresAuth: false, title: 'Classements' },
   },
   {
+    path: '/efootball/journees',
+    name: 'EfootJourneesPublic',
+    component: () => import('@/views/public/EfootJourneesPublicView.vue'),
+    meta: { requiresAuth: false, title: 'eFootball - Journées' },
+  },
+  {
+    path: '/tournoi/:id',
+    name: 'TournoiPublic',
+    component: () => import('@/views/public/TournoiPublicView.vue'),
+    meta: { requiresAuth: false, title: 'Tournoi' },
+  },
+  {
     // Lisibles par tous (visiteurs compris) : mise en page membre ou publique selon la connexion.
     path: '/tekken/journees',
     name: 'TekkenJournees',

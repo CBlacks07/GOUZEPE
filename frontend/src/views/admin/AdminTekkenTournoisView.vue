@@ -13,8 +13,8 @@
               <div>
                 <label class="label">Format</label>
                 <select v-model="newT.format" class="input">
-                  <option value="single_elimination">Elimination simple</option>
-                  <option value="double_elimination">Double elimination</option>
+                  <option value="single_elimination">Élimination simple</option>
+                  <option value="double_elimination">Double élimination</option>
                   <option value="round_robin">Round Robin</option>
                   <option value="groups_knockout">Groupes + Finales</option>
                 </select>
@@ -64,7 +64,7 @@
               <button @click="createTournament" :disabled="creating" class="btn-primary w-full justify-center" :title="isJournee ? 'Créer une journée' : 'Créer un tournoi'">
                 <Loader2Icon v-if="creating" class="w-3.5 h-3.5 animate-spin" />
                 <PlusIcon v-else class="w-3.5 h-3.5" />
-                Creer
+                Créer
               </button>
             </div>
           </section>
@@ -126,10 +126,10 @@
                     @click="generateBracket"
                     :disabled="generating"
                     class="btn-primary w-full sm:w-auto justify-center"
-                    title="Generer le bracket"
+                    title="Générer le bracket"
                   >
                     <Loader2Icon v-if="generating" class="w-3.5 h-3.5 animate-spin" />
-                    Generer le bracket
+                    Générer le bracket
                   </button>
 
                   <button
@@ -145,7 +145,7 @@
                     v-if="selected.status === 'live'"
                     @click="changeStatus('completed')"
                     class="btn w-full sm:w-auto justify-center"
-                    title="Passer en termine"
+                    title="Passer en terminé"
                   >
                     Terminer
                   </button>
@@ -197,7 +197,7 @@
                     <textarea
                       v-model="selectedDayComment"
                       class="input min-h-[92px]"
-                      placeholder="Commentaire de la journee tournoi..."
+                      placeholder="Commentaire de la journée tournoi..."
                     />
                   </div>
                   <template v-if="selected?.format === 'round_robin'">
@@ -336,16 +336,16 @@
                     class="btn w-full sm:w-auto justify-center"
                     title="Valider les joueurs coches"
                   >
-                    Valider la selection
+                    Valider la sélection
                   </button>
                   <button
                     @click="memberSelection = []"
                     class="btn w-full sm:w-auto justify-center"
-                    title="Tout decocher"
+                    title="Tout décocher"
                   >
-                    Tout decocher
+                    Tout décocher
                   </button>
-                  <span class="text-xs text-gz-muted">{{ memberSelection.length }} selectionne(s)</span>
+                  <span class="text-xs text-gz-muted">{{ memberSelection.length }} sélectionné(s)</span>
                 </div>
               </div>
 
@@ -482,16 +482,16 @@
                       @score-saved="onScoreSaved"
                     />
                     <div v-else class="py-4 space-y-3">
-                      <div class="text-sm text-gz-muted">Tableau final non genere pour ce tournoi.</div>
+                      <div class="text-sm text-gz-muted">Tableau final non généré pour ce tournoi.</div>
                       <button
                         v-if="shouldShowKnockoutGenerate"
                         @click="generateKnockoutFromGroups()"
                         :disabled="generatingKnockout"
                         class="btn-primary w-full sm:w-auto justify-center"
-                        title="Generer le tableau final depuis les groupes"
+                        title="Générer le tableau final depuis les groupes"
                       >
                         <Loader2Icon v-if="generatingKnockout" class="w-3.5 h-3.5 animate-spin" />
-                        Generer le tableau final
+                        Générer le tableau final
                       </button>
                     </div>
                   </section>
@@ -999,7 +999,7 @@ async function generateBracket() {
     tournaments.value = data.tournaments || []
     const fresh = tournaments.value.find((t) => t.id === selected.value.id)
     if (fresh) await selectTournament(fresh)
-    success('Bracket genere')
+    success('Bracket généré')
   } catch (e) {
     toastError(e.response?.data?.error || 'Erreur')
   }
@@ -1039,7 +1039,7 @@ async function deleteTournament() {
     await syncTournamentRoom(null)
     selectedTournamentId.value = null
     selected.value = null
-    success('Tournoi supprime')
+    success('Tournoi supprimé')
   } catch (e) {
     toastError(e.response?.data?.error || 'Erreur')
   }
@@ -1073,7 +1073,7 @@ async function onScoreSaved({ matchId, score1, score2, done, fail }) {
     }
     const shouldAutoGenerate = shouldShowKnockoutGenerate.value
     done()
-    success('Score enregistre')
+    success('Score enregistré')
     if (shouldAutoGenerate) {
       await generateKnockoutFromGroups({ automatic: true })
     }
@@ -1118,7 +1118,7 @@ async function onBatchScoresSaved({ edits, done, fail }) {
 
     done()
     showSaisieRapide.value = false
-    success(`${edits.length} score(s) enregistres`)
+    success(`${edits.length} score(s) enregistrés`)
     await nextTick()
     restorePageScroll(scrollPos, 14)
   } catch (e) {
@@ -1199,7 +1199,7 @@ async function saveTournamentMeta() {
     selectedRrMatchMode.value = String(tournament.rr_match_mode || 'single')
     const idx = tournaments.value.findIndex((t) => t.id === selected.value.id)
     if (idx !== -1) tournaments.value[idx] = { ...tournaments.value[idx], ...tournament }
-    success('Meta tournoi mise a jour')
+    success('Informations du tournoi mises à jour')
   } catch (e) {
     toastError(e.response?.data?.error || 'Erreur')
   }
@@ -1211,13 +1211,13 @@ function statusVariant(s) {
 }
 
 function statusLabel(s) {
-  return { live: 'LIVE', completed: 'Termine', archived: 'Archive', draft: 'Brouillon', cancelled: 'Annule' }[s] ?? s
+  return { live: 'LIVE', completed: 'Terminé', archived: 'Archivé', draft: 'Brouillon', cancelled: 'Annulé' }[s] ?? s
 }
 
 function formatLabel(f) {
   return {
-    single_elimination: 'Elimination simple',
-    double_elimination: 'Double elimination',
+    single_elimination: 'Élimination simple',
+    double_elimination: 'Double élimination',
     round_robin: 'Round Robin',
     groups_knockout: 'Groupes + Finales',
   }[f] ?? f
