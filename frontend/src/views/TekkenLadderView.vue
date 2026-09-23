@@ -3,7 +3,7 @@
     <div class="page-wrap tk-page">
       <div class="section-head">
         <h1>Tekken Ladder</h1>
-        <p>Classement ELO des duels classes entre membres.</p>
+        <p>Classement ELO des duels classés entre membres.</p>
       </div>
 
       <!-- Onglets -->
@@ -30,8 +30,8 @@
                 <th class="text-center">V</th>
                 <th class="text-center">D</th>
                 <th class="text-center">%</th>
-                <th class="text-center">Serie</th>
-                <th class="text-center">Meilleure serie</th>
+                <th class="text-center">Série</th>
+                <th class="text-center">Meilleure série</th>
                 <th class="text-center">Peak ELO</th>
               </tr>
             </thead>
@@ -77,7 +77,7 @@
       <!-- TAB: Duels recents -->
       <section v-if="tab === 'history'" class="card">
         <div v-if="duelsLoading" class="empty">Chargement...</div>
-        <div v-else-if="!duels.length" class="empty">Aucun duel enregistre.</div>
+        <div v-else-if="!duels.length" class="empty">Aucun duel enregistré.</div>
         <div v-else class="duels-list">
           <article v-for="d in duels" :key="d.id" class="duel-card">
             <div class="duel-date">{{ fmtDate(d.played_at) }}</div>

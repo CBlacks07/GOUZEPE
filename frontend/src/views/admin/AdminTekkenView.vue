@@ -42,7 +42,7 @@
                 <th class="text-center">ELO</th>
                 <th class="text-center">V</th>
                 <th class="text-center">D</th>
-                <th class="text-center">Serie</th>
+                <th class="text-center">Série</th>
                 <th class="text-center">Peak</th>
                 <th>Actions</th>
               </tr>
@@ -111,7 +111,7 @@
                 <td colspan="7" class="text-center text-gz-muted py-8">Chargement...</td>
               </tr>
               <tr v-else-if="!duels.length">
-                <td colspan="7" class="text-center text-gz-muted py-8">Aucun duel enregistre.</td>
+                <td colspan="7" class="text-center text-gz-muted py-8">Aucun duel enregistré.</td>
               </tr>
               <tr v-for="d in duels" :key="d.id">
                 <td class="text-gz-muted text-xs whitespace-nowrap">{{ fmtDate(d.played_at) }}</td>
@@ -196,9 +196,9 @@
             <span v-if="duelMsg" :class="['text-sm', duelOk ? 'text-gz-green' : 'text-gz-red']">{{ duelMsg }}</span>
           </div>
 
-          <!-- Resultat apres soumission -->
+          <!-- Résultat après soumission -->
           <div v-if="lastResult" class="mt-4 p-3 border border-gz-border rounded-lg bg-gz-panel/30">
-            <p class="text-sm font-semibold mb-1">Resultat enregistre</p>
+            <p class="text-sm font-semibold mb-1">Résultat enregistré</p>
             <p class="text-sm text-gz-muted">
               Vainqueur : <strong>{{ lastResult.winner_name }}</strong>
             </p>
@@ -343,7 +343,7 @@ async function confirmCorrect() {
   try {
     await api.post(`/admin/tekken/ladder/${encodeURIComponent(correctTarget.value.player_id)}/correct`, correctForm.value)
     correctModal.value = false
-    success('ELO corrige')
+    success('ELO corrigé')
     await loadLadder()
   } catch (e) {
     correctErr.value = e.response?.data?.error || 'Erreur lors du correctif'
@@ -385,7 +385,7 @@ async function submitDuel() {
 }
 
 async function deleteDuel(id) {
-  if (!confirm('Supprimer ce duel ? (les ELO ne seront pas recalcules)')) return
+  if (!confirm('Supprimer ce duel ? (les ELO ne seront pas recalculés)')) return
   try {
     await api.delete('/admin/tekken/duels/' + id)
     await loadDuels()

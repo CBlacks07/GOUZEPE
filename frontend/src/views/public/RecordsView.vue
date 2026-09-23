@@ -9,7 +9,8 @@
       </div>
 
       <div v-if="loading" class="empty">Chargement…</div>
-      <div v-else class="rec-grid">
+      <h2 v-if="!loading" class="rec-game"><span class="dot efoot" />eFootball</h2>
+      <div v-if="!loading" class="rec-grid">
         <article v-if="r.carton" class="rec-card">
           <div class="rec-icon icon-red"><ZapIcon class="w-5 h-5" /></div>
           <span class="rec-label">Plus large victoire</span>
@@ -47,6 +48,31 @@
 
         <div v-if="!hasAny" class="empty">Pas encore de données pour établir des records.</div>
       </div>
+
+      <template v-if="!loading">
+        <h2 class="rec-game"><span class="dot tekken" />Tekken</h2>
+        <div class="rec-grid">
+          <article v-if="tk.peak_elo" class="rec-card">
+            <div class="rec-icon icon-orange"><ZapIcon class="w-5 h-5" /></div>
+            <span class="rec-label">ELO record</span>
+            <div class="rec-value">{{ tk.peak_elo.name }} <span class="score">{{ tk.peak_elo.elo }}</span></div>
+            <div class="rec-sub">Plus haut ELO atteint au ladder</div>
+          </article>
+          <article v-if="tk.best_streak" class="rec-card">
+            <div class="rec-icon icon-red"><FlameIcon class="w-5 h-5" /></div>
+            <span class="rec-label">Plus longue série</span>
+            <div class="rec-value">{{ tk.best_streak.name }}</div>
+            <div class="rec-sub">{{ tk.best_streak.streak }} victoires d'affilée</div>
+          </article>
+          <article v-if="tk.most_titles" class="rec-card">
+            <div class="rec-icon icon-gold"><TrophyIcon class="w-5 h-5" /></div>
+            <span class="rec-label">Plus de journées remportées</span>
+            <div class="rec-value">{{ tk.most_titles.name }}</div>
+            <div class="rec-sub">{{ tk.most_titles.count }} journée(s) gagnée(s)</div>
+          </article>
+          <div v-if="!hasTekken" class="empty">Les records Tekken apparaîtront après les premiers matchs classés.</div>
+        </div>
+      </template>
     </section>
 
     <PublicFooter />
@@ -62,7 +88,9 @@ import { ZapIcon, FlameIcon, TrophyIcon, TargetIcon, BarChart2Icon } from 'lucid
 
 const loading = ref(true)
 const r = ref({})
+const tk = ref({})
 const hasAny = computed(() => Object.values(r.value || {}).some(Boolean))
+const hasTekken = computed(() => Object.values(tk.value || {}).some(Boolean))
 
 function fmtDate(d) {
   if (!d) return ''
@@ -72,7 +100,7 @@ function fmtDate(d) {
 onMounted(async () => {
   try {
     const res = await fetch(resolveBaseURL() + '/public/records', { headers: { Accept: 'application/json' } })
-    if (res.ok) { const d = await res.json(); r.value = d.records || {} }
+    if (res.ok) { const d = await res.json(); r.value = d.records || {}; tk.value = d.tekken || {} }
   } catch (_) {}
   loading.value = false
 })
@@ -87,6 +115,11 @@ onMounted(async () => {
 .section-head p { color: var(--muted); margin: 0; }
 .empty { color: var(--muted); padding: 2rem 0; }
 
+.rec-game { display: flex; align-items: center; gap: .55rem; font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: 1rem; margin: 2rem 0 1rem; }
+.rec-game:first-of-type { margin-top: 0; }
+.rec-game .dot { width: .6rem; height: .6rem; border-radius: 50%; }
+.rec-game .dot.efoot { background: #3b82f6; }
+.rec-game .dot.tekken { background: #ff5a2c; }
 .rec-grid { display: grid; gap: 1.1rem; grid-template-columns: 1fr; }
 @media (min-width: 720px) { .rec-grid { grid-template-columns: 1fr 1fr; } }
 @media (min-width: 1100px) { .rec-grid { grid-template-columns: repeat(3, 1fr); } }

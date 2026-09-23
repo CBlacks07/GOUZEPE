@@ -2985,13 +2985,8 @@ function publicTournamentsHandler(gameType) {
 app.get('/public/tournaments', publicTournamentsHandler('efoot'));
 
 // Dernière journée confirmée (public) — classements D1 et D2 complets
-app.get('/public/latest-day', async (_req, res) => {
-  const s = await q(`SELECT id FROM seasons WHERE is_closed=false ORDER BY id DESC LIMIT 1`)
-  if (!s.rowCount) return ok(res, { day: null })
-  const sid = s.rows[0].id
-  const r = await q(`SELECT day, payload FROM matchday WHERE season_id=$1 ORDER BY day DESC LIMIT 1`, [sid])
-  if (!r.rowCount) return ok(res, { day: null })
-  const row = r.rows[0]
+// Vue publique d'une journée eFootball confirmée (classements D1/D2, champions, résultats).
+async function buildPublicMatchday(row) {
   const p = row.payload || {}
   const inviteIds = collectInviteIdsFromPayload(p)
   const roles = await getPlayersRoles()
@@ -3019,7 +3014,7 @@ app.get('/public/latest-day', async (_req, res) => {
   const d1 = buildStandings(p.d1 || [], inviteIds)
   const d2 = buildStandings(p.d2 || [], inviteIds)
 
-  ok(res, {
+  return {
     day:       dayjs(row.day).format('YYYY-MM-DD'),
     status:    'confirmed',
     champions: p.champions || {},
@@ -3030,7 +3025,39 @@ app.get('/public/latest-day', async (_req, res) => {
     d2,
     results_d1: buildResults(p.d1),
     results_d2: buildResults(p.d2),
-  })
+  }
+}
+
+app.get('/public/latest-day', async (_req, res) => {
+  const s = await q(`SELECT id FROM seasons WHERE is_closed=false ORDER BY id DESC LIMIT 1`)
+  if (!s.rowCount) return ok(res, { day: null })
+  const r = await q(`SELECT day, payload FROM matchday WHERE season_id=$1 ORDER BY day DESC LIMIT 1`, [s.rows[0].id])
+  if (!r.rowCount) return ok(res, { day: null })
+  ok(res, await buildPublicMatchday(r.rows[0]))
+})
+
+// Journées confirmées d'une saison (la plus récente d'abord).
+app.get('/public/matchdays', async (req, res) => {
+  try {
+    const sid = await resolveTekkenSeasonId(req.query.season_id)
+    if (!sid) return ok(res, { season_id: null, days: [] })
+    const r = await q(`SELECT day, payload FROM matchday WHERE season_id=$1 ORDER BY day DESC`, [sid])
+    const days = r.rows.map((row) => {
+      const c = (row.payload || {}).champions || {}
+      return { day: dayjs(row.day).format('YYYY-MM-DD'), champion_d1: c.d1?.id || null, champion_d2: c.d2?.id || null }
+    })
+    ok(res, { season_id: sid, days })
+  } catch (e) { bad(res, 500, e.message || 'Journées indisponibles') }
+})
+
+app.get('/public/matchday/:date', async (req, res) => {
+  const d = String(req.params.date || '')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return bad(res, 400, 'Date invalide')
+  try {
+    const r = await q(`SELECT day, payload FROM matchday WHERE day=$1`, [d])
+    if (!r.rowCount) return bad(res, 404, 'Journée introuvable')
+    ok(res, await buildPublicMatchday(r.rows[0]))
+  } catch (e) { bad(res, 500, e.message || 'Journée indisponible') }
 })
 
 // Demande de membre (public)
@@ -3190,9 +3217,14 @@ app.get('/public/palmares', async (_req, res) => {
         id: r.id, name: r.name, moyenne: r.moyenne, total: r.total,
         participations: r.participations, won_d1: r.won_d1, won_d2: r.won_d2,
       }))
+      const tk = await computeTekkenSeasonStandings(s.id)
       out.push({
         id: s.id, name: s.name, is_closed: s.is_closed, ended_at: s.ended_at,
         journees: daysCount, classed_count: classed.length, podium,
+        tekken: {
+          journees: tk.journees_count,
+          podium: tk.standings.slice(0, 3).map((r) => ({ id: r.player_id, name: r.name, points: r.points, titles: r.titles, wins: r.wins })),
+        },
       })
     }
     ok(res, { seasons: out })
@@ -3287,7 +3319,23 @@ app.get('/public/records', async (_req, res) => {
     }
     const nm = id => nameById.get(id) || id
 
+    // Tekken : ELO record, plus longue série, plus de titres de journée.
+    const peak = (await q(`SELECT l.player_id, p.name, l.peak_elo FROM tekken_ladder l JOIN players p ON p.player_id=l.player_id
+                           ORDER BY l.peak_elo DESC, l.wins DESC LIMIT 1`)).rows[0] || null
+    const tkStreak = (await q(`SELECT l.player_id, p.name, l.best_streak FROM tekken_ladder l JOIN players p ON p.player_id=l.player_id
+                               WHERE l.best_streak > 0 ORDER BY l.best_streak DESC, l.elo DESC LIMIT 1`)).rows[0] || null
+    const tkTitles = (await q(`
+      SELECT tp.player_id, MAX(tp.display_name) AS name, COUNT(*)::int AS count
+      FROM tournaments t JOIN tournament_participants tp ON tp.tournament_id=t.id AND tp.display_name=t.winner_name
+      WHERE t.game_type='tekken' AND t.kind='journee' AND t.status IN ('completed','archived') AND tp.player_id IS NOT NULL
+      GROUP BY tp.player_id ORDER BY count DESC LIMIT 1`)).rows[0] || null
+
     ok(res, {
+      tekken: {
+        peak_elo: peak && peak.peak_elo > 1200 ? { id: peak.player_id, name: peak.name, elo: peak.peak_elo } : null,
+        best_streak: tkStreak ? { id: tkStreak.player_id, name: tkStreak.name, streak: tkStreak.best_streak } : null,
+        most_titles: tkTitles ? { id: tkTitles.player_id, name: tkTitles.name, count: tkTitles.count } : null,
+      },
       records: {
         carton: carton ? { ...carton, winner_name: nm(carton.winner), loser_name: nm(carton.loser) } : null,
         top_journee: topJournee ? { ...topJournee, name: nm(topJournee.id) } : null,
@@ -3398,7 +3446,7 @@ app.get('/public/faceoff/:a/:b', async (req, res) => {
 // Annuaire public des membres (hors invités)
 app.get('/public/members', async (_req, res) => {
   const r = await q(`
-    SELECT player_id, name, role, profile_pic_url, created_at,
+    SELECT player_id, name, role, profile_pic_url, created_at, COALESCE(main_game, 'efoot') AS main_game,
            COALESCE(admission_year, EXTRACT(YEAR FROM created_at)::INT) AS admission_year
     FROM players
     WHERE UPPER(COALESCE(role,'MEMBRE')) <> 'INVITE'
@@ -3743,6 +3791,20 @@ app.get('/tekken/tournaments/:id/standings', auth, async (req, res) => {
   } catch (e) { bad(res, 500, e.message); }
 });
 app.get('/public/tekken/tournaments', publicTournamentsHandler('tekken'));
+app.get('/public/tournaments/:id', async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide')
+  try {
+    const bundle = await getTournamentBundle(id)
+    if (!bundle || bundle.tournament.kind !== 'tournament' || !['live', 'completed', 'archived'].includes(bundle.tournament.status)) {
+      return bad(res, 404, 'Tournoi introuvable')
+    }
+    const ranking = rankTournamentParticipants(bundle.tournament, bundle.participants.map((p) => ({ ...p, display_name: p.name })), bundle.matches)
+      .map((r) => ({ rank: r.rank, name: r.display_name, player_id: r.player_id || null }))
+    ok(res, { ...bundle, ranking })
+  } catch (e) { bad(res, 500, e.message || 'Tournoi indisponible') }
+})
+
 // Saisons (lecture publique) : sélecteur de saison des pages Journées / Classement Tekken.
 app.get('/public/seasons', async (_req, res) => {
   try {
@@ -5054,6 +5116,7 @@ async function computeSeasonStandings(seasonId){
            COALESCE(ended_at, updated_at, created_at) AS played_at
     FROM tournaments
     WHERE season_id=$1
+      AND game_type='efoot'
       AND status='completed'
       AND member_tournament=true
       AND counts_for_title=true
@@ -5400,7 +5463,7 @@ app.get('/seasons/:id/tournaments-breakdown', auth, async (req, res) => {
       SELECT id, name, slug, format, status, winner_name, rr_standings_mode,
              starts_at, COALESCE(ended_at, updated_at, created_at) AS played_at
       FROM tournaments
-      WHERE season_id=$1 AND status='completed'
+      WHERE season_id=$1 AND game_type='efoot' AND status='completed'
         AND member_tournament=true AND counts_for_title=true
       ORDER BY COALESCE(ended_at, updated_at, created_at) ASC, id ASC
     `, [sid]);
@@ -5583,7 +5646,7 @@ app.get('/season/guest/:playerId', auth, async (req, res) => {
              COALESCE(t.ended_at, t.updated_at, t.created_at) AS dt
       FROM tournaments t
       JOIN tournament_participants tp ON tp.tournament_id = t.id
-      WHERE t.season_id=$1 AND t.member_tournament=true AND t.status='completed'
+      WHERE t.season_id=$1 AND t.game_type='efoot' AND t.member_tournament=true AND t.status='completed'
         AND t.counts_for_title=true AND tp.player_id=$2
     `, [seasonId, playerId])
     for (const t of tlist.rows) {
@@ -5701,7 +5764,7 @@ async function computeGuestStandings(seasonId) {
   const tournaments = await q(`
     SELECT id, format, winner_name, rr_standings_mode
     FROM tournaments
-    WHERE season_id=$1 AND member_tournament=true AND status='completed' AND counts_for_title=true
+    WHERE season_id=$1 AND game_type='efoot' AND member_tournament=true AND status='completed' AND counts_for_title=true
     ORDER BY COALESCE(ended_at, updated_at, created_at) ASC, id ASC
   `, [seasonId])
   for (const t of tournaments.rows) {

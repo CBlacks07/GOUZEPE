@@ -10,7 +10,7 @@
           <span class="hero-club-label">{{ hero.eyebrow }}</span>
         </div>
 
-        <!-- Bande photos defilante (si configuree) -->
+        <!-- Bande photos défilante : photos Tekken, sinon celles du club -->
         <div v-if="strip.length" class="hero-photos-track-wrap" aria-hidden="true">
           <div class="hero-photos-track">
             <div
@@ -34,12 +34,13 @@
             </h2>
             <p class="hero-sub reveal delay-1">{{ hero.lead }}</p>
             <div class="flex flex-wrap gap-2 reveal delay-2">
-              <router-link to="/tekken-ladder" class="btn-primary">{{ hero.ctaPrimary }}</router-link>
+              <router-link to="/tekken/journees" class="btn-primary">Journées</router-link>
+              <router-link to="/tekken-ladder" class="btn">{{ hero.ctaPrimary }}</router-link>
               <router-link to="/profil" class="btn-ghost">Mon espace</router-link>
             </div>
           </div>
 
-          <!-- Visuel rotatif (si configure) -->
+          <!-- Visuel rotatif : visuels Tekken, sinon ceux du club -->
           <div v-if="heroSlides.length" class="hero-visual" aria-hidden="true">
             <div class="hero-ring hero-ring-outer"></div>
             <div class="hero-ring hero-ring-inner"></div>
@@ -69,10 +70,10 @@
           <div class="my-rank-stats">
             <span class="my-stat"><span class="my-stat-n win">{{ myLadder.wins }}</span> V</span>
             <span class="my-stat"><span class="my-stat-n loss">{{ myLadder.losses }}</span> D</span>
-            <span class="my-stat">Serie: <strong :class="myLadder.streak > 0 ? 'win' : myLadder.streak < 0 ? 'loss' : ''">
+            <span class="my-stat">Série : <strong :class="myLadder.streak > 0 ? 'win' : myLadder.streak < 0 ? 'loss' : ''">
               {{ myLadder.streak > 0 ? 'W' + myLadder.streak : myLadder.streak < 0 ? 'L' + Math.abs(myLadder.streak) : '--' }}
             </strong></span>
-            <span class="my-stat">Peak: <strong>{{ myLadder.peak_elo }}</strong></span>
+            <span class="my-stat">Record : <strong>{{ myLadder.peak_elo }}</strong></span>
           </div>
         </div>
       </section>
@@ -83,7 +84,7 @@
           <h3 class="font-semibold">Derniers duels</h3>
         </div>
         <div v-if="loadingDuels" class="text-sm" style="color:var(--muted)">Chargement...</div>
-        <div v-else-if="!duels.length" class="text-sm" style="color:var(--muted)">Aucun duel enregistre.</div>
+        <div v-else-if="!duels.length" class="text-sm" style="color:var(--muted)">Aucun duel enregistré.</div>
         <div v-else class="duels-feed">
           <div v-for="d in duels.slice(0, 6)" :key="d.id" class="duel-row">
             <span class="duel-date">{{ fmtDate(d.played_at) }}</span>
@@ -134,7 +135,8 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { useAPI, resolveBaseURL, mediaUrl } from '@/composables/useAPI'
+import { useAPI, resolveBaseURL } from '@/composables/useAPI'
+import { loadHomeMedia } from '@/composables/useClubMedia'
 import { useGameStore } from '@/stores/game'
 import { useSiteSettings, DEFAULTS } from '@/stores/siteSettings'
 import { BarChart2Icon, UserIcon, TrophyIcon } from 'lucide-vue-next'
@@ -150,9 +152,7 @@ const liveTournament = ref(null)
 
 // Reglages d'apparence de l'accueil Tekken (avec valeurs par defaut)
 const hero = computed(() => ({ ...DEFAULTS.tekkenHome, ...(site.settings.tekkenHome || {}) }))
-const strip = computed(() => (site.settings.tekkenHome?.slides || []).filter(Boolean).map(mediaUrl))
-
-const HERO_ANIMS = ['slide-float', 'slide-zoom', 'slide-spin', 'slide-drift']
+const strip = ref([])
 const heroSlides = ref([])
 const heroSlideIndex = ref(0)
 let heroSlideTimer = null
@@ -165,8 +165,10 @@ function fmtDate(d) {
 onMounted(async () => {
   game.set('tekken')
 
-  const cmsHero = (site.settings.tekkenHome?.hero || []).filter(Boolean)
-  heroSlides.value = cmsHero.map((src, i) => ({ src: mediaUrl(src), alt: `Tekken ${i + 1}`, anim: HERO_ANIMS[i % HERO_ANIMS.length] }))
+  // Même repli que l'accueil eFootball : sans médias Tekken, on montre les photos du club.
+  const media = await loadHomeMedia(site.settings, 'tekkenHome', 'Tekken')
+  strip.value = media.photos
+  heroSlides.value = media.slides
   if (heroSlides.value.length > 1) {
     heroSlideTimer = setInterval(() => {
       heroSlideIndex.value = (heroSlideIndex.value + 1) % heroSlides.value.length
