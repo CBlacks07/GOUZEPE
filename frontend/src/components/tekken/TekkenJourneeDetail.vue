@@ -67,24 +67,8 @@
       <!-- Matchs / bracket -->
       <section class="tj-card">
         <!-- Le tableau toutes rondes porte déjà son titre « Confrontations ». -->
-        <div v-if="t.format !== 'round_robin' || !matches.length" class="tj-card-head"><h3>Tableau</h3></div>
-        <div v-if="!matches.length" class="tj-empty">Le tableau n'est pas encore généré.</div>
-        <template v-else>
-          <BracketSE v-if="t.format === 'single_elimination'" :matches="matches" :admin-mode="false" :persist-key="`tk-j-${t.id}-se`" />
-          <BracketDE v-else-if="t.format === 'double_elimination'" :matches="matches" :admin-mode="false" :persist-key="`tk-j-${t.id}-de`" />
-          <BracketRR v-else-if="t.format === 'round_robin'" :matches="matches" :standings="[]" standings-mode="wins" :admin-mode="false" />
-          <div v-else-if="t.format === 'groups_knockout'" class="space-y-4">
-            <div v-for="g in groups" :key="g.group_no">
-              <h4 class="tj-sub">Groupe {{ String.fromCharCode(65 + g.group_no) }}</h4>
-              <BracketRR :matches="g.matches" :standings="[]" standings-mode="wins" :admin-mode="false" />
-            </div>
-            <div>
-              <h4 class="tj-sub">Phase finale</h4>
-              <BracketSE v-if="knockout.length" :matches="knockout" :admin-mode="false" :persist-key="`tk-j-${t.id}-ko`" />
-              <p v-else class="tj-empty">La phase finale commencera à la fin des groupes.</p>
-            </div>
-          </div>
-        </template>
+        <div v-if="t.format !== 'round_robin' || !(data.matches || []).length" class="tj-card-head"><h3>Tableau</h3></div>
+        <BracketView :matches="data.matches || []" :format="t.format" :persist-key="`tk-j-${t.id}`" />
       </section>
     </template>
   </div>
@@ -93,11 +77,10 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import BracketSE from '@/components/tournament/BracketSE.vue'
-import BracketDE from '@/components/tournament/BracketDE.vue'
-import BracketRR from '@/components/tournament/BracketRR.vue'
+import BracketView from '@/components/tournament/BracketView.vue'
 import { useAPI } from '@/composables/useAPI'
 import { onRealtimeEvent } from '@/composables/useRealtimeSocket'
+import { FORMAT_LABELS } from '@/utils/bracketMatches'
 import { TrophyIcon, Loader2Icon } from 'lucide-vue-next'
 
 const props = defineProps({ journeeId: { type: Number, required: true } })
@@ -123,38 +106,6 @@ const scoringHint = computed(() => {
   parts.push(`champion +${s.championBonus}`)
   return 'Barème : ' + parts.join(' · ')
 })
-
-// Même normalisation que les écrans de tournoi : les brackets attendent ces champs.
-function normalizeSide(raw, format, roundNo) {
-  const side = String(raw || '').trim().toUpperCase()
-  if (['W', 'L', 'GF', 'G'].includes(side)) return side
-  if (format === 'double_elimination') return roundNo >= 20 ? 'GF' : roundNo >= 10 ? 'L' : 'W'
-  return 'W'
-}
-const matches = computed(() => (data.value?.matches || []).map((m) => {
-  const roundNo = Number(m.round_no || 0)
-  return {
-    ...m,
-    round_no: roundNo,
-    slot_no: Number(m.slot_no || 0),
-    p1_id: m.p1_participant_id ?? null,
-    p2_id: m.p2_participant_id ?? null,
-    score1: m.score_p1 ?? null,
-    score2: m.score_p2 ?? null,
-    bracket_side: normalizeSide(m.bracket_side, t.value.format, roundNo),
-  }
-}))
-const isGroup = (m) => m.bracket_side === 'G' || (m.group_no !== null && m.group_no !== undefined)
-const groups = computed(() => {
-  const map = new Map()
-  for (const m of matches.value.filter(isGroup)) {
-    const k = Number(m.group_no) || 0
-    if (!map.has(k)) map.set(k, [])
-    map.get(k).push(m)
-  }
-  return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([group_no, list]) => ({ group_no, matches: list }))
-})
-const knockout = computed(() => matches.value.filter((m) => !isGroup(m)))
 
 async function load() {
   const id = props.journeeId
@@ -190,14 +141,8 @@ onUnmounted(() => {
 watch(() => props.journeeId, () => { data.value = null; load() })
 
 const STATUS = { draft: 'À venir', live: 'En direct', completed: 'Terminée', archived: 'Archivée', cancelled: 'Annulée' }
-const FORMATS = {
-  single_elimination: 'Élimination simple',
-  double_elimination: 'Double élimination',
-  round_robin: 'Toutes rondes',
-  groups_knockout: 'Poules + phase finale',
-}
 function statusLabel(s) { return STATUS[s] || s }
-function formatLabel(f) { return FORMATS[f] || f }
+function formatLabel(f) { return FORMAT_LABELS[f] || f }
 function fmtDate(v) {
   const d = new Date(v)
   return isNaN(d) ? '' : d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -228,7 +173,6 @@ function fmtDate(v) {
 .tj-card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem; margin-bottom: .75rem; }
 .tj-card-head h3 { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: .95rem; }
 .tj-hint { font-size: .75rem; color: var(--muted); }
-.tj-sub { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: .5rem; }
 .tj-player { color: inherit; text-decoration: none; }
 .tj-player:hover { color: var(--accent-l); }
 .tj-card .data-table { min-width: 0; }
