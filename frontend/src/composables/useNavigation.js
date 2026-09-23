@@ -18,8 +18,10 @@ export const EFOOT_LINKS = [
 ]
 
 export const TEKKEN_LINKS = [
-  { to: '/accueil-tekken',  label: 'Accueil',  icon: HomeIcon },
-  { to: '/tekken-ladder',   label: 'Ladder',   icon: ListOrderedIcon },
+  { to: '/accueil-tekken',    label: 'Accueil',    icon: HomeIcon },
+  { to: '/tekken/journees',   label: 'Journées',   icon: CalendarDaysIcon },
+  { to: '/tekken/classement', label: 'Classement', icon: BarChart2Icon },
+  { to: '/tekken-ladder',     label: 'Ladder',     icon: ListOrderedIcon },
   { to: '/tekken-tournois', label: 'Tournois', icon: TrophyIcon },
 ]
 
@@ -36,6 +38,7 @@ export const ADMIN_GROUPS = [
   },
   {
     key: 'tekken', title: 'Tekken', links: [
+      { to: '/admin/tekken/journees', label: 'Journées',       desc: 'Journées de championnat : scores, points, ELO', icon: CalendarDaysIcon },
       { to: '/admin/tekken',          label: 'Ladder & duels', desc: 'Classement ELO et duels classés', icon: SwordsIcon },
       { to: '/admin/tekken/tournois', label: 'Tournois',       desc: 'Tournois Tekken', icon: GamepadIcon },
     ],
