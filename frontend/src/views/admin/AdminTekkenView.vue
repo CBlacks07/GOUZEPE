@@ -2,7 +2,6 @@
   <AppLayout season-label="Admin Tekken">
     <div class="page-wrap tk-admin">
       <div class="mb-6">
-        <RouterLink to="/admin" class="back">&larr; Console</RouterLink>
         <h1 class="title">Tekken -- Ladder &amp; Duels</h1>
       </div>
 
@@ -246,7 +245,6 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAPI } from '@/composables/useAPI'
@@ -401,8 +399,6 @@ onMounted(async () => {
 
 <style scoped>
 .tk-admin { max-width: 64rem; }
-.back { color: var(--muted); text-decoration: none; font-size: .85rem; font-weight: 600; }
-.back:hover { color: var(--accent-l); }
 .title { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 1.5rem; margin-top: .4rem; }
 
 .tabs { display: inline-flex; gap: .35rem; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); margin-bottom: 1.2rem; }

@@ -5115,7 +5115,7 @@ app.get('/matchdays/draft/:date', auth, async (req,res)=>{
     ok(res,{ payload: r.rows[0].payload });
   }catch(e){ bad(res,500,'draft get error'); }
 });
-app.put('/matchdays/draft/:date', auth, async (req,res)=>{
+app.put('/matchdays/draft/:date', auth, adminOnly, async (req,res)=>{
   const d = req.params.date;
   // âœ… FIX: Validation de la date et du payload
   if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return bad(res,400,'Invalid date format (YYYY-MM-DD expected)');
@@ -5134,7 +5134,7 @@ app.put('/matchdays/draft/:date', auth, async (req,res)=>{
     ok(res,{ ok:true });
   }catch(e){ bad(res,500,'draft save error'); }
 });
-app.delete('/matchdays/draft/:date', auth, async (req,res)=>{
+app.delete('/matchdays/draft/:date', auth, adminOnly, async (req,res)=>{
   try{
     await q('DELETE FROM draft WHERE day=$1',[req.params.date]);
     ok(res,{ ok:true });
@@ -5180,7 +5180,7 @@ app.post('/matchdays/confirm', auth, adminOnly, async (req,res)=>{
     bad(res,500,'Failed to confirm matchday');
   }
 });
-app.delete('/matchdays/:date', auth, async (req,res)=>{
+app.delete('/matchdays/:date', auth, adminOnly, async (req,res)=>{
   await q(`DELETE FROM matchday WHERE day=$1`,[req.params.date]);
   io.to(`day:${req.params.date}`).emit('day:updated', { date:req.params.date, source:'deleted' });
   io.emit('season:changed');
