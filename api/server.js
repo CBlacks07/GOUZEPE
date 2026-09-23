@@ -32,6 +32,13 @@ const EMAIL_FROM = process.env.EMAIL_FROM || 'GOUZEPE Gaming Club <no-reply@gouz
 const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || 'contact@gouzepe-gaming.com';
 const SITE_URL = String(process.env.SITE_URL || 'https://gouzepe-gaming.com').replace(/\/+$/, '');
 const EMAIL_LOGO_URL = `${SITE_URL}/assets/icons/icon-192x192.png`;
+// Logo joint à l'e-mail (image intégrée, référencée en cid:) : il s'affiche même quand la
+// messagerie ne va pas chercher les images distantes. Lien distant en secours.
+const EMAIL_LOGO_CID = 'gz-logo';
+const EMAIL_LOGO_B64 = (() => {
+  try { return fs.readFileSync(path.join(__dirname, 'assets', 'email-logo.png')).toString('base64'); }
+  catch (_) { return null; }
+})();
 
 function escapeHtml(s) {
   return String(s ?? '')
@@ -50,7 +57,7 @@ function emailShell(title, bodyHtml) {
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:14px;overflow:hidden;">
             <tr>
               <td style="background:#0f1a30;padding:28px 24px;text-align:center;">
-                <img src="${EMAIL_LOGO_URL}" alt="GOUZEPE" width="56" height="56" style="border-radius:12px;display:block;margin:0 auto 10px;" />
+                <img src="__EMAIL_LOGO_SRC__" alt="GOUZEPE" width="56" height="56" style="border-radius:12px;display:block;margin:0 auto 10px;" />
                 <div style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:.04em;">GOUZEPE <span style="color:#3b82f6;">GAMING CLUB</span></div>
               </td>
             </tr>
@@ -80,15 +87,29 @@ async function sendEmail({ to, subject, html }) {
     console.warn('[email] RESEND_API_KEY manquant — email non envoyé:', subject, '->', to);
     return false;
   }
+  const post = (payload) => fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: EMAIL_FROM, to, subject,
+      ...(EMAIL_REPLY_TO ? { reply_to: EMAIL_REPLY_TO } : {}),
+      ...payload,
+    }),
+  });
   try {
-    const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: EMAIL_FROM, to, subject, html,
-        ...(EMAIL_REPLY_TO ? { reply_to: EMAIL_REPLY_TO } : {}),
-      }),
-    });
+    let r;
+    if (EMAIL_LOGO_B64) {
+      r = await post({
+        html: html.replaceAll('__EMAIL_LOGO_SRC__', `cid:${EMAIL_LOGO_CID}`),
+        attachments: [{ filename: 'gouzepe-logo.png', content: EMAIL_LOGO_B64, content_id: EMAIL_LOGO_CID, content_type: 'image/png' }],
+      });
+      // Pièce jointe refusée par Resend : on n'empêche jamais l'envoi pour un logo.
+      if (!r.ok && r.status >= 400 && r.status < 500) {
+        console.warn('[email] logo intégré refusé, envoi avec le lien distant', r.status, await r.text().catch(() => ''));
+        r = null;
+      }
+    }
+    if (!r) r = await post({ html: html.replaceAll('__EMAIL_LOGO_SRC__', EMAIL_LOGO_URL) });
     if (!r.ok) {
       const errText = await r.text().catch(() => '');
       console.error('[email] échec envoi', r.status, errText);
