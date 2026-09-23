@@ -3746,15 +3746,24 @@ app.get('/public/tekken/tournaments', publicTournamentsHandler('tekken'));
 
 app.post('/admin/tekken/tournaments', auth, adminOnly, createTournamentHandler('tekken'));
 
-app.patch('/admin/tekken/tournaments/:id', auth, adminOnly, async (req, res) => {
+const updateTekkenTournamentHandler = async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
   if (!await ensureTekkenTournament(id)) return bad(res, 404, 'Tournoi Tekken introuvable');
   req.params.id = String(id);
   // Tekken n'a pas de "buts" : le classement y est toujours aux victoires, quoi qu'envoie le client.
   if (req.body?.rr_standings_mode !== undefined) req.body.rr_standings_mode = 'wins';
+  // Une journée compte toujours pour l'ELO : on ignore toute tentative de la passer en amicale.
+  const k = await q(`SELECT kind FROM tournaments WHERE id=$1`, [id]);
+  if (k.rows[0]?.kind === 'journee' && req.body) {
+    delete req.body.counts_for_title;
+    delete req.body.member_tournament;
+  }
   updateTournamentHandler(req, res);
-});
+};
+app.patch('/admin/tekken/tournaments/:id', auth, adminOnly, updateTekkenTournamentHandler);
+// PUT aussi, comme pour eFootball : l'écran admin change le statut en PUT.
+app.put('/admin/tekken/tournaments/:id', auth, adminOnly, updateTekkenTournamentHandler);
 
 app.delete('/admin/tekken/tournaments/:id', auth, adminOnly, async (req, res) => {
   const id = Number(req.params.id);
