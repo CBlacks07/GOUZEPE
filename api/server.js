@@ -3407,6 +3407,13 @@ app.post('/public/inscription', async (req, res) => {
   const existing = await q(`SELECT id FROM membership_requests WHERE email=$1 AND status='pending'`, [email.trim().toLowerCase()])
   if (existing.rowCount) return bad(res, 409, 'Une demande est déjà en attente pour cet email')
   const gamesArr = Array.isArray(games) ? games.filter(Boolean) : (games ? [games] : [])
+  // Le club ne pratique qu'eFootball (console) et Tekken.
+  if (!gamesArr.length || gamesArr.some((g) => g !== 'efoot' && g !== 'tekken')) {
+    return bad(res, 400, 'Le club est réservé aux joueurs eFootball (console) et Tekken')
+  }
+  if (String(platform || '').toLowerCase() === 'mobile') {
+    return bad(res, 400, 'eFootball se joue sur console au club : la version mobile n’est pas acceptée')
+  }
   const extra = JSON.stringify({
     phone: phone.trim(), birthdate: birthdate || null,
     profession: (profession || '').trim() || null, address: (address || '').trim() || null,
