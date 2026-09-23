@@ -12,7 +12,7 @@
 
         <h1 class="brand-title">Rejoins<br/>la communauté.</h1>
         <p class="brand-lead">
-          Deviens membre du club et entre dans la compétition <strong>eFootball</strong> &amp; <strong>Tekken</strong>.
+          Deviens membre du club et entre dans la compétition <strong>eFootball (console)</strong> &amp; <strong>Tekken</strong>.
         </p>
 
         <ol class="reg-steps">
@@ -51,11 +51,20 @@
             <li><span class="sm-n">3</span> En piste</li>
           </ol>
 
+          <!-- Périmètre du club : à lire avant de remplir -->
+          <div class="scope-box" role="note">
+            <GamepadIcon class="scope-ic" aria-hidden="true" />
+            <div>
+              <strong>Le club ne pratique que deux jeux</strong>
+              <p><b>eFootball</b> sur console et <b>Tekken</b>. L'adhésion est réservée à celles et ceux qui veulent jouer à l'un de ces jeux (ou aux deux) au sein du club. Les demandes pour d'autres jeux ne seront pas acceptées.</p>
+            </div>
+          </div>
+
           <form @submit.prevent="submit" class="reg-form">
 
             <!-- Jeux pratiqués -->
             <fieldset class="fg">
-              <legend>Tu joues à *</legend>
+              <legend>Tu veux jouer au club à *</legend>
               <div class="game-pick">
                 <button type="button" v-for="g in gameOptions" :key="g.v"
                         :class="['gp', { on: form.games.includes(g.v) }, g.v]"
@@ -111,7 +120,6 @@
                     <option value="PS4">PlayStation 4</option>
                     <option value="Xbox">Xbox</option>
                     <option value="PC">PC / Steam</option>
-                    <option value="Mobile">Mobile</option>
                   </select>
                 </div>
                 <div>
@@ -155,6 +163,10 @@
                 <p><strong>5. Admissibilité</strong> — Demande soumise à validation. Le club peut refuser sans justification.</p>
               </div>
               <label class="terms-check">
+                <input type="checkbox" v-model="form.acceptedScope" required />
+                <span>Je souhaite rejoindre le club pour jouer à eFootball (console) et/ou Tekken *</span>
+              </label>
+              <label class="terms-check">
                 <input type="checkbox" v-model="form.accepted" required />
                 <span>J'ai lu et j'accepte le règlement du GOUZEPE Gaming Club *</span>
               </label>
@@ -166,7 +178,7 @@
 
             <p v-if="error" class="form-error">{{ error }}</p>
 
-            <button type="submit" :disabled="loading || !form.accepted || !form.acceptedFees" class="btn-primary reg-submit">
+            <button type="submit" :disabled="loading || !form.acceptedScope || !form.accepted || !form.acceptedFees" class="btn-primary reg-submit">
               <Loader2Icon v-if="loading" class="w-4 h-4 animate-spin" />
               {{ loading ? 'Envoi en cours…' : 'Envoyer ma demande' }}
             </button>
@@ -192,7 +204,7 @@
 import { ref, reactive } from 'vue'
 import { RouterLink } from 'vue-router'
 import axios from 'axios'
-import { ArrowLeftIcon, CheckIcon, Loader2Icon } from 'lucide-vue-next'
+import { ArrowLeftIcon, CheckIcon, Loader2Icon, GamepadIcon } from 'lucide-vue-next'
 import { resolveBaseURL } from '@/composables/useAPI'
 
 const base = resolveBaseURL()
@@ -201,11 +213,11 @@ const submitted = ref(false)
 const error = ref('')
 const form = reactive({
   name: '', email: '', phone: '', birthdate: '', profession: '', address: '',
-  platform: '', frequency: '', message: '', accepted: false, acceptedFees: false, games: [],
+  platform: '', frequency: '', message: '', acceptedScope: false, accepted: false, acceptedFees: false, games: [],
 })
 
 const gameOptions = [
-  { v: 'efoot', label: 'eFootball' },
+  { v: 'efoot', label: 'eFootball (console)' },
   { v: 'tekken', label: 'Tekken' },
 ]
 
@@ -218,6 +230,7 @@ function toggleGame(v) {
 async function submit() {
   error.value = ''
   if (!form.games.length) { error.value = 'Choisis au moins un jeu.'; return }
+  if (!form.acceptedScope) { error.value = 'Le club est réservé aux joueurs eFootball (console) et Tekken.'; return }
   if (!form.accepted) { error.value = 'Veuillez accepter le règlement.'; return }
   if (!form.acceptedFees) { error.value = 'Veuillez confirmer l\'engagement sur la cotisation.'; return }
   loading.value = true
@@ -238,6 +251,17 @@ async function submit() {
 </script>
 
 <style scoped>
+.scope-box {
+  display: flex; gap: .8rem; align-items: flex-start;
+  margin: 0 0 1.25rem; padding: .9rem 1rem; border-radius: .8rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--card));
+}
+.scope-ic { width: 1.4rem; height: 1.4rem; flex: none; color: var(--accent-l); margin-top: .1rem; }
+.scope-box strong { display: block; font-size: .95rem; }
+.scope-box p { margin-top: .25rem; font-size: .85rem; line-height: 1.45; color: var(--muted); }
+.scope-box b { color: var(--text); }
+
 .reg { min-height: 100dvh; display: grid; grid-template-columns: 1fr; }
 
 /* ── Panneau marque ── */
