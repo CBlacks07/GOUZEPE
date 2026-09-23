@@ -3743,6 +3743,13 @@ app.get('/tekken/tournaments/:id/standings', auth, async (req, res) => {
   } catch (e) { bad(res, 500, e.message); }
 });
 app.get('/public/tekken/tournaments', publicTournamentsHandler('tekken'));
+// Saisons (lecture publique) : sélecteur de saison des pages Journées / Classement Tekken.
+app.get('/public/seasons', async (_req, res) => {
+  try {
+    const r = await q(`SELECT id, name, is_closed, started_at, ended_at FROM seasons ORDER BY id DESC`);
+    ok(res, { seasons: r.rows });
+  } catch (e) { bad(res, 500, e.message || 'Saisons indisponibles'); }
+});
 
 app.post('/admin/tekken/tournaments', auth, adminOnly, createTournamentHandler('tekken'));
 

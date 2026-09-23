@@ -66,6 +66,19 @@ const routes = [
     meta: { requiresAuth: false, title: 'Classements' },
   },
   {
+    // Lisibles par tous (visiteurs compris) : mise en page membre ou publique selon la connexion.
+    path: '/tekken/journees',
+    name: 'TekkenJournees',
+    component: () => import('@/views/TekkenJourneesView.vue'),
+    meta: { requiresAuth: false, title: 'Tekken - Journées' },
+  },
+  {
+    path: '/tekken/classement',
+    name: 'TekkenClassement',
+    component: () => import('@/views/TekkenClassementView.vue'),
+    meta: { requiresAuth: false, title: 'Tekken - Classement' },
+  },
+  {
     path: '/membres',
     name: 'Membres',
     component: () => import('@/views/public/MembresView.vue'),

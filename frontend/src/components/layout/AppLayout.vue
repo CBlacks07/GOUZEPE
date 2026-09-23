@@ -44,7 +44,7 @@ const route = useRoute()
 // suit la route courante ; une page admin mise en cache ne doit pas perdre sa barre.
 const isAdminArea = auth.isAdmin && route.path.startsWith('/admin')
 
-const tekkenRoutes = ['/tekken-ladder', '/tekken-tournois', '/accueil-tekken', '/admin/tekken']
+const tekkenRoutes = ['/tekken-ladder', '/tekken-tournois', '/accueil-tekken', '/admin/tekken', '/tekken/']
 
 const activePole = computed(() => {
   const p = route.path

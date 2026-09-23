@@ -18,8 +18,10 @@ export const EFOOT_LINKS = [
 ]
 
 export const TEKKEN_LINKS = [
-  { to: '/accueil-tekken',  label: 'Accueil',  icon: HomeIcon },
-  { to: '/tekken-ladder',   label: 'Ladder',   icon: ListOrderedIcon },
+  { to: '/accueil-tekken',    label: 'Accueil',    icon: HomeIcon },
+  { to: '/tekken/journees',   label: 'Journées',   icon: CalendarDaysIcon },
+  { to: '/tekken/classement', label: 'Classement', icon: BarChart2Icon },
+  { to: '/tekken-ladder',     label: 'Ladder',     icon: ListOrderedIcon },
   { to: '/tekken-tournois', label: 'Tournois', icon: TrophyIcon },
 ]
 
