@@ -207,6 +207,13 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin - Tekken' },
   },
   {
+    // Même vue que les tournois Tekken, en mode « journée de championnat ».
+    path: '/admin/tekken/journees',
+    name: 'AdminTekkenJournees',
+    component: () => import('@/views/admin/AdminTekkenTournoisView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, tekkenKind: 'journee', title: 'Admin - Journées Tekken' },
+  },
+  {
     path: '/admin/tekken/tournois',
     name: 'AdminTekkenTournois',
     component: () => import('@/views/admin/AdminTekkenTournoisView.vue'),

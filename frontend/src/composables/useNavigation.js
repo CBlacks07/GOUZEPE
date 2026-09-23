@@ -36,6 +36,7 @@ export const ADMIN_GROUPS = [
   },
   {
     key: 'tekken', title: 'Tekken', links: [
+      { to: '/admin/tekken/journees', label: 'Journées',       desc: 'Journées de championnat : scores, points, ELO', icon: CalendarDaysIcon },
       { to: '/admin/tekken',          label: 'Ladder & duels', desc: 'Classement ELO et duels classés', icon: SwordsIcon },
       { to: '/admin/tekken/tournois', label: 'Tournois',       desc: 'Tournois Tekken', icon: GamepadIcon },
     ],

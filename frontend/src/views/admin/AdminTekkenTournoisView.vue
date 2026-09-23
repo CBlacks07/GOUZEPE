@@ -1,14 +1,14 @@
 <template>
-  <AppLayout season-label="Admin Tournois Tekken">
+  <AppLayout :season-label="isJournee ? 'Admin Journées Tekken' : 'Admin Tournois Tekken'">
     <div class="page-wrap admin-tournois-wrap">
       <div class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-4 md:gap-6 items-start">
         <aside class="space-y-4 reveal admin-sidebar">
           <section class="card">
-            <h2 class="font-semibold text-gz-text mb-4">Nouveau tournoi</h2>
+            <h2 class="font-semibold text-gz-text mb-4">{{ isJournee ? 'Nouvelle journée' : 'Nouveau tournoi' }}</h2>
             <div class="space-y-3">
               <div>
                 <label class="label">Nom</label>
-                <input v-model="newT.name" type="text" class="input" placeholder="Cup #1" />
+                <input v-model="newT.name" type="text" class="input" :placeholder="isJournee ? 'Journée du 27/09' : 'Cup #1'" />
               </div>
               <div>
                 <label class="label">Format</label>
@@ -32,7 +32,17 @@
                 <label class="label">Date & heure</label>
                 <input v-model="newT.startsAtInput" type="datetime-local" class="input" />
               </div>
-              <div class="space-y-2">
+              <div v-if="isJournee" class="space-y-2">
+                <p class="text-xs text-gz-muted font-medium">Barème (points par victoire)</p>
+                <div class="grid grid-cols-2 gap-2">
+                  <label v-for="f in SCORING_FIELDS" :key="f.key" class="text-[11px] text-gz-muted">
+                    {{ f.label }}
+                    <input v-model.number="newScoring[f.key]" type="number" min="0" max="50" step="0.25" class="input mt-0.5" />
+                  </label>
+                </div>
+                <p class="text-[11px] text-gz-muted leading-snug">Chaque match de la journée compte aussi pour le ladder ELO.</p>
+              </div>
+              <div v-else class="space-y-2">
                 <div class="pl-5 space-y-1.5 border-l-2 border-gz-green/30">
                   <p class="text-xs text-gz-muted font-medium">Comptant pour le ladder ELO ?</p>
                   <div class="flex gap-4">
@@ -51,7 +61,7 @@
                   </p>
                 </div>
               </div>
-              <button @click="createTournament" :disabled="creating" class="btn-primary w-full justify-center" title="Creer un tournoi">
+              <button @click="createTournament" :disabled="creating" class="btn-primary w-full justify-center" :title="isJournee ? 'Créer une journée' : 'Créer un tournoi'">
                 <Loader2Icon v-if="creating" class="w-3.5 h-3.5 animate-spin" />
                 <PlusIcon v-else class="w-3.5 h-3.5" />
                 Creer
@@ -60,7 +70,7 @@
           </section>
 
           <section class="card">
-            <h2 class="font-semibold text-gz-text mb-3">Tournois</h2>
+            <h2 class="font-semibold text-gz-text mb-3">{{ isJournee ? 'Journées de la saison' : 'Tournois' }}</h2>
             <div v-if="loadingList" class="text-gz-muted text-sm text-center py-4">Chargement...</div>
             <div v-else class="space-y-1 sidebar-scroll pr-1">
               <button
@@ -80,14 +90,14 @@
                   {{ statusLabel(t.status) }}
                 </BaseBadge>
               </button>
-              <p v-if="!tournaments.length" class="text-gz-muted text-sm text-center py-3">Aucun tournoi.</p>
+              <p v-if="!tournaments.length" class="text-gz-muted text-sm text-center py-3">{{ isJournee ? 'Aucune journée.' : 'Aucun tournoi.' }}</p>
             </div>
           </section>
         </aside>
 
         <main class="min-w-0 space-y-4">
           <section v-if="!selected" class="card reveal delay-1 text-gz-muted text-sm py-12 text-center">
-            Selectionne ou cree un tournoi Tekken.
+            {{ isJournee ? 'Sélectionne ou crée une journée Tekken.' : 'Sélectionne ou crée un tournoi Tekken.' }}
           </section>
 
           <template v-else>
@@ -102,7 +112,8 @@
                       • {{ rrMatchModeLabel(selected.rr_match_mode) }}
                     </span>
                     <span class="text-sm text-gz-muted">
-                      <template v-if="selected.counts_for_title">• Tournoi membre <span class="text-gz-green font-medium">· Compte pour le ladder ELO</span></template>
+                      <template v-if="isJournee">• Journée de championnat <span class="text-gz-green font-medium">· Compte pour le ladder ELO</span></template>
+                      <template v-else-if="selected.counts_for_title">• Tournoi membre <span class="text-gz-green font-medium">· Compte pour le ladder ELO</span></template>
                       <template v-else>• Tournoi membre <span class="text-gz-muted">· Amical</span></template>
                     </span>
                     <span v-if="selected.participants?.length" class="text-sm text-gz-muted">• {{ selected.participants.length }} participants</span>
@@ -205,6 +216,57 @@
                     Enregistrer meta
                   </button>
                 </div>
+              </div>
+            </section>
+
+            <section v-if="isJournee" class="card reveal delay-2">
+              <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <h3 class="font-semibold text-gz-text">Points de la journée</h3>
+                <span class="text-xs text-gz-muted">
+                  Recalculés à chaque score. Le bonus champion s'ajoute quand la journée est terminée.
+                </span>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
+                <label v-for="f in SCORING_FIELDS" :key="f.key" class="text-[11px] text-gz-muted">
+                  {{ f.label }}
+                  <input v-model.number="dayScoring[f.key]" type="number" min="0" max="50" step="0.25" class="input mt-0.5" />
+                </label>
+              </div>
+              <div class="flex justify-end mt-2">
+                <button @click="saveDayScoring" :disabled="savingScoring" class="btn text-sm">
+                  <Loader2Icon v-if="savingScoring" class="w-3.5 h-3.5 animate-spin" />
+                  Enregistrer le barème
+                </button>
+              </div>
+              <div class="overflow-x-auto mt-3">
+                <table class="data-table text-sm w-full">
+                  <thead>
+                    <tr>
+                      <th class="text-center w-10">#</th>
+                      <th>Joueur</th>
+                      <th class="text-center w-14">V</th>
+                      <th class="text-center w-14">D</th>
+                      <th class="text-center w-16">Diff.</th>
+                      <th class="text-center w-16">Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-if="!dayStandings.length">
+                      <td colspan="6" class="text-center text-gz-muted py-3">Aucun participant pour l'instant.</td>
+                    </tr>
+                    <tr v-for="r in dayStandings" :key="r.participant_id">
+                      <td class="text-center text-gz-muted">{{ r.rank }}</td>
+                      <td class="font-medium">
+                        {{ r.name }}
+                        <TrophyIcon v-if="r.champion" class="w-3.5 h-3.5 inline ml-1" style="color:#eab308" aria-label="Champion de la journée" />
+                      </td>
+                      <td class="text-center">{{ r.wins }}</td>
+                      <td class="text-center">{{ r.losses }}</td>
+                      <td class="text-center text-gz-muted">{{ r.rounds_diff > 0 ? '+' : '' }}{{ r.rounds_diff }}</td>
+                      <td class="text-center font-bold">{{ r.points }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </section>
 
@@ -444,7 +506,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import BracketSE from '@/components/tournament/BracketSE.vue'
@@ -457,9 +520,25 @@ import { useSessionState } from '@/composables/useSessionState'
 import { useSiteSettings } from '@/stores/siteSettings'
 import { onRealtimeEvent, joinRealtimeRoom, leaveRealtimeRoom } from '@/composables/useRealtimeSocket'
 import { applyIdStandings } from '@/utils/tournamentLabels'
-import { PlusIcon, Trash2Icon, XIcon, Loader2Icon, ZapIcon, DownloadIcon } from 'lucide-vue-next'
+import { PlusIcon, Trash2Icon, XIcon, Loader2Icon, ZapIcon, DownloadIcon, TrophyIcon } from 'lucide-vue-next'
 
 const api = useAPI()
+// Même écran pour les tournois et les journées de championnat (route /admin/tekken/journees).
+// Mode figé à la création : la page est gardée en cache par route.
+const route = useRoute()
+const isJournee = route.meta.tekkenKind === 'journee'
+const listParams = { params: { kind: isJournee ? 'journee' : 'tournament' } }
+const SCORING_DEFAULT = { groupWin: 1, bracketWin: 2, losersWin: 1, championBonus: 3 }
+const SCORING_FIELDS = [
+  { key: 'groupWin', label: 'Victoire en poule' },
+  { key: 'bracketWin', label: 'Victoire en phase finale' },
+  { key: 'losersWin', label: 'Victoire en repêchage' },
+  { key: 'championBonus', label: 'Bonus champion' },
+]
+const newScoring = ref({ ...SCORING_DEFAULT })
+const dayScoring = ref({ ...SCORING_DEFAULT })
+const dayStandings = ref([])
+const savingScoring = ref(false)
 const site = useSiteSettings()
 const printing = ref(false)
 const { success, error: toastError } = useToast()
@@ -501,7 +580,7 @@ const selectedTournamentId = ref(null)
 let realtimeOffTournamentChanged = null
 let joinedTournamentRoom = ''
 
-useSessionState('tekken.ui.admin.tournois.v1', {
+useSessionState(isJournee ? 'tekken.ui.admin.journees.v1' : 'tekken.ui.admin.tournois.v1', {
   selectedTournamentId,
   selectedStartsAtInput,
   selectedDayComment,
@@ -641,7 +720,7 @@ function bindRealtimeListeners() {
     if (!Number.isInteger(tournamentId) || tournamentId <= 0) return
     if (Date.now() - lastLocalSaveAt < REALTIME_ECHO_GRACE_MS) return
     try {
-      const { data } = await api.get('/tekken/tournaments')
+      const { data } = await api.get('/tekken/tournaments', listParams)
       tournaments.value = data.tournaments || []
       if (selected.value?.id === tournamentId) {
         const scrollPos = capturePageScroll()
@@ -673,7 +752,7 @@ onMounted(async () => {
   bindRealtimeListeners()
   loadingList.value = true
   try {
-    const [tRes, pRes] = await Promise.all([api.get('/tekken/tournaments'), api.get('/players')])
+    const [tRes, pRes] = await Promise.all([api.get('/tekken/tournaments', listParams), api.get('/players')])
     tournaments.value = tRes.data.tournaments || []
     allPlayers.value = (pRes.data.players || []).sort((a, b) =>
       (a.name || a.player_id).localeCompare(b.name || b.player_id, 'fr')
@@ -703,8 +782,9 @@ async function createTournament() {
       format: newT.value.format,
       starts_at: startsAt || null,
       member_tournament: true,
-      counts_for_title: !!newT.value.countsForTitle,
+      counts_for_title: isJournee ? true : !!newT.value.countsForTitle,
       rr_match_mode: newT.value.format === 'round_robin' ? newT.value.rrMatchMode : 'single',
+      ...(isJournee ? { kind: 'journee', scoring: { ...newScoring.value } } : {}),
     })
     const t = data.tournament || data
     tournaments.value.unshift(t)
@@ -717,7 +797,7 @@ async function createTournament() {
       rrMatchMode: 'single',
     }
     selectTournament(t)
-    success('Tournoi cree')
+    success(isJournee ? 'Journée créée' : 'Tournoi créé')
   } catch (e) {
     toastError(e.response?.data?.error || 'Erreur')
   }
@@ -765,6 +845,34 @@ async function selectTournament(t) {
   } catch (_) {}
   loadingBracket.value = false
 }
+
+async function loadDayPoints() {
+  if (!isJournee || !selected.value?.id) { dayStandings.value = []; return }
+  const id = selected.value.id
+  try {
+    const { data } = await api.get(`/tekken/journees/${id}`)
+    if (selected.value?.id !== id) return // sélection changée entre-temps
+    dayScoring.value = { ...SCORING_DEFAULT, ...(data.day_scoring || {}) }
+    dayStandings.value = data.day_standings || []
+  } catch (_) {}
+}
+
+async function saveDayScoring() {
+  if (!selected.value?.id) return
+  savingScoring.value = true
+  try {
+    lastLocalSaveAt = Date.now()
+    await api.put(`/admin/tekken/journees/${selected.value.id}/scoring`, { scoring: { ...dayScoring.value } })
+    await loadDayPoints()
+    success('Barème enregistré')
+  } catch (e) {
+    toastError(e.response?.data?.error || 'Barème non enregistré')
+  }
+  savingScoring.value = false
+}
+
+// Les points suivent les matchs : toute mise à jour des matchs (score, sélection, statut) les recharge.
+watch(matches, () => { if (isJournee) loadDayPoints() })
 
 async function removeParticipant(pid) {
   const names = (selected.value.participants || []).filter((p) => p !== pid)
@@ -887,7 +995,7 @@ async function generateBracket() {
   generating.value = true
   try {
     await api.post(`/admin/tekken/tournaments/${selected.value.id}/generate`)
-    const { data } = await api.get('/tekken/tournaments')
+    const { data } = await api.get('/tekken/tournaments', listParams)
     tournaments.value = data.tournaments || []
     const fresh = tournaments.value.find((t) => t.id === selected.value.id)
     if (fresh) await selectTournament(fresh)
@@ -904,7 +1012,8 @@ async function changeStatus(status) {
     selected.value = { ...selected.value, status }
     const idx = tournaments.value.findIndex((t) => t.id === selected.value.id)
     if (idx !== -1) tournaments.value[idx] = { ...tournaments.value[idx], status }
-    success('Statut mis a jour')
+    if (isJournee) loadDayPoints() // le bonus champion dépend du statut
+    success('Statut mis à jour')
   } catch (e) {
     toastError(e.response?.data?.error || 'Erreur')
   }
