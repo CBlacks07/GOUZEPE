@@ -90,7 +90,7 @@
               </div>
               <h2 class="text-xl font-bold mt-5 mb-2">Tournois Tekken</h2>
               <p class="text-sm text-gz-muted max-w-sm text-center leading-relaxed">
-                Selectionne un tournoi dans la liste pour afficher le bracket, les scores et le classement final.
+                Sélectionne un tournoi dans la liste pour afficher le bracket, les scores et le classement final.
               </p>
               <div v-if="tournaments.length" class="mt-6 flex flex-wrap gap-2 justify-center">
                 <button
@@ -104,8 +104,8 @@
                 </button>
               </div>
               <div v-else class="mt-6 flex flex-wrap gap-2 justify-center">
-                <span class="format-chip">Elimination simple</span>
-                <span class="format-chip">Double elimination</span>
+                <span class="format-chip">Élimination simple</span>
+                <span class="format-chip">Double élimination</span>
                 <span class="format-chip">Round Robin</span>
                 <span class="format-chip">Groupes + Finales</span>
               </div>
@@ -246,7 +246,7 @@
                           <BracketSE :matches="knockoutMatches" :admin-mode="false" :persist-key="`tekken-tournois-${selected?.id || 'none'}-gk-ko`" />
                         </div>
                       </div>
-                      <div v-else class="text-sm text-gz-muted py-4">Tableau final non genere pour ce tournoi.</div>
+                      <div v-else class="text-sm text-gz-muted py-4">Tableau final non généré pour ce tournoi.</div>
                     </section>
                   </div>
                   <div v-else class="text-gz-muted text-sm">Format non supporte.</div>
@@ -464,13 +464,13 @@ async function selectTournament(t) {
 }
 
 function statusLabel(s) {
-  return { live: 'LIVE', completed: 'Termine', archived: 'Archive', draft: 'Brouillon' }[s] ?? s
+  return { live: 'LIVE', completed: 'Terminé', archived: 'Archivé', draft: 'Brouillon' }[s] ?? s
 }
 
 function formatLabel(f) {
   return {
-    single_elimination: 'Elimination simple',
-    double_elimination: 'Double elimination',
+    single_elimination: 'Élimination simple',
+    double_elimination: 'Double élimination',
     round_robin: 'Round Robin',
     groups_knockout: 'Groupes + Finales',
   }[f] ?? f

@@ -19,17 +19,9 @@
         <button :class="['gt', { on: activeGame === 'tekken' }]" @click="selectGame('tekken')">Tekken</button>
       </div>
 
-      <!-- Tekken : à venir -->
-      <div v-if="activeGame === 'tekken'" class="soon-box">
-        <TrophyIcon class="soon-ic" />
-        <h3>Membres Tekken — bientôt</h3>
-        <p>Le pôle Tekken se prépare. Les joueurs Tekken apparaîtront ici dès le lancement.</p>
-        <RouterLink to="/inscription" class="btn-primary cta-lg">Rejoindre le club</RouterLink>
-      </div>
-
-      <template v-else>
+      <div>
         <div class="section-head">
-          <h2>Annuaire</h2>
+          <h2>{{ activeGame === 'tekken' ? 'Joueurs Tekken' : 'Joueurs eFootball' }}</h2>
           <p v-if="!loading">{{ filtered.length }} membre(s)</p>
         </div>
 
@@ -53,7 +45,7 @@
           <span v-if="isAdminRole(m.role)" class="m-badge">Admin</span>
         </RouterLink>
         </div>
-      </template>
+      </div>
     </section>
 
     <section class="section join-band">
@@ -69,7 +61,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { TrophyIcon } from 'lucide-vue-next'
 import PublicNav from '@/components/public/PublicNav.vue'
 import PublicFooter from '@/components/public/PublicFooter.vue'
 import { useGameStore } from '@/stores/game'
@@ -87,10 +78,15 @@ function selectGame(g) {
   game.set(g)
 }
 
+// Un membre qui joue aux deux jeux apparaît dans les deux onglets.
+const byGame = computed(() => members.value.filter((m) => {
+  const g = String(m.main_game || 'efoot').toLowerCase()
+  return g === 'both' || g === activeGame.value
+}))
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
-  if (!q) return members.value
-  return members.value.filter(m => (m.name || '').toLowerCase().includes(q) || (m.player_id || '').toLowerCase().includes(q))
+  if (!q) return byGame.value
+  return byGame.value.filter(m => (m.name || '').toLowerCase().includes(q) || (m.player_id || '').toLowerCase().includes(q))
 })
 
 function initials(name) {

@@ -247,7 +247,8 @@ import { useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import NewsAnnouncements from '@/components/NewsAnnouncements.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useAPI, mediaUrl } from '@/composables/useAPI'
+import { useAPI } from '@/composables/useAPI'
+import { loadHomeMedia } from '@/composables/useClubMedia'
 import { useSiteSettings } from '@/stores/siteSettings'
 import { onRealtimeEvent } from '@/composables/useRealtimeSocket'
 import { CalendarDaysIcon, BarChart2Icon, SwordsIcon, TrophyIcon } from 'lucide-vue-next'
@@ -316,48 +317,6 @@ async function runTypingLoop() {
 const shuffledPhotos = ref([])
 const heroSlides     = ref([])
 
-async function probeAssets(prefix, max = 99) {
-  const v = Date.now()
-  const results = await Promise.all(
-    Array.from({ length: max }, (_, i) => {
-      const n = i + 1
-      const srcs = [
-        `/assets/${prefix}${n}.jpg?v=${v}`,
-        `/assets/${prefix}${String(n).padStart(2, '0')}.jpg?v=${v}`,
-      ]
-      return new Promise(resolve => {
-        let resolved = false
-        let pending = srcs.length
-        for (const src of srcs) {
-          const img = new Image()
-          img.onload = () => {
-            if (!resolved) { resolved = true; resolve(src) }
-          }
-          img.onerror = () => {
-            pending--
-            if (pending === 0 && !resolved) resolve(null)
-          }
-          img.src = src
-        }
-      })
-    })
-  )
-  const found = []
-  for (const r of results) {
-    if (r === null) break
-    found.push(r)
-  }
-  return found
-}
-
-function shuffle(arr) {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
 const heroSlideIndex = ref(0)
 let heroSlideTimer = null
 let cardsInsightsTimer = null
@@ -724,24 +683,9 @@ onMounted(async () => {
   runTypingLoop()
 
   // Médias de l'accueil : URLs du CMS (Cloudinary) sinon découverte auto des assets.
-  const anims = ['slide-float', 'slide-zoom', 'slide-spin', 'slide-drift']
-  const cmsPhotos = (site.settings.efootHome?.slides || []).filter(Boolean)
-  const cmsHero   = (site.settings.efootHome?.hero  || []).filter(Boolean)
-
-  // Bande photos défilante
-  if (cmsPhotos.length) {
-    shuffledPhotos.value = shuffle(cmsPhotos.map(mediaUrl))
-  } else {
-    shuffledPhotos.value = shuffle(await probeAssets('Photo'))
-  }
-
-  // Hero (visuel rotatif)
-  if (cmsHero.length) {
-    heroSlides.value = cmsHero.map((src, i) => ({ src: mediaUrl(src), alt: `GOUZEPE ${i + 1}`, anim: anims[i % anims.length] }))
-  } else {
-    const imgs = await probeAssets('image')
-    heroSlides.value = imgs.map((src, i) => ({ src, alt: `GOUZEPE ${i + 1}`, anim: anims[i % anims.length] }))
-  }
+  const media = await loadHomeMedia(site.settings, 'efootHome')
+  shuffledPhotos.value = media.photos
+  heroSlides.value = media.slides
 
   if (heroSlides.value.length) {
     heroSlideTimer = setInterval(() => {

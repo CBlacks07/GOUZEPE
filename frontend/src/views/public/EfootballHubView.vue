@@ -16,7 +16,8 @@
           tournois et duels. Toute la rivalité, saison après saison.
         </p>
         <div class="hub-cta">
-          <RouterLink to="/login" class="btn-primary cta-lg">Accéder à l'espace</RouterLink>
+          <RouterLink to="/efootball/journees" class="btn-primary cta-lg">Voir les journées</RouterLink>
+          <RouterLink to="/classements" class="btn cta-lg">Classement</RouterLink>
           <RouterLink to="/inscription" class="btn cta-lg">Rejoindre</RouterLink>
         </div>
       </div>
@@ -26,7 +27,10 @@
     <section class="section">
       <div class="section-head">
         <h2>Saison en cours</h2>
-        <p v-if="latestDay?.day">Dernière journée : {{ fmtDate(latestDay.day) }}</p>
+        <p v-if="latestDay?.day">
+          Dernière journée : {{ fmtDate(latestDay.day) }} ·
+          <RouterLink :to="{ path: '/efootball/journees', query: { d: latestDay.day } }" class="head-link">voir le détail</RouterLink>
+        </p>
         <p v-else>Pas encore de journée enregistrée.</p>
       </div>
 
@@ -54,7 +58,7 @@
     <section class="section">
       <div class="section-head"><h2>Tournois</h2><p>Les compétitions du club.</p></div>
       <div v-if="tournaments.length" class="tourn-grid">
-        <article v-for="t in tournaments.slice(0, 6)" :key="t.id" class="tourn-card">
+        <RouterLink v-for="t in tournaments.slice(0, 6)" :key="t.id" :to="`/tournoi/${t.id}`" class="tourn-card">
           <div class="tourn-top">
             <span :class="['tourn-status', t.status === 'live' ? 'live' : '']">{{ t.status === 'live' ? 'En cours' : 'Terminé' }}</span>
             <span class="tourn-fmt">{{ formatLabel(t.format) }}</span>
@@ -64,7 +68,7 @@
             <span>{{ t.participants_count }} joueurs</span>
             <span v-if="t.winner_name"><TrophyIcon class="w-3 h-3 inline" style="color:#eab308" /> {{ t.winner_name }}</span>
           </div>
-        </article>
+        </RouterLink>
       </div>
       <p v-else class="empty">Aucun tournoi pour le moment.</p>
     </section>
@@ -162,7 +166,9 @@ onMounted(async () => {
 .mini-pts { color: var(--muted); font-size: .85rem; }
 
 .tourn-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; }
-.tourn-card { border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.2rem; background: var(--card); transition: transform .18s, border-color .18s; }
+.head-link { color: var(--accent-l); text-decoration: none; font-weight: 600; }
+.head-link:hover { text-decoration: underline; }
+.tourn-card { display: block; text-decoration: none; color: var(--text); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.2rem; background: var(--card); transition: transform .18s, border-color .18s; }
 .tourn-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
 .tourn-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: .7rem; }
 .tourn-status { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: .2rem .6rem; border-radius: 999px; border: 1px solid var(--border); }

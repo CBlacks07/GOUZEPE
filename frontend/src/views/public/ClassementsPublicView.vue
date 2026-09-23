@@ -10,7 +10,7 @@
         <p class="c-lead" v-if="activeGame === 'efoot' && season">
           {{ cleanName(season.name) }}<span v-if="daysCount"> · {{ daysCount }} journée(s)</span>
         </p>
-        <p class="c-lead" v-else-if="activeGame === 'tekken'">Classement ELO des duels classes.</p>
+        <p class="c-lead" v-else-if="activeGame === 'tekken'">Championnat par journées et ladder ELO.</p>
       </div>
     </section>
 
@@ -24,14 +24,43 @@
       <!-- Tekken ladder -->
       <template v-if="activeGame === 'tekken'">
         <div class="section-head">
+          <h2>Championnat de la saison</h2>
+          <p>Points gagnés sur les journées terminées ·
+            <RouterLink to="/tekken/classement" class="members-link">classement complet</RouterLink> ·
+            <RouterLink to="/tekken/journees" class="members-link">journées</RouterLink>
+          </p>
+        </div>
+        <div v-if="!loading && !tekkenSeason.length" class="empty">Le championnat démarre avec la première journée terminée.</div>
+        <div v-else-if="!loading" class="overflow-x-auto tk-table-wrap mb-8">
+          <table class="tk-table">
+            <thead>
+              <tr><th>#</th><th>Joueur</th><th>Journées</th><th>Titres</th><th>Points</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in tekkenSeason.slice(0, 10)" :key="r.player_id || r.name">
+                <td>
+                  <span v-if="r.rank <= 3" :class="['rank-medal', ['gold', 'silver', 'bronze'][r.rank - 1]]">{{ r.rank }}</span>
+                  <span v-else class="text-muted font-bold">{{ r.rank }}</span>
+                </td>
+                <td class="font-semibold">{{ r.name }}</td>
+                <td>{{ r.journees }}</td>
+                <td>{{ r.titles }}</td>
+                <td class="font-bold tk-elo">{{ r.points }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-head">
           <h2>Ladder ELO</h2>
+          <p>Chaque match joué au club (journée, duel, tournoi) fait bouger l'ELO.</p>
         </div>
         <div v-if="loading" class="empty">Chargement...</div>
         <div v-else-if="!tekkenLadder.length" class="empty">Aucun joueur dans le ladder Tekken.</div>
         <div v-else class="overflow-x-auto tk-table-wrap">
           <table class="tk-table">
             <thead>
-              <tr><th>#</th><th>Joueur</th><th>ELO</th><th>V</th><th>D</th><th>Serie</th></tr>
+              <tr><th>#</th><th>Joueur</th><th>ELO</th><th>V</th><th>D</th><th>Série</th></tr>
             </thead>
             <tbody>
               <tr v-for="(p, i) in tekkenLadder" :key="p.player_id">
@@ -101,6 +130,7 @@
         <p v-if="!loading && classedCount > classed.length" class="members-note">
           Classement complet ({{ classedCount }} joueurs classés) et détails par tournoi
           <RouterLink to="/login" class="members-link">dans l'espace membre</RouterLink>.
+          Le détail de chaque journée est <RouterLink to="/efootball/journees" class="members-link">consultable ici</RouterLink>.
         </p>
       </template>
     </section>
@@ -135,6 +165,7 @@ const threshold = ref(0)
 const classedCount = ref(0)
 const classed = computed(() => standings.value)
 const tekkenLadder = ref([])
+const tekkenSeason = ref([])
 
 function cleanName(n) { return String(n || '').replace(/^"+|"+$/g, '') }
 
@@ -157,8 +188,12 @@ async function load() {
 async function loadTekken() {
   loading.value = true
   try {
-    const r = await fetch(resolveBaseURL() + '/tekken/ladder', { headers: { Accept: 'application/json' } })
+    const [r, rs] = await Promise.all([
+      fetch(resolveBaseURL() + '/tekken/ladder', { headers: { Accept: 'application/json' } }),
+      fetch(resolveBaseURL() + '/tekken/season-standings', { headers: { Accept: 'application/json' } }),
+    ])
     if (r.ok) { const d = await r.json(); tekkenLadder.value = d.ladder || [] }
+    if (rs.ok) { const d = await rs.json(); tekkenSeason.value = d.standings || [] }
   } catch (_) {}
   loading.value = false
 }
