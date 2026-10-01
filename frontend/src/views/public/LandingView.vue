@@ -19,6 +19,7 @@
         </div>
         <h1 class="hero-title">{{ s.home.title }}</h1>
         <p class="hero-lead">{{ s.home.lead }}</p>
+        <RouterLink to="/inscription" class="hero-open">✅ Inscriptions ouvertes pour la saison 2026-2027</RouterLink>
         <div class="hero-cta">
           <RouterLink to="/inscription" class="btn-primary cta-lg">{{ s.home.ctaPrimary }}</RouterLink>
           <a href="#univers" class="btn cta-lg">{{ s.home.ctaSecondary }}</a>
@@ -379,6 +380,9 @@ onMounted(async () => {
 .hero-title { font-family: var(--font-title); font-weight: 700; font-size: clamp(2.8rem, 8vw, 6rem); line-height: .96; letter-spacing: .02em; margin: 0 0 1.25rem; text-transform: uppercase; }
 .hero-lead { max-width: 38rem; color: var(--muted); font-size: clamp(1rem, 2.2vw, 1.2rem); line-height: 1.6; margin: 0 0 2rem; }
 .hero-lead strong { color: var(--text); }
+.hero-open { display: inline-flex; align-items: center; gap: .4rem; margin: -1rem 0 1.75rem; padding: .45rem .9rem; border-radius: 999px;
+  border: 1px solid rgba(34, 197, 94, .45); background: rgba(34, 197, 94, .12); color: #4ade80; font-weight: 700; font-size: .92rem; text-decoration: none; }
+.hero-open:hover { background: rgba(34, 197, 94, .2); }
 .hero-cta { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 2.75rem; }
 .cta-lg { padding: .8rem 1.6rem; font-size: 1rem; border-radius: .7rem; }
 
