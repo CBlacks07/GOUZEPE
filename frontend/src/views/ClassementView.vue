@@ -1232,7 +1232,8 @@ async function printSelectedDay() {
     html += renderStand('CLASSEMENT D2', main2, inv2)
 
     const printBarrageAffiche = payload?.barrage?.ids || '—'
-    const printBarrageWinner = payload?.barrage?.winner ? displayNameOf(payload.barrage.winner) : '—'
+    // Identifiant du joueur (comme l'affiche juste à côté), pas son nom d'affichage.
+    const printBarrageWinner = payload?.barrage?.winner || '—'
     html += '<h2>BARRAGES</h2><table class="tbl"><thead><tr><th>Affiche</th><th>Gagnant</th></tr></thead><tbody>'
     html += `<tr><td>${escapeHtml(printBarrageAffiche)}</td><td style="font-weight:700;color:#16a34a">${escapeHtml(printBarrageWinner)}</td></tr></tbody></table>`
     html += `<div class="verdict">*** ${escapeHtml(payload?.barrage?.label || '—')}</div>`
