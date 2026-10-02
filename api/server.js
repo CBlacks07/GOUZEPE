@@ -5444,6 +5444,41 @@ app.post('/matchdays/confirm', auth, adminOnly, async (req,res)=>{
     bad(res,500,'Failed to confirm matchday');
   }
 });
+// Corrige la date d'une journée déjà confirmée (erreur de saisie). La date est la clé de la
+// journée : on la déplace d'un bloc, sans jamais écraser une autre journée.
+const isRealDay = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(`${d}T12:00:00Z`).toISOString().slice(0, 10) === d;
+app.put('/admin/matchdays/:day/date', auth, adminOnly, async (req,res)=>{
+  const from = String(req.params.day || '');
+  const to = String(req.body?.new_day || '').trim();
+  if(!isRealDay(from) || !isRealDay(to)) return bad(res,400,'Date invalide (AAAA-MM-JJ attendu)');
+  if(from === to) return ok(res,{ ok:true, day: to, unchanged: true });
+  const client = await pool.connect();
+  try{
+    await client.query('BEGIN');
+    const src = await client.query(`SELECT 1 FROM matchday WHERE day=$1 FOR UPDATE`,[from]);
+    if(!src.rowCount){ await client.query('ROLLBACK'); return bad(res,404,'Journée introuvable'); }
+    const clash = await client.query(`SELECT 1 FROM matchday WHERE day=$1`,[to]);
+    if(clash.rowCount){
+      await client.query('ROLLBACK');
+      const toFr = new Date(`${to}T12:00:00Z`).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric', timeZone:'UTC' });
+      return bad(res,409,`Une journée existe déjà le ${toFr}. Change d'abord la date de celle-ci, ou supprime-la.`);
+    }
+    await client.query(`UPDATE matchday SET day=$2 WHERE day=$1`,[from,to]);
+    // Brouillon éventuel : il suit la journée, sauf si la nouvelle date en a déjà un.
+    await client.query(`UPDATE draft SET day=$2 WHERE day=$1 AND NOT EXISTS (SELECT 1 FROM draft WHERE day=$2)`,[from,to]);
+    await client.query('COMMIT');
+    io.to(`day:${from}`).emit('day:updated', { date:from, source:'moved' });
+    io.to(`day:${to}`).emit('day:updated', { date:to, source:'moved' });
+    io.emit('season:changed');
+    ok(res,{ ok:true, day: to, from });
+  }catch(e){
+    try{ await client.query('ROLLBACK'); }catch(_){}
+    console.error('PUT /admin/matchdays/:day/date', e);
+    bad(res,500,'Changement de date impossible');
+  }finally{
+    client.release();
+  }
+});
 app.delete('/matchdays/:date', auth, adminOnly, async (req,res)=>{
   await q(`DELETE FROM matchday WHERE day=$1`,[req.params.date]);
   io.to(`day:${req.params.date}`).emit('day:updated', { date:req.params.date, source:'deleted' });

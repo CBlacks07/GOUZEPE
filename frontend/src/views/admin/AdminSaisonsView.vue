@@ -54,22 +54,46 @@
             <tbody>
               <tr v-for="d in days" :key="d">
                 <td class="font-semibold capitalize">{{ fmtDay(d) }}</td>
-                <td class="text-right whitespace-nowrap">
+                <td class="text-right"><div class="flex flex-wrap justify-end gap-1">
                   <RouterLink :to="{ path: '/admin/journees', query: { day: d } }" class="btn text-xs">
                     <PencilIcon class="w-3.5 h-3.5" /> Modifier
                   </RouterLink>
-                  <button @click="deleteDay(d)" class="btn text-xs btn-danger ml-1" :disabled="deleting === d"
+                  <button @click="openMove(d)" class="btn text-xs" title="Corriger la date de cette journée">
+                    <CalendarClockIcon class="w-3.5 h-3.5" /> Changer la date
+                  </button>
+                  <button @click="deleteDay(d)" class="btn text-xs btn-danger" :disabled="deleting === d"
                           :aria-label="`Supprimer la journée du ${fmtDay(d)}`">
                     <Loader2Icon v-if="deleting === d" class="w-3.5 h-3.5 animate-spin" />
                     <Trash2Icon v-else class="w-3.5 h-3.5" />
                   </button>
-                </td>
+                </div></td>
               </tr>
             </tbody>
           </table>
         </section>
       </div>
     </div>
+
+    <BaseModal :open="moveOpen" title="Changer la date d'une journée" @close="moveOpen = false" size="sm">
+      <div>
+        <p class="text-sm mb-3" style="color:var(--muted)">
+          Journée actuellement enregistrée le <strong style="color:var(--text)">{{ moveFrom ? fmtDay(moveFrom) : '' }}</strong>.
+          Tous ses résultats sont conservés : seule la date change.
+        </p>
+        <label class="label" for="move-day">Nouvelle date</label>
+        <input id="move-day" v-model="moveTo" type="date" class="input" @keydown.enter="confirmMove" />
+        <p v-if="moveError" class="text-xs mt-2" style="color:var(--red,#ef4444)" role="alert">{{ moveError }}</p>
+        <p v-else class="text-xs mt-2" style="color:var(--muted)">
+          Si une autre journée occupe déjà cette date, change d'abord la sienne.
+        </p>
+      </div>
+      <template #footer>
+        <button @click="moveOpen = false" class="btn">Annuler</button>
+        <button @click="confirmMove" class="btn-primary" :disabled="!moveTo || moveTo === moveFrom || moving">
+          <Loader2Icon v-if="moving" class="w-3.5 h-3.5 animate-spin" /> Changer la date
+        </button>
+      </template>
+    </BaseModal>
 
     <BaseModal :open="createOpen" title="Créer une saison" @close="createOpen = false" size="sm">
       <div>
@@ -97,7 +121,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAPI } from '@/composables/useAPI'
 import { useToast } from '@/composables/useToast'
-import { PlusIcon, CalendarPlusIcon, PencilIcon, Trash2Icon, Loader2Icon } from 'lucide-vue-next'
+import { PlusIcon, CalendarPlusIcon, CalendarClockIcon, PencilIcon, Trash2Icon, Loader2Icon } from 'lucide-vue-next'
 
 const api = useAPI()
 const { success, error: toastError } = useToast()
@@ -173,6 +197,37 @@ async function deleteDay(day) {
     toastError('Suppression impossible')
   } finally {
     deleting.value = null
+  }
+}
+
+/* ====== Corriger la date d'une journée ====== */
+const moveOpen = ref(false)
+const moveFrom = ref('')
+const moveTo = ref('')
+const moving = ref(false)
+const moveError = ref('')
+
+function openMove(day) {
+  moveFrom.value = day
+  moveTo.value = day
+  moveError.value = ''
+  moveOpen.value = true
+}
+
+async function confirmMove() {
+  if (moving.value || !moveTo.value || moveTo.value === moveFrom.value) return
+  moving.value = true
+  moveError.value = ''
+  try {
+    await api.put(`/admin/matchdays/${moveFrom.value}/date`, { new_day: moveTo.value })
+    success(`Journée déplacée au ${fmtDay(moveTo.value)}`)
+    moveOpen.value = false
+    await loadDays()
+  } catch (e) {
+    // 409 : la date est déjà prise par une autre journée -- on affiche le message du serveur dans la fenêtre.
+    moveError.value = e.response?.data?.error || 'Changement de date impossible'
+  } finally {
+    moving.value = false
   }
 }
 
