@@ -516,6 +516,7 @@ import BracketRR from '@/components/tournament/BracketRR.vue'
 import ScoreSaisieRapide from '@/components/tournament/ScoreSaisieRapide.vue'
 import { useAPI, mediaUrl } from '@/composables/useAPI'
 import { useToast } from '@/composables/useToast'
+import { createSaveGuard, createCoalescedRefresh } from '@/composables/useRealtimeGuard'
 import { useSessionState } from '@/composables/useSessionState'
 import { useSiteSettings } from '@/stores/siteSettings'
 import { onRealtimeEvent, joinRealtimeRoom, leaveRealtimeRoom } from '@/composables/useRealtimeSocket'
@@ -546,8 +547,7 @@ const { success, error: toastError } = useToast()
 // Écho temps réel de nos propres sauvegardes (voir AdminTournoisView.vue) : sans ce garde-fou,
 // chaque score enregistré redéclenchait un re-fetch complet + saut de scroll en plus de la mise
 // à jour déjà faite localement -- rafraîchissement visible "en boucle" en saisie rapide.
-let lastLocalSaveAt = 0
-const REALTIME_ECHO_GRACE_MS = 4000
+const saveGuard = createSaveGuard()
 
 const tournaments = ref([])
 const selected = ref(null)
@@ -713,37 +713,48 @@ async function syncTournamentRoom(tournamentId) {
   }
 }
 
+// Événements reçus depuis le dernier rechargement : traités en un seul passage.
+const realtimeIds = new Set()
+const refreshFromRealtime = createCoalescedRefresh(async () => {
+  const ids = new Set(realtimeIds)
+  realtimeIds.clear()
+  try {
+    const { data } = await api.get('/tekken/tournaments', listParams)
+    tournaments.value = data.tournaments || []
+    if (selected.value && ids.has(Number(selected.value.id))) {
+      const tournamentId = Number(selected.value.id)
+      const scrollPos = capturePageScroll()
+      const fresh = tournaments.value.find((t) => Number(t.id) === tournamentId)
+      if (fresh) {
+        await selectTournament(fresh, { quiet: true })
+        await nextTick()
+        restorePageScroll(scrollPos)
+      } else {
+        await syncTournamentRoom(null)
+        selectedTournamentId.value = null
+        selected.value = null
+        matches.value = []
+        rrStandings.value = []
+        groupStandings.value = []
+      }
+    }
+  } catch (_) {}
+})
+
 function bindRealtimeListeners() {
   if (realtimeOffTournamentChanged) return
-  realtimeOffTournamentChanged = onRealtimeEvent('tournament:changed', async (event = {}) => {
+  realtimeOffTournamentChanged = onRealtimeEvent('tournament:changed', (event = {}) => {
     const tournamentId = Number(event.tournamentId || 0)
     if (!Number.isInteger(tournamentId) || tournamentId <= 0) return
-    if (Date.now() - lastLocalSaveAt < REALTIME_ECHO_GRACE_MS) return
-    try {
-      const { data } = await api.get('/tekken/tournaments', listParams)
-      tournaments.value = data.tournaments || []
-      if (selected.value?.id === tournamentId) {
-        const scrollPos = capturePageScroll()
-        const fresh = tournaments.value.find((t) => Number(t.id) === tournamentId)
-        if (fresh) {
-          await selectTournament(fresh)
-          await nextTick()
-          restorePageScroll(scrollPos)
-        }
-        else {
-          await syncTournamentRoom(null)
-          selectedTournamentId.value = null
-          selected.value = null
-          matches.value = []
-          rrStandings.value = []
-          groupStandings.value = []
-        }
-      }
-    } catch (_) {}
+    // Écho de notre propre enregistrement : la page est déjà à jour.
+    if (saveGuard.isEcho()) return
+    realtimeIds.add(tournamentId)
+    refreshFromRealtime.trigger()
   })
 }
 
 function unbindRealtimeListeners() {
+  refreshFromRealtime.cancel()
   if (realtimeOffTournamentChanged) realtimeOffTournamentChanged()
   realtimeOffTournamentChanged = null
 }
@@ -804,12 +815,15 @@ async function createTournament() {
   creating.value = false
 }
 
-async function selectTournament(t) {
+// quiet : rechargement en arrière-plan (temps réel) — on garde le tableau affiché au lieu de le vider.
+async function selectTournament(t, { quiet = false } = {}) {
   selectedTournamentId.value = Number(t?.id || 0) || null
+  if (!quiet) {
   matches.value = []
   rrStandings.value = []
   groupStandings.value = []
   loadingBracket.value = true
+  }
   try {
     const { data } = await api.get(`/tekken/tournaments/${t.id}`)
     const tournament = data.tournament || t
@@ -860,13 +874,15 @@ async function loadDayPoints() {
 async function saveDayScoring() {
   if (!selected.value?.id) return
   savingScoring.value = true
+  saveGuard.begin()
   try {
-    lastLocalSaveAt = Date.now()
     await api.put(`/admin/tekken/journees/${selected.value.id}/scoring`, { scoring: { ...dayScoring.value } })
     await loadDayPoints()
     success('Barème enregistré')
   } catch (e) {
     toastError(e.response?.data?.error || 'Barème non enregistré')
+  } finally {
+    saveGuard.end()
   }
   savingScoring.value = false
 }
@@ -1046,14 +1062,13 @@ async function deleteTournament() {
 }
 
 async function onScoreSaved({ matchId, score1, score2, done, fail }) {
+  saveGuard.begin()
   const scrollPos = capturePageScroll()
   try {
-    lastLocalSaveAt = Date.now()
     await api.post(`/admin/tekken/tournaments/${selected.value.id}/matches/${matchId}/result`, {
       score_p1: score1,
       score_p2: score2,
     })
-    lastLocalSaveAt = Date.now()
     const { data } = await api.get(`/tekken/tournaments/${selected.value.id}`)
     if (data.tournament) {
       selected.value = { ...selected.value, ...data.tournament }
@@ -1082,20 +1097,22 @@ async function onScoreSaved({ matchId, score1, score2, done, fail }) {
   } catch (e) {
     toastError(e.response?.data?.error || 'Erreur')
     fail()
+  } finally {
+    saveGuard.end()
   }
+
 }
 
 // Un seul appel vers l'endpoint de lot (voir AdminTournoisView.vue pour le contexte complet) --
 // N requetes individuelles se heurtaient toutes au meme verrou de ligne sur le tournoi cote base,
 // et un gros lot epuisait le pool de connexions au lieu d'aller plus vite.
 async function onBatchScoresSaved({ edits, done, fail }) {
+  saveGuard.begin()
   const scrollPos = capturePageScroll()
   try {
-    lastLocalSaveAt = Date.now()
     await api.post(`/admin/tekken/tournaments/${selected.value.id}/matches/batch-result`, {
       results: edits.map((edit) => ({ matchId: edit.matchId, score_p1: edit.score1, score_p2: edit.score2 })),
     })
-    lastLocalSaveAt = Date.now()
 
     const { data } = await api.get(`/tekken/tournaments/${selected.value.id}`)
     if (data.tournament) {
@@ -1124,7 +1141,10 @@ async function onBatchScoresSaved({ edits, done, fail }) {
   } catch (e) {
     toastError(e.response?.data?.error || 'Erreur')
     fail()
+  } finally {
+    saveGuard.end()
   }
+
 }
 
 async function generateKnockoutFromGroups({ automatic = false } = {}) {

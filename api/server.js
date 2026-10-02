@@ -1556,12 +1556,10 @@ function emitTournamentRealtime(tournamentLike, reason = 'updated') {
     at: new Date().toISOString(),
   };
 
+  // Un seul envoi, à tous les clients : l'ancien code émettait aussi vers la salle du tournoi, si
+  // bien qu'un client déjà dans cette salle recevait chaque événement en double (deux rechargements).
   io.emit('tournament:changed', payload);
-  io.to(`tournament:${tournamentId}`).emit('tournament:changed', payload);
-  if (day) {
-    io.to(`day:${day}`).emit('tournaments:day:update', payload);
-    io.emit('tournaments:day:update', payload);
-  }
+  if (day) io.emit('tournaments:day:update', payload);
 }
 
 async function assignWinnerToNextMatch(client, tournamentId, matchRow, winnerParticipantId) {
