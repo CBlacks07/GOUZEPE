@@ -270,6 +270,7 @@ import { useAPI, mediaUrl } from '@/composables/useAPI'
 import { useSessionState } from '@/composables/useSessionState'
 import { useSiteSettings } from '@/stores/siteSettings'
 import { useToast } from '@/composables/useToast'
+import { createSaveGuard, createCoalescedRefresh } from '@/composables/useRealtimeGuard'
 import { onRealtimeEvent, joinRealtimeRoom, leaveRealtimeRoom } from '@/composables/useRealtimeSocket'
 import { applyIdLabels, applyIdStandings, buildIdIndex, participantIdLabel } from '@/utils/tournamentLabels'
 import { computeFinalStandings } from '@/utils/tournamentStandings'
@@ -383,44 +384,57 @@ async function syncTournamentRoom(tournamentId) {
   }
 }
 
+const realtimeIds = new Set()
+const refreshFromRealtime = createCoalescedRefresh(async () => {
+  const ids = new Set(realtimeIds)
+  realtimeIds.clear()
+  try {
+    const { data } = await api.get('/tekken/tournaments')
+    tournaments.value = (data.tournaments || []).filter((t) => t.status !== 'draft')
+    if (selected.value && ids.has(Number(selected.value.id))) {
+      const tournamentId = Number(selected.value.id)
+      const fresh = tournaments.value.find((t) => Number(t.id) === tournamentId)
+      if (fresh) {
+        await selectTournament(fresh, { quiet: true })
+      } else {
+        await syncTournamentRoom(null)
+        selectedTournamentId.value = null
+        selected.value = null
+        matches.value = []
+        rrStandings.value = []
+        groupStandings.value = []
+      }
+    }
+  } catch (_) {}
+})
+
 function bindRealtimeListeners() {
   if (realtimeOffTournamentChanged) return
-  realtimeOffTournamentChanged = onRealtimeEvent('tournament:changed', async (event = {}) => {
+  realtimeOffTournamentChanged = onRealtimeEvent('tournament:changed', (event = {}) => {
     const tournamentId = Number(event.tournamentId || 0)
     if (!Number.isInteger(tournamentId) || tournamentId <= 0) return
-    try {
-      const { data } = await api.get('/tekken/tournaments')
-      tournaments.value = (data.tournaments || []).filter((t) => t.status !== 'draft')
-      if (selected.value?.id === tournamentId) {
-        const fresh = tournaments.value.find((t) => Number(t.id) === tournamentId)
-        if (fresh) {
-          await selectTournament(fresh)
-        } else {
-          await syncTournamentRoom(null)
-          selectedTournamentId.value = null
-          selected.value = null
-          matches.value = []
-          rrStandings.value = []
-          groupStandings.value = []
-        }
-      }
-    } catch (_) {}
+    realtimeIds.add(tournamentId)
+    refreshFromRealtime.trigger()
   })
 }
 
 function unbindRealtimeListeners() {
+  refreshFromRealtime.cancel()
   if (realtimeOffTournamentChanged) realtimeOffTournamentChanged()
   realtimeOffTournamentChanged = null
 }
 
-async function selectTournament(t) {
+// quiet : rechargement en arrière-plan (temps réel) — on garde le tableau affiché au lieu de le vider.
+async function selectTournament(t, { quiet = false } = {}) {
   selectedTournamentId.value = Number(t?.id || 0) || null
+  if (!quiet) {
   matches.value = []
   rawMatchesRef.value = []
   rawParticipants.value = []
   rrStandings.value = []
   groupStandings.value = []
   loadingBracket.value = true
+  }
   try {
     const { data } = await api.get(`/tekken/tournaments/${t.id}`)
     const tournament = data.tournament || t
