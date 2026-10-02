@@ -1193,14 +1193,14 @@ async function printSelectedDay() {
     const { main: main1, inv: inv1 } = splitAndRankDaily(st1)
     const { main: main2, inv: inv2 } = splitAndRankDaily(st2)
 
-    const css = '@page{size:A4 landscape;margin:12mm;}body{font:12px/1.35 "Segoe UI",Roboto,Arial,sans-serif;color:#111;}h1{font-size:18px;margin:0 0 8px;display:flex;align-items:center;gap:8px}h1 img{height:28px} h2{font-size:14px;margin:10px 0 6px;} .tbl{width:100%;border-collapse:collapse;border:1px solid #444;} .tbl th,.tbl td{border:1px solid #444;padding:4px 6px;text-align:center} .tbl thead th{background:#efefef;} .champ{text-align:center;margin:6px 0 10px;font-weight:900;color:#cc0000;font-size:17px;} .verdict{margin-top:8px;font-weight:800;color:#1d4ed8;text-align:center;font-size:15px;} .sepRow td{background:#f7f7f7;font-style:italic}'
+    const css = '@page{size:A4 landscape;margin:12mm;}body{font:12px/1.35 "Segoe UI",Roboto,Arial,sans-serif;color:#111;}h1{font-size:18px;margin:0 0 8px;display:flex;align-items:center;gap:8px}h1 img{height:28px} h2{font-size:14px;margin:10px 0 6px;} .tbl{width:100%;border-collapse:collapse;border:1px solid #444;} .tbl th,.tbl td{border:1px solid #444;padding:4px 6px;text-align:center} .tbl thead th{background:#efefef;} .champ{text-align:center;margin:6px 0 10px;font-weight:900;color:#cc0000;font-size:17px;} .verdict{margin-top:8px;font-weight:800;color:#1d4ed8;text-align:center;font-size:15px;} .sepRow td{background:#f7f7f7;font-style:italic} .tbl.match{table-layout:fixed;} .tbl.match td.pl{font-weight:600;} .tbl.match td.pl1{text-align:right;padding-right:14px;} .tbl.match td.pl2{text-align:left;padding-left:14px;} .tbl.match td.sc{font-weight:700;white-space:nowrap;} .tbl.match thead th.pl1{text-align:right;padding-right:14px;} .tbl.match thead th.pl2{text-align:left;padding-left:14px;}'
 
     const renderMatches = (rows) => {
-      let h = '<table class="tbl"><thead><tr><th>Domicile</th><th>Extérieur</th><th>Aller</th><th>Retour</th></tr></thead><tbody>'
+      let h = '<table class="tbl match"><colgroup><col style="width:32%"><col style="width:18%"><col style="width:18%"><col style="width:32%"></colgroup><thead><tr><th class="pl1">Joueur 1</th><th>Aller</th><th>Retour</th><th class="pl2">Joueur 2</th></tr></thead><tbody>'
       for (const m of (rows || [])) {
         const a = (m.a1 != null || m.a2 != null) ? `${m.a1 ?? ''} - ${m.a2 ?? ''}` : ''
         const r = (m.r1 != null || m.r2 != null) ? `${m.r1 ?? ''} - ${m.r2 ?? ''}` : ''
-        h += `<tr><td>${escapeHtml(m.p1 || '')}</td><td>${escapeHtml(m.p2 || '')}</td><td>${escapeHtml(a)}</td><td>${escapeHtml(r)}</td></tr>`
+        h += `<tr><td class="pl pl1">${escapeHtml(m.p1 || '')}</td><td class="sc">${escapeHtml(a)}</td><td class="sc">${escapeHtml(r)}</td><td class="pl pl2">${escapeHtml(m.p2 || '')}</td></tr>`
       }
       return h + '</tbody></table>'
     }
