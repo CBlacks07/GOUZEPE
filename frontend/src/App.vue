@@ -67,7 +67,9 @@ onUnmounted(() => {
 .app-root {
   position: relative;
   min-height: 100vh;
-  overflow: hidden;
+  /* « clip » rogne comme « hidden » mais ne crée pas de conteneur de défilement : sans ça, les animations
+     pilotées par le défilement (animation-timeline) s'attachaient à cet élément fixe au lieu de la page. */
+  overflow: clip;
 }
 
 .app-shell {
