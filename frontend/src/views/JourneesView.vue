@@ -1731,18 +1731,18 @@ async function printDaySheet() {
 }
 
 .standings-table { min-width: 520px; }
-.matches-table { min-width: 560px; }
+.matches-table { min-width: 480px; }
 
 .matches-table th:nth-child(1),
 .matches-table td:nth-child(1),
 .matches-table th:nth-child(3),
 .matches-table td:nth-child(3) {
-  min-width: 190px;
+  min-width: 150px;
 }
 
 .matches-table th:nth-child(2),
 .matches-table td:nth-child(2) {
-  min-width: 170px;
+  min-width: 150px;
 }
 
 .player-id-input {
@@ -1951,7 +1951,8 @@ button[title] {
 .day-spinner { width: 20px; height: 20px; border: 2px solid rgba(34,197,94,.2); border-top-color: #22c55e; border-radius: 50%; animation: spinDay .6s linear infinite; flex-shrink: 0; }
 @keyframes spinDay { to { transform: rotate(360deg); } }
 
-.day-divisions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+/* Deux divisions côte à côte seulement si chacune a au moins 500 px (avec la barre latérale admin, 300 px était trop juste) */
+.day-divisions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr)); gap: 1rem; }
 
 .day-division-card {
   background: color-mix(in srgb, var(--card) 90%, transparent);
