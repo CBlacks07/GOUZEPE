@@ -146,7 +146,9 @@ function pick(g) {
   .brand-sub { display: none; }
 }
 
-@media (min-width: 960px) {
+/* Tous les liens + sélecteur de jeu + Connexion + Rejoindre demandent ~1075 px : en dessous,
+   c'est le menu burger (à 960 px le bouton « Rejoindre » sortait de l'écran). */
+@media (min-width: 1120px) {
   .pnav-links { display: flex; }
   .btn-login { display: inline-flex; }
   .pnav-burger { display: none; }
