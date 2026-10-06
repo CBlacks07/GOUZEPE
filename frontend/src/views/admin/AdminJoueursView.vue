@@ -65,8 +65,8 @@
                   <th>ID</th>
                   <th>Nom</th>
                   <th>Pole</th>
-                  <th>Admission</th>
-                  <th>Compte</th>
+                  <th class="hidden sm:table-cell">Admission</th>
+                  <th class="hidden sm:table-cell">Compte</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -81,15 +81,15 @@
                   <td class="font-mono text-gz-muted text-xs">{{ p.player_id }}</td>
                   <td class="font-medium">{{ p.name || '—' }}</td>
                   <td class="text-xs font-semibold" :style="poleColor(p.main_game)">{{ poleLabel(p.main_game) }}</td>
-                  <td class="text-gz-muted text-sm">{{ p.admission_year || '--' }}</td>
-                  <td class="text-gz-muted text-sm">{{ p.user_email || '—' }}</td>
+                  <td class="text-gz-muted text-sm hidden sm:table-cell">{{ p.admission_year || '--' }}</td>
+                  <td class="text-gz-muted text-sm hidden sm:table-cell">{{ p.user_email || '—' }}</td>
                   <td>
                     <div class="flex gap-1">
-                      <button @click="openEdit(p)" class="btn py-1 px-2 text-xs flex items-center gap-1">
-                        <PencilIcon class="w-3 h-3" /> Modifier
+                      <button @click="openEdit(p)" class="btn py-1 px-2 text-xs flex items-center gap-1" title="Modifier ce joueur">
+                        <PencilIcon class="w-3 h-3" /> <span class="hidden sm:inline">Modifier</span><span class="sr-only sm:hidden">Modifier</span>
                       </button>
-                      <button @click="deletePlayer(p.player_id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1">
-                        <Trash2Icon class="w-3 h-3" /> Supprimer
+                      <button @click="deletePlayer(p.player_id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1" title="Supprimer ce joueur">
+                        <Trash2Icon class="w-3 h-3" /> <span class="hidden sm:inline">Supprimer</span><span class="sr-only sm:hidden">Supprimer</span>
                       </button>
                     </div>
                   </td>
@@ -112,8 +112,8 @@
                   <th>ID</th>
                   <th>Nom</th>
                   <th>Pole</th>
-                  <th>Admission</th>
-                  <th>Compte</th>
+                  <th class="hidden sm:table-cell">Admission</th>
+                  <th class="hidden sm:table-cell">Compte</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -128,15 +128,15 @@
                   <td class="font-mono text-gz-muted text-xs">{{ p.player_id }}</td>
                   <td class="font-medium">{{ p.name || '—' }}</td>
                   <td class="text-xs font-semibold" :style="poleColor(p.main_game)">{{ poleLabel(p.main_game) }}</td>
-                  <td class="text-gz-muted text-sm">{{ p.admission_year || '--' }}</td>
-                  <td class="text-gz-muted text-sm">{{ p.user_email || '—' }}</td>
+                  <td class="text-gz-muted text-sm hidden sm:table-cell">{{ p.admission_year || '--' }}</td>
+                  <td class="text-gz-muted text-sm hidden sm:table-cell">{{ p.user_email || '—' }}</td>
                   <td>
                     <div class="flex gap-1">
-                      <button @click="openEdit(p)" class="btn py-1 px-2 text-xs flex items-center gap-1">
-                        <PencilIcon class="w-3 h-3" /> Modifier
+                      <button @click="openEdit(p)" class="btn py-1 px-2 text-xs flex items-center gap-1" title="Modifier ce joueur">
+                        <PencilIcon class="w-3 h-3" /> <span class="hidden sm:inline">Modifier</span><span class="sr-only sm:hidden">Modifier</span>
                       </button>
-                      <button @click="deletePlayer(p.player_id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1">
-                        <Trash2Icon class="w-3 h-3" /> Supprimer
+                      <button @click="deletePlayer(p.player_id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1" title="Supprimer ce joueur">
+                        <Trash2Icon class="w-3 h-3" /> <span class="hidden sm:inline">Supprimer</span><span class="sr-only sm:hidden">Supprimer</span>
                       </button>
                     </div>
                   </td>

@@ -50,8 +50,8 @@
               <tr>
                 <th>Email</th>
                 <th>Rôle</th>
-                <th>Player ID</th>
-                <th>Créé</th>
+                <th class="hidden sm:table-cell">Player ID</th>
+                <th class="hidden sm:table-cell">Créé</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -72,15 +72,15 @@
                     {{ u.role }}
                   </span>
                 </td>
-                <td class="text-gz-muted text-sm font-mono">{{ u.player_id || '—' }}</td>
-                <td class="text-gz-muted text-xs whitespace-nowrap">{{ fmtDate(u.created_at) }}</td>
+                <td class="text-gz-muted text-sm font-mono hidden sm:table-cell">{{ u.player_id || '—' }}</td>
+                <td class="text-gz-muted text-xs whitespace-nowrap hidden sm:table-cell">{{ fmtDate(u.created_at) }}</td>
                 <td>
                   <div class="flex gap-1">
-                    <button @click="openEdit(u)" class="btn py-1 px-2 text-xs flex items-center gap-1">
-                      <PencilIcon class="w-3 h-3" /> Modifier
+                    <button @click="openEdit(u)" class="btn py-1 px-2 text-xs flex items-center gap-1" title="Modifier cet utilisateur">
+                      <PencilIcon class="w-3 h-3" /> <span class="hidden sm:inline">Modifier</span><span class="sr-only sm:hidden">Modifier</span>
                     </button>
-                    <button @click="deleteUser(u.id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1">
-                      <Trash2Icon class="w-3 h-3" /> Supprimer
+                    <button @click="deleteUser(u.id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1" title="Supprimer cet utilisateur">
+                      <Trash2Icon class="w-3 h-3" /> <span class="hidden sm:inline">Supprimer</span><span class="sr-only sm:hidden">Supprimer</span>
                     </button>
                   </div>
                 </td>
