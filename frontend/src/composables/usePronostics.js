@@ -189,6 +189,35 @@ export function usePronostics({ payload, seasonStandings, recentDays, knownDaysC
   return { titleRace, titleConfidence, matchPredictions, formPlayer }
 }
 
+// Temps forts d'une journée (carton, buteur, patron) à partir d'un payload { d1, d2 }.
+// Même règles que le bandeau « À la une » de l'accueil ; renvoie [] tant qu'aucun score n'est saisi.
+export function buildDayFlashes(payload, isGuest = () => false) {
+  if (!payload) return []
+  const flashes = []
+  const matches = [...(payload.d1 || []), ...(payload.d2 || [])].filter((m) => m?.p1 && m?.p2)
+
+  let best = null
+  for (const m of matches) {
+    for (const [x, y] of [[sc(m.a1), sc(m.a2)], [sc(m.r1), sc(m.r2)]]) {
+      if (x === null || y === null) continue
+      const margin = Math.abs(x - y)
+      if (margin <= 0 || (best && margin <= best.margin)) continue
+      const p1Win = x > y
+      best = { margin, winner: p1Win ? m.p1 : m.p2, loser: p1Win ? m.p2 : m.p1, w: Math.max(x, y), l: Math.min(x, y) }
+    }
+  }
+  if (best) flashes.push({ tag: 'Carton du jour', text: `${best.winner} s'impose ${best.w}–${best.l} face à ${best.loser}.` })
+
+  const agg = [...collectDivisionForm([{ payload }], 'd1'), ...collectDivisionForm([{ payload }], 'd2')].filter((r) => !isGuest(r.id))
+  if (agg.length) {
+    const scorer = agg.slice().sort((a, b) => b.BP - a.BP)[0]
+    if (scorer.BP > 0) flashes.push({ tag: 'Buteur du jour', text: `${scorer.id} a fait trembler les filets : ${scorer.BP} but(s) sur la journée.` })
+    const boss = agg.slice().sort((a, b) => b.V - a.V || (b.BP - b.BC) - (a.BP - a.BC))[0]
+    if (boss.V > 0) flashes.push({ tag: 'En patron', text: `${boss.id} a dominé sa journée (${boss.V} victoire(s)).` })
+  }
+  return flashes
+}
+
 // Chargement autonome des données de pronostic (pour les pages qui ne les ont pas déjà).
 // api : instance axios de useAPI(). Renvoie les refs à passer à usePronostics.
 export function usePronosticsData(api) {

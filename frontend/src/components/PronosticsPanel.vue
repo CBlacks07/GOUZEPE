@@ -5,14 +5,14 @@
       <span class="pronos-sub">{{ subtitle }}</span>
     </div>
 
-    <div class="pronos-grid" :class="{ 'pronos-grid--solo': !titleRace.length }">
+    <div class="pronos-grid" :class="{ 'pronos-grid--solo': !titleRace.length && !flashes.length }">
       <!-- Course au titre -->
-      <div v-if="titleRace.length" class="pronos-block">
-        <div class="pronos-block-head">
+      <div v-if="titleRace.length || flashes.length" class="pronos-block">
+        <div v-if="titleRace.length" class="pronos-block-head">
           <span class="pronos-block-title">Course au titre</span>
           <span v-if="titleConfidence" class="pronos-chip" :class="`tone-${titleConfidence.tone}`">{{ titleConfidence.label }}</span>
         </div>
-        <div class="title-race">
+        <div v-if="titleRace.length" class="title-race">
           <div v-for="row in titleRace" :key="row.id" class="tr-row" :class="{ leader: row.rank === 1 }">
             <span class="tr-rank">{{ row.rank }}</span>
             <span class="tr-name">{{ row.id }}</span>
@@ -24,6 +24,12 @@
           <span class="dot" /> En forme : <strong>{{ formPlayer.name }}</strong>
           <span class="muted">{{ formPlayer.pts }} pts · {{ formPlayer.bp }} buts (2 dern. J)</span>
         </p>
+        <div v-if="flashes.length" class="pronos-flashes">
+          <p v-for="f in flashes" :key="f.tag" class="pronos-flash">
+            <span class="pronos-flash-tag">{{ f.tag }}</span>
+            <span class="pronos-flash-text">{{ f.text }}</span>
+          </p>
+        </div>
         <slot name="left-extra" />
       </div>
 
@@ -71,6 +77,7 @@ const props = defineProps({
   titleConfidence: { type: Object, default: null },
   formPlayer: { type: Object, default: null },
   matchPredictions: { type: Array, default: () => [] },
+  flashes: { type: Array, default: () => [] },
   subtitle: { type: String, default: 'Estimations · prochaine journée' },
 })
 const groups = computed(() =>
@@ -113,6 +120,12 @@ const groups = computed(() =>
 .pronos-form-line { margin-top: .65rem; font-size: .78rem; display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
 .pronos-form-line .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
 .pronos-form-line .muted { color: var(--muted); }
+
+/* Temps forts de la journée */
+.pronos-flashes { margin-top: .7rem; display: flex; flex-direction: column; gap: .35rem; }
+.pronos-flash { display: flex; align-items: baseline; gap: .6rem; padding: .5rem .7rem; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--border) 55%, transparent); background: color-mix(in srgb, var(--panel) 55%, transparent); font-size: .82rem; line-height: 1.35; }
+.pronos-flash-tag { flex: none; font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #22c55e; }
+.pronos-flash-text { min-width: 0; color: var(--text); opacity: .85; }
 
 /* Affiches : grille de cartes compactes, sans défilement interne */
 .pred-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: .8rem; }

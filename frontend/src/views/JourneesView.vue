@@ -224,7 +224,7 @@
         <!-- Pronostics : calculés sur les confrontations affichées (suivent la saisie en direct) -->
         <PronosticsPanel v-if="showPronos" class="day-pronos reveal"
           :title-race="titleRace" :title-confidence="titleConfidence"
-          :form-player="formPlayer" :match-predictions="matchPredictions"
+          :form-player="formPlayer" :match-predictions="matchPredictions" :flashes="dayFlashes"
           subtitle="Estimations · cette journée" />
 
         <div v-if="loadingDay" class="day-loading">
@@ -667,7 +667,7 @@
 import { ref, reactive, computed, watch, onMounted, onUnmounted, onActivated } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PronosticsPanel from '@/components/PronosticsPanel.vue'
-import { usePronostics, usePronosticsData } from '@/composables/usePronostics'
+import { usePronostics, usePronosticsData, buildDayFlashes } from '@/composables/usePronostics'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -724,6 +724,7 @@ const { titleRace, titleConfidence, matchPredictions, formPlayer } = usePronosti
   knownDaysCount: pronoData.knownDaysCount,
   isGuest: pronoData.isGuest,
 })
+const dayFlashes = computed(() => buildDayFlashes(pronoPayload.value, pronoData.isGuest))
 let storedPronos = true // actif par défaut, sauf si l'utilisateur l'a fermé
 try { storedPronos = localStorage.getItem(PRONOS_STORAGE_KEY) !== '0' } catch (_) {}
 const showPronos = ref(storedPronos)
