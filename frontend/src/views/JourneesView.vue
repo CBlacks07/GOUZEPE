@@ -1892,8 +1892,15 @@ button[title] {
     min-width: 0;
   }
 
+  /* Téléphone : les tableaux tiennent dans l'écran (plus de défilement horizontal à deviner) */
+  .standings-table, .matches-table { min-width: 0; }
+  .standings-table th, .standings-table td { padding-left: .25rem; padding-right: .25rem; font-size: .78rem; }
   .player-id-input {
-    width: 90px !important;
+    width: 100% !important;
+    min-width: 0;
+    padding-left: .35rem !important;
+    padding-right: .35rem !important;
+    font-size: .78rem;
   }
 
   .player-id-text {

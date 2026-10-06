@@ -246,3 +246,23 @@ textarea:focus-visible,
 .adm-compact .space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: .5rem; }
 .adm-compact .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: .625rem; }
 .adm-compact .data-table td .btn, .adm-compact .data-table td .btn-danger { padding: .2rem .55rem; }
+@media (max-width: 639px) {
+  .adm-compact .data-table { min-width: 0; }
+  .adm-compact .data-table th, .adm-compact .data-table td { padding-left: .4rem; padding-right: .4rem; }
+}
+
+/* Zones qui défilent horizontalement (tableaux larges, confrontations) : une ombre sur le bord
+   où il reste du contenu signale qu'on peut les faire glisser. */
+@media (max-width: 1023px) {
+  .adm-compact .table-shell, .adm-compact .overflow-x-auto, .adm-compact .bracket-shell {
+    background-image:
+      linear-gradient(to right, var(--card) 30%, transparent),
+      linear-gradient(to left, var(--card) 30%, transparent),
+      radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, .5), transparent),
+      radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, .5), transparent);
+    background-position: left center, right center, left center, right center;
+    background-size: 28px 100%, 28px 100%, 12px 100%, 12px 100%;
+    background-repeat: no-repeat;
+    background-attachment: local, local, scroll, scroll;
+  }
+}
