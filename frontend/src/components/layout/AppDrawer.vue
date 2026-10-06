@@ -1,12 +1,12 @@
 <template>
   <!-- Overlay -->
-  <Transition name="fade">
-    <div v-if="open" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden"
+  <Transition enter-active-class="animate-fade-in animate-duration-fast" leave-active-class="animate-fade-out animate-duration-faster">
+    <div v-if="open" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs lg:hidden"
          @click="$emit('close')" />
   </Transition>
 
   <!-- Drawer -->
-  <Transition name="slide-right">
+  <Transition enter-active-class="animate-slide-in-right animate-duration-fast" leave-active-class="animate-slide-out-right animate-duration-fast">
     <aside v-if="open"
       id="app-drawer"
       ref="panelEl"
@@ -142,11 +142,7 @@ async function handleLogout() {
 </script>
 
 <style scoped>
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
 
-.slide-right-enter-active, .slide-right-leave-active { transition: transform 0.25s ease; }
-.slide-right-enter-from, .slide-right-leave-to { transform: translateX(100%); }
 
 .nav-on {
   color: var(--accent-l) !important;

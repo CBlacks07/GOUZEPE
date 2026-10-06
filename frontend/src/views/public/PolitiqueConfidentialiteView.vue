@@ -2,7 +2,7 @@
   <div class="legal">
     <PublicNav />
 
-    <section class="section">
+    <section class="reveal-scroll section">
       <div class="section-head">
         <h1>Politique de confidentialité</h1>
         <p>Dernière mise à jour : {{ lastUpdate }}</p>

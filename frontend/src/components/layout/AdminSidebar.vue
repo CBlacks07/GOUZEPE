@@ -34,7 +34,7 @@
       <ChevronDownIcon class="w-4 h-4 adm-chev" :class="{ open: menuOpen }" />
     </button>
 
-    <Transition name="adm-drop">
+    <Transition enter-active-class="animate-fade-in-down animate-duration-fast" leave-active-class="animate-fade-out animate-duration-faster">
       <div v-if="menuOpen" id="adm-mobile-list" class="adm-list" role="menu">
         <RouterLink :to="ADMIN_HOME.to" role="menuitem" class="adm-item" :class="{ on: active?.to === ADMIN_HOME.to }">
           <component :is="ADMIN_HOME.icon" class="w-4 h-4" /> {{ ADMIN_HOME.label }}
@@ -143,8 +143,6 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
 }
 .adm-item:hover { color: var(--text); background: color-mix(in srgb, var(--border) 22%, transparent); }
 .adm-item.on { color: var(--accent-l); background: color-mix(in srgb, var(--accent) 15%, transparent); font-weight: 600; }
-.adm-drop-enter-active, .adm-drop-leave-active { transition: opacity .12s ease, transform .12s ease; }
-.adm-drop-enter-from, .adm-drop-leave-to { opacity: 0; transform: translateY(-4px); }
 /* Le choix colonne / barre se fait ici et non via des classes Tailwind,
    que les règles scoped ci-dessus écraseraient. */
 @media (min-width: 1024px) {

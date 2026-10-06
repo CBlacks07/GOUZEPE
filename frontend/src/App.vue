@@ -8,7 +8,7 @@
 
     <div class="app-shell">
       <RouterView v-slot="{ Component, route }">
-        <Transition name="page" mode="out-in">
+        <Transition mode="out-in" enter-active-class="animate-fade-in-up animate-duration-fast" leave-active-class="animate-fade-out animate-duration-faster">
           <KeepAlive v-if="route.meta?.keepAlive !== false">
             <component :is="Component" :key="route.name || route.path" />
           </KeepAlive>
@@ -122,14 +122,4 @@ onUnmounted(() => {
 }
 
 /* ── Transitions de page ── */
-.page-enter-active { animation: pageIn .22s ease both; }
-.page-leave-active { animation: pageOut .18s ease both; }
-@keyframes pageIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes pageOut {
-  from { opacity: 1; transform: translateY(0); }
-  to   { opacity: 0; transform: translateY(-6px); }
-}
 </style>

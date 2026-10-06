@@ -33,7 +33,7 @@
             <component :is="g.icon" class="w-3.5 h-3.5" /> {{ g.label }}
             <ChevronDownIcon class="w-3 h-3 transition-transform" :class="{ 'rotate-180': openMenu === g.key }" />
           </button>
-          <Transition name="dd">
+          <Transition enter-active-class="animate-fade-in-down animate-duration-fast" leave-active-class="animate-fade-out animate-duration-faster">
             <div v-if="openMenu === g.key" class="dd-panel" role="menu">
               <RouterLink v-for="l in g.links" :key="l.to" :to="l.to" role="menuitem"
                           class="dd-item" :class="{ 'dd-on': isActive(l.to) }" @click="openMenu = null">
@@ -164,6 +164,4 @@ async function handleLogout() {
 .dd-item:hover { color: var(--text); background: color-mix(in srgb, var(--border) 25%, transparent); }
 .dd-on { color: var(--accent-l); background: color-mix(in srgb, var(--accent) 14%, transparent); }
 
-.dd-enter-active, .dd-leave-active { transition: opacity .12s ease, transform .12s ease; }
-.dd-enter-from, .dd-leave-to { opacity: 0; transform: translateY(-4px); }
 </style>

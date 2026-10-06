@@ -14,7 +14,7 @@
       </div>
     </section>
 
-    <section class="section">
+    <section class="reveal-scroll section">
       <!-- Onglets par jeu -->
       <div class="game-tabs">
         <button :class="['gt', { on: activeGame === 'efoot' }]" @click="selectGame('efoot')">eFootball</button>

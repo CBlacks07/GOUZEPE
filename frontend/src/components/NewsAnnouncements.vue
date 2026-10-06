@@ -6,7 +6,7 @@
       <span class="na-live"><span class="na-live-dot" /> Récent</span>
     </div>
     <div v-if="loading" class="na-empty">Chargement…</div>
-    <TransitionGroup v-else name="na-row" tag="div" class="na-list">
+    <TransitionGroup v-else name="na-row" tag="div" class="na-list" enter-active-class="animate-fade-in-up animate-duration-normal">
       <div v-for="(n, i) in items" :key="n.id" class="na-row" :style="{ animationDelay: (i * 90) + 'ms' }">
         <span class="na-row-bar" :class="{ pinned: n.pinned }" />
         <div class="na-row-body">
@@ -112,8 +112,6 @@ onMounted(async () => {
 .na-date { font-size: .7rem; color: var(--muted); opacity: .8; }
 
 /* TransitionGroup (rafraîchissement de la liste) */
-.na-row-enter-active { transition: opacity .35s ease, transform .35s ease; }
-.na-row-enter-from { opacity: 0; transform: translateY(8px); }
 .na-row-move { transition: transform .35s ease; }
 
 @keyframes na-rise {

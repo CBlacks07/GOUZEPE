@@ -116,10 +116,10 @@
                             class="text-sm underline" style="background:none;border:none;color:inherit;cursor:pointer;padding:0">
                       {{ row.name || row.id }}
                     </button>
-                    <span class="text-xs px-1.5 py-0.5 rounded" style="background:rgba(37,99,235,.15);color:#60a5fa">
+                    <span class="text-xs px-1.5 py-0.5 rounded-sm" style="background:rgba(37,99,235,.15);color:#60a5fa">
                       D1 {{ aggMap.get(row.id)?.d1 || 0 }}
                     </span>
-                    <span class="text-xs px-1.5 py-0.5 rounded" style="background:color-mix(in srgb, var(--blue) 16%, transparent);color:var(--blue-l)">
+                    <span class="text-xs px-1.5 py-0.5 rounded-sm" style="background:color-mix(in srgb, var(--blue) 16%, transparent);color:var(--blue-l)">
                       D2 {{ aggMap.get(row.id)?.d2 || 0 }}
                     </span>
                   </div>
@@ -324,7 +324,7 @@
                   <div v-for="(leg, li) in cmpResult.h2h.recent" :key="li"
                        class="flex items-center gap-2 py-1 text-xs"
                        style="border-bottom:1px solid color-mix(in srgb,var(--border) 30%,transparent)">
-                    <span class="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold" :style="sourceBadge(leg.source)">
+                    <span class="shrink-0 px-1.5 py-0.5 rounded-sm text-[10px] font-semibold" :style="sourceBadge(leg.source)">
                       {{ sourceShort(leg.source) }}
                     </span>
                     <span class="shrink-0 w-16" style="color:var(--muted)">{{ leg.date || '—' }}</span>
@@ -1697,28 +1697,6 @@ function openPlayerTitles(row) {
   min-width: 0;
 }
 
-.reveal {
-  animation: rise-in 460ms ease both;
-}
-
-.delay-1 {
-  animation-delay: 90ms;
-}
-
-.delay-2 {
-  animation-delay: 160ms;
-}
-
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @media (min-width: 1024px) {
   .classement-wrap {

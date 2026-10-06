@@ -1,12 +1,12 @@
 <template>
   <TransitionRoot as="template" :show="open">
-    <Dialog as="div" class="relative z-[100]" @close="$emit('close')">
+    <Dialog as="div" class="relative z-100" @close="$emit('close')">
       <!-- Overlay -->
       <TransitionChild as="template"
         enter="ease-out duration-200" enter-from="opacity-0" enter-to="opacity-100"
         leave="ease-in duration-150"  leave-from="opacity-100" leave-to="opacity-0"
       >
-        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" />
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-xs" />
       </TransitionChild>
 
       <!-- Panel -->

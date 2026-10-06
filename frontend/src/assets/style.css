@@ -1,70 +1,466 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import 'tailwind-animations';
+
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+/* « inline » : les utilitaires (bg-gz-card…) lisent var(--card) à l'endroit où ils s'appliquent, ce
+   qui garde le thème clair/sombre et les variables redéfinies localement. */
+@theme inline {
+  --color-gz-bg: var(--bg);
+  --color-gz-panel: var(--panel);
+  --color-gz-card: var(--card);
+  --color-gz-border: var(--border);
+  --color-gz-text: var(--text);
+  --color-gz-muted: var(--muted);
+  --color-gz-input: var(--input);
+  --color-gz-green: var(--green);
+  --color-gz-blue: var(--blue);
+  --color-gz-red: var(--red);
+  --color-gz-amber: var(--amber);
+
+  --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-title: "Rajdhani", "Exo 2", "Segoe UI", system-ui, sans-serif;
+
+  --radius-card: 12px;
+
+  /* tailwind-animations redéfinit « pulse » : on garde celui de Tailwind (4 écrans l'utilisent déjà) */
+  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  @keyframes pulse {
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  --animate-winner-in: winner-in 0.35s ease;
+  --animate-fade-in: fade-in 0.2s ease;
+  --animate-slide-up: slide-up 0.25s ease;
+
+  @keyframes winner-in {
+    from {
+      opacity: 0;
+      transform: scale(0.9) translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 /* ═══════════════════════════════════════════════
-   VARIABLES CSS — Dark (défaut)
+   COMPOSANTS — CSS pur (pas d'@apply avec /N)
+═══════════════════════════════════════════════ */
+
+/* Composants : couche « components », donc moins prioritaires que les utilitaires
+   (py-1 px-2 text-xs doivent l'emporter sur .btn, comme sous Tailwind v3). */
+@layer components {
+  /* ── Apparition des blocs (.reveal) : animation de la bibliothèque tailwind-animations ──
+     Une seule définition pour tout le site (chaque page en avait une copie légèrement différente). */
+  .reveal {
+    @apply animate-fade-in-up animate-duration-normal animate-ease-out;
+  }
+  .delay-1 { animation-delay: 80ms; }
+  .delay-2 { animation-delay: 160ms; }
+  .delay-3 { animation-delay: 240ms; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { animation: none; }
+  }
+
+  .btn {
+    /* ── Boutons ── */
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      border-color 0.15s,
+      background 0.15s,
+      box-shadow 0.15s,
+      scale 0.1s;
+    outline: none;
+    text-decoration: none;
+    &:hover {
+      border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+    }
+    &:focus-visible {
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent);
+    }
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      background 0.15s,
+      border-color 0.15s,
+      box-shadow 0.15s,
+      scale 0.1s;
+    outline: none;
+    &:hover {
+      background: color-mix(in srgb, var(--accent) 82%, #000 18%);
+      border-color: color-mix(in srgb, var(--accent) 82%, #000 18%);
+      box-shadow: 0 6px 18px rgba(var(--accent-rgb), 0.28);
+    }
+    &:focus-visible {
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent);
+    }
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+  }
+
+  .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: transparent;
+    color: #ef4444;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background 0.15s,
+      border-color 0.15s;
+    outline: none;
+    &:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: #ef4444;
+    }
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.5rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    outline: none;
+    &:hover {
+      background: rgba(99, 130, 165, 0.15);
+    }
+  }
+
+  .input {
+    /* ── Inputs ── */
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    background: var(--input);
+    color: var(--text);
+    font-size: 0.875rem;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+    outline: none;
+    &::placeholder {
+      color: var(--muted);
+    }
+    &:focus {
+      border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+    /* Tailwind v4 / CSS moderne : n'affiche l'erreur qu'après la saisie (pas dès l'ouverture du formulaire) */
+    &:user-invalid {
+      border-color: color-mix(in srgb, var(--red) 70%, transparent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--red) 20%, transparent);
+    }
+  }
+  /* Les zones de texte grandissent avec leur contenu (rows reste le minimum) */
+  textarea.input {
+    field-sizing: content;
+    min-height: 3.4rem;   /* ~2 lignes : field-sizing ignore l'attribut rows, on le restitue ici */
+    max-height: 18rem;
+  }
+  textarea.input[rows='3'] { min-height: 5.2rem; }
+  textarea.input[rows='4'] { min-height: 6.9rem; }
+
+  .label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: var(--font-title);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.25rem;
+  }
+
+  .card {
+    /* ── Card ── */
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: var(--shadow);
+  }
+
+  .badge {
+    /* ── Badges ── */
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.625rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+
+  .badge-green {
+    background: color-mix(in srgb, var(--green) 12%, transparent);
+    color: var(--green-l);
+    border-color: color-mix(in srgb, var(--green) 35%, transparent);
+  }
+
+  .badge-blue {
+    background: color-mix(in srgb, var(--blue) 12%, transparent);
+    color: var(--blue-l);
+    border-color: color-mix(in srgb, var(--blue) 35%, transparent);
+  }
+
+  .badge-red {
+    background: color-mix(in srgb, var(--red) 12%, transparent);
+    color: var(--red-l);
+    border-color: color-mix(in srgb, var(--red) 35%, transparent);
+  }
+
+  .badge-amber {
+    background: color-mix(in srgb, var(--amber) 12%, transparent);
+    color: var(--amber-l);
+    border-color: color-mix(in srgb, var(--amber) 35%, transparent);
+  }
+
+  .badge-muted {
+    background: rgba(99, 130, 165, 0.12);
+    color: var(--muted);
+    border-color: var(--border);
+  }
+
+  .data-table {
+    /* ── Table ── */
+    width: 100%;
+    min-width: 480px;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    & th {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    & td {
+      padding: 0.625rem 0.75rem;
+      color: var(--text);
+      border-bottom: 1px solid rgba(99, 130, 165, 0.1);
+    }
+    & tbody tr:last-child td {
+      border-bottom: none;
+    }
+    & tbody tr:hover td {
+      background: rgba(99, 130, 165, 0.05);
+    }
+  }
+
+  .table-shell {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .page-wrap {
+    /* ── Layout ── */
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+    @media (min-width: 640px) {
+      padding: 1.5rem 1.5rem;
+    }
+  }
+
+  .topbar {
+    /* ── Topbar ── */
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 1rem;
+    height: 3.5rem;
+    background: rgba(15, 24, 41, 0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    :root.light & {
+      background: rgba(255, 255, 255, 0.9);
+    }
+  }
+}
+
+/* CSS global hors couches (variables de thème, accessibilité, mode compact admin) : comme sous v3,
+   il l'emporte sur les utilitaires à spécificité égale. */
+/* ═══════════════════════════════════════════════
+ VARIABLES CSS — Dark (défaut)
 ═══════════════════════════════════════════════ */
 :root {
-  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
-  --font-title: "Rajdhani", "Segoe UI", system-ui, sans-serif;
+  --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font-title: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
 
-  --bg:      #060f22;
-  --panel:   #0d1b36;
-  --card:    #132345;
-  --border:  rgba(154,180,224,.34);
-  --input:   #1a2c54;
-  --text:    #eef4ff;
-  --muted:   #a7b9da;
-  --shadow:  0 4px 18px rgba(3,8,24,.45);
+  --bg: #060f22;
+  --panel: #0d1b36;
+  --card: #132345;
+  --border: rgba(154, 180, 224, 0.34);
+  --input: #1a2c54;
+  --text: #eef4ff;
+  --muted: #a7b9da;
+  --shadow: 0 4px 18px rgba(3, 8, 24, 0.45);
 
-  --green:   #22c55e;
+  --green: #22c55e;
   --green-l: #c7f9d8;
-  --blue:    #5f8dff;
-  --blue-l:  #d8e4ff;
-  --red:     #d43c49;
-  --red-l:   #f8a8af;
-  --amber:   #b98a3f;
+  --blue: #5f8dff;
+  --blue-l: #d8e4ff;
+  --red: #d43c49;
+  --red-l: #f8a8af;
+  --amber: #b98a3f;
   --amber-l: #efd8aa;
 
   /* ── Accent dynamique par jeu (défaut : eFootball / bleu) ── */
-  --accent:     #3b82f6;
-  --accent-l:   #bfdcff;
-  --accent-rgb: 59,130,246;
-  --accent-2:   #60a5fa;
+  --accent: #3b82f6;
+  --accent-l: #bfdcff;
+  --accent-rgb: 59, 130, 246;
+  --accent-2: #60a5fa;
 }
 
 /* Thème Tekken : accent orange-rouge */
-:root[data-game="tekken"] {
-  --accent:     #ff5a2c;
-  --accent-l:   #ffd2c2;
-  --accent-rgb: 255,90,44;
-  --accent-2:   #ff8155;
+:root[data-game='tekken'] {
+  --accent: #ff5a2c;
+  --accent-l: #ffd2c2;
+  --accent-rgb: 255, 90, 44;
+  --accent-2: #ff8155;
 }
 
 :root.light {
-  --bg:      #eef3fb;
-  --panel:   #ffffff;
-  --card:    #ffffff;
-  --border:  rgba(56,86,142,.22);
-  --input:   #f3f7ff;
-  --text:    #12213f;
-  --muted:   #4f648f;
-  --shadow:  0 2px 12px rgba(16,27,57,.1);
+  --bg: #eef3fb;
+  --panel: #ffffff;
+  --card: #ffffff;
+  --border: rgba(56, 86, 142, 0.22);
+  --input: #f3f7ff;
+  --text: #12213f;
+  --muted: #4f648f;
+  --shadow: 0 2px 12px rgba(16, 27, 57, 0.1);
 
-  --green:   #16a34a;
+  --green: #16a34a;
   --green-l: #0f6b31;
-  --blue:    #2f5bff;
-  --blue-l:  #2446b6;
-  --red:     #c5344b;
-  --red-l:   #82243a;
-  --amber:   #b07a2a;
+  --blue: #2f5bff;
+  --blue-l: #2446b6;
+  --red: #c5344b;
+  --red-l: #82243a;
+  --amber: #b07a2a;
   --amber-l: #6f511d;
 }
 
 /* ═══════════════════════════════════════════════
-   BASE
+ BASE
 ═══════════════════════════════════════════════ */
+
+/* ── Finitions modernes (Tailwind v4 / CSS récent) ───────────────────────────────────────────── */
+:root { color-scheme: dark; }          /* sélecteurs de date, barres de défilement natives au thème */
+:root.light { color-scheme: light; }
+.btn:active:not(:disabled), .btn-primary:active:not(:disabled), .btn-danger:active:not(:disabled), .btn-ghost:active:not(:disabled) { scale: 0.97; }
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled), .btn-primary:active:not(:disabled), .btn-danger:active:not(:disabled), .btn-ghost:active:not(:disabled) { scale: none; }
+}
+/* Titres équilibrés, paragraphes sans ligne orpheline */
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+/* Apparition des sections au défilement (pages publiques). Navigateurs sans timeline de défilement :
+   la section reste simplement visible, sans animation. */
+@supports (animation-timeline: view()) {
+  .reveal-scroll {
+    animation: fade-in-up 1s linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 26%;
+  }
+  @media (prefers-reduced-motion: reduce) { .reveal-scroll { animation: none; } }
+}
+
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
 
@@ -86,115 +482,6 @@
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
-}
-
-/* ═══════════════════════════════════════════════
-   COMPOSANTS — CSS pur (pas d'@apply avec /N)
-═══════════════════════════════════════════════ */
-@layer components {
-
-  /* ── Boutons ── */
-  .btn {
-    display: inline-flex; align-items: center; gap: .375rem;
-    padding: .5rem .875rem; border-radius: .5rem;
-    border: 1px solid var(--border); background: var(--card); color: var(--text);
-    font-size: .875rem; font-weight: 500; cursor: pointer; white-space: nowrap;
-    transition: border-color .15s, background .15s, box-shadow .15s;
-    outline: none; text-decoration: none;
-  }
-  .btn:hover  { border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
-  .btn:focus-visible { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent); }
-  .btn:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
-
-  .btn-primary {
-    display: inline-flex; align-items: center; gap: .375rem;
-    padding: .5rem .875rem; border-radius: .5rem;
-    border: 1px solid var(--accent); background: var(--accent); color: #fff;
-    font-size: .875rem; font-weight: 600; cursor: pointer; white-space: nowrap;
-    transition: background .15s, border-color .15s, box-shadow .15s; outline: none;
-  }
-  .btn-primary:hover { background: color-mix(in srgb, var(--accent) 82%, #000 18%); border-color: color-mix(in srgb, var(--accent) 82%, #000 18%); box-shadow: 0 6px 18px rgba(var(--accent-rgb), .28); }
-  .btn-primary:focus-visible { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent); }
-  .btn-primary:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
-
-  .btn-danger {
-    display: inline-flex; align-items: center; gap: .375rem;
-    padding: .5rem .875rem; border-radius: .5rem;
-    border: 1px solid rgba(239,68,68,.35); background: transparent; color: #ef4444;
-    font-size: .875rem; font-weight: 500; cursor: pointer;
-    transition: background .15s, border-color .15s; outline: none;
-  }
-  .btn-danger:hover { background: rgba(239,68,68,.1); border-color: #ef4444; }
-
-  .btn-ghost {
-    display: inline-flex; align-items: center; gap: .375rem;
-    padding: .5rem .875rem; border-radius: .5rem;
-    border: 1px solid transparent; background: transparent; color: var(--text);
-    font-size: .875rem; font-weight: 500; cursor: pointer;
-    transition: background .15s; outline: none;
-  }
-  .btn-ghost:hover { background: rgba(99,130,165,.15); }
-
-  /* ── Inputs ── */
-  .input {
-    width: 100%; padding: .5rem .75rem; border-radius: .5rem;
-    border: 1px solid var(--border); background: var(--input); color: var(--text);
-    font-size: .875rem; transition: border-color .15s, box-shadow .15s; outline: none;
-  }
-  .input::placeholder { color: var(--muted); }
-  .input:focus { border-color: color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
-
-  .label {
-    display: block; font-size: .7rem; font-weight: 600;
-    font-family: var(--font-title);
-    color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: .25rem;
-  }
-
-  /* ── Card ── */
-  .card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1rem; box-shadow: var(--shadow);
-  }
-
-  /* ── Badges ── */
-  .badge {
-    display: inline-flex; align-items: center;
-    padding: .125rem .625rem; border-radius: 999px;
-    font-size: .75rem; font-weight: 600; border: 1px solid transparent;
-  }
-  .badge-green { background: color-mix(in srgb, var(--green) 12%, transparent);  color: var(--green-l); border-color: color-mix(in srgb, var(--green) 35%, transparent);  }
-  .badge-blue  { background: color-mix(in srgb, var(--blue) 12%, transparent); color: var(--blue-l);  border-color: color-mix(in srgb, var(--blue) 35%, transparent); }
-  .badge-red   { background: color-mix(in srgb, var(--red) 12%, transparent);  color: var(--red-l);   border-color: color-mix(in srgb, var(--red) 35%, transparent);  }
-  .badge-amber { background: color-mix(in srgb, var(--amber) 12%, transparent); color: var(--amber-l); border-color: color-mix(in srgb, var(--amber) 35%, transparent); }
-  .badge-muted { background: rgba(99,130,165,.12); color: var(--muted);   border-color: var(--border);       }
-
-  /* ── Table ── */
-  .data-table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: .875rem; }
-  .table-shell { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
-  .data-table th {
-    padding: .5rem .75rem; text-align: left; font-size: .7rem; font-weight: 700;
-    color: var(--muted); text-transform: uppercase; letter-spacing: .04em;
-    border-bottom: 1px solid var(--border); background: rgba(255,255,255,.02);
-  }
-  .data-table td {
-    padding: .625rem .75rem; color: var(--text); border-bottom: 1px solid rgba(99,130,165,.1);
-  }
-  .data-table tbody tr:last-child td { border-bottom: none; }
-  .data-table tbody tr:hover td { background: rgba(99,130,165,.05); }
-
-  /* ── Layout ── */
-  .page-wrap { max-width: 80rem; margin: 0 auto; padding: 1.5rem 1rem; }
-  @media (min-width: 640px) { .page-wrap { padding: 1.5rem 1.5rem; } }
-
-  /* ── Topbar ── */
-  .topbar {
-    position: sticky; top: 0; z-index: 40;
-    display: flex; align-items: center; gap: .75rem;
-    padding: 0 1rem; height: 3.5rem;
-    background: rgba(15,24,41,.9); backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
-  }
-  :root.light .topbar { background: rgba(255,255,255,.9); }
 }
 
 /* ── Accessibilité : focus clavier visible (a11y) ───────────────────────── */

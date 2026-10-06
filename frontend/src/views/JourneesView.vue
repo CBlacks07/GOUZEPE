@@ -554,7 +554,7 @@
             <div class="rounded-xl p-2 overflow-y-auto" style="border:1px solid var(--border);max-height:240px">
               <p v-if="!pmD1.length" class="text-center py-4 text-sm" style="color:var(--muted)">Aucun participant</p>
               <div v-for="id in pmD1" :key="id"
-                   class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-gz-panel text-sm">
+                   class="flex items-center justify-between px-2 py-1.5 rounded-sm hover:bg-gz-panel text-sm">
                 <span class="font-medium">{{ id }}</span>
                 <button @click="pmRemove('d1', id)" title="Retirer ce joueur de la D1" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px">×</button>
               </div>
@@ -566,7 +566,7 @@
             <div class="rounded-xl p-2 overflow-y-auto" style="border:1px solid var(--border);max-height:240px">
               <p v-if="!pmD2.length" class="text-center py-4 text-sm" style="color:var(--muted)">Aucun participant</p>
               <div v-for="id in pmD2" :key="id"
-                   class="flex items-center justify-between px-2 py-1.5 rounded text-sm">
+                   class="flex items-center justify-between px-2 py-1.5 rounded-sm text-sm">
                 <span class="font-medium">{{ id }}</span>
                 <button @click="pmRemove('d2', id)" title="Retirer ce joueur de la D2" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px">×</button>
               </div>

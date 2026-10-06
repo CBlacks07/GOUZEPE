@@ -32,7 +32,7 @@
     </div>
 
     <!-- Menu mobile -->
-    <Transition name="pnav-drop">
+    <Transition enter-active-class="animate-fade-in-down animate-duration-fast" leave-active-class="animate-fade-out animate-duration-faster">
       <div v-if="mobileOpen" class="pnav-mobile">
         <RouterLink to="/" exact-active-class="on" @click="mobileOpen = false">Accueil</RouterLink>
         <RouterLink to="/efootball" active-class="on" @click="mobileOpen = false">eFootball</RouterLink>
@@ -131,8 +131,6 @@ function pick(g) {
 .pnav-mobile-sep--switch { display: none; }
 .game-switch--mobile { display: none; align-self: flex-start; margin-top: .2rem; }
 
-.pnav-drop-enter-active, .pnav-drop-leave-active { transition: opacity .15s ease, transform .15s ease; }
-.pnav-drop-enter-from, .pnav-drop-leave-to { opacity: 0; transform: translateY(-6px); }
 
 /* Très petits écrans : le header (logo + switch + Rejoindre + burger) peut déborder.
    On masque le sélecteur de jeu dans l'en-tête (dupliqué dans le menu mobile) et on

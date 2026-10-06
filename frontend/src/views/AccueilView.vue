@@ -1555,18 +1555,6 @@ async function loadNextFixture() {
   color: #1f2937;
 }
 
-.reveal {
-  animation: rise-in 520ms ease both;
-}
-
-.delay-1 {
-  animation-delay: 110ms;
-}
-
-.delay-2 {
-  animation-delay: 200ms;
-}
-
 .hero-typing {
   white-space: nowrap;
   display: inline;
@@ -1585,16 +1573,6 @@ async function loadNextFixture() {
   50%       { opacity: 0; }
 }
 
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @keyframes pulse-live {
   0%,

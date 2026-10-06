@@ -2,7 +2,7 @@
   <div class="palm">
     <PublicNav />
 
-    <section class="section">
+    <section class="reveal-scroll section">
       <div class="section-head">
         <h1>Palmarès</h1>
         <p>Les champions du club, saison après saison.</p>

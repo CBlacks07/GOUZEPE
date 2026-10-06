@@ -24,7 +24,7 @@
     </section>
 
     <!-- Saison en cours -->
-    <section class="section">
+    <section class="reveal-scroll section">
       <div class="section-head">
         <h2>Saison en cours</h2>
         <p v-if="latestDay?.day">
@@ -55,7 +55,7 @@
     </section>
 
     <!-- Tournois -->
-    <section class="section">
+    <section class="reveal-scroll section">
       <div class="section-head"><h2>Tournois</h2><p>Les compétitions du club.</p></div>
       <div v-if="tournaments.length" class="tourn-grid">
         <RouterLink v-for="t in tournaments.slice(0, 6)" :key="t.id" :to="`/tournoi/${t.id}`" class="tourn-card">
@@ -73,7 +73,7 @@
       <p v-else class="empty">Aucun tournoi pour le moment.</p>
     </section>
 
-    <section class="section join-band">
+    <section class="reveal-scroll section join-band">
       <h2>Prêt à jouer la saison ?</h2>
       <p>Rejoins le championnat eFootball du club.</p>
       <RouterLink to="/inscription" class="btn-primary cta-lg">Devenir membre</RouterLink>

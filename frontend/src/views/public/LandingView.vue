@@ -33,7 +33,7 @@
     </section>
 
     <!-- ── Annonces du club ── -->
-    <section class="section news-section">
+    <section class="reveal-scroll section news-section">
       <NewsAnnouncements />
     </section>
 
@@ -169,7 +169,7 @@
     </section>
 
     <!-- ── Découvrir le club ── -->
-    <section class="section discover">
+    <section class="reveal-scroll section discover">
       <div class="section-head">
         <h2>Découvre le club</h2>
         <p>Champions, records et membres — explore ce que le club a déjà accompli.</p>
@@ -201,7 +201,7 @@
     </section>
 
     <!-- ── CTA final ── -->
-    <section class="section join-band">
+    <section class="reveal-scroll section join-band">
       <h2>Prêt à rejoindre la communauté ?</h2>
       <p>Crée ta demande d'adhésion et entre dans la compétition.</p>
       <RouterLink to="/inscription" class="btn-primary cta-lg">Devenir membre</RouterLink>

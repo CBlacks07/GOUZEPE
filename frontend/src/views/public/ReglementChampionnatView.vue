@@ -2,7 +2,7 @@
   <div class="legal">
     <PublicNav />
 
-    <section class="section">
+    <section class="reveal-scroll section">
       <div class="section-head">
         <h1>Règlement du championnat eFootball</h1>
         <p>Complément aux statuts du GOUZEPE Gaming Club · Dernière mise à jour : {{ lastUpdate }}</p>
