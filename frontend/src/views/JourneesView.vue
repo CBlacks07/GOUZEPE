@@ -1967,11 +1967,12 @@ button[title] {
 .day-toolbar {
   display: flex; align-items: center; justify-content: space-between;
   flex-wrap: wrap; gap: .6rem;
-  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  background: var(--panel);
   border: 1px solid rgba(148,163,184,.14); border-radius: 14px;
   padding: .75rem 1rem;
-  position: sticky; top: 68px; z-index: 10;
-  backdrop-filter: blur(10px);
+  position: sticky; top: 60px; z-index: 10;
+  /* fond opaque + bande masquant l'espace entre la nav et la barre : le contenu ne transparait plus */
+  box-shadow: 0 -8px 0 var(--bg), 0 10px 18px -10px rgba(0,0,0,.45);
 }
 .day-toolbar-left { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 .day-toolbar-right { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-left: auto; }
