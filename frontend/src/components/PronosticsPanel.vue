@@ -33,20 +33,28 @@
           <span class="pronos-block-title">Affiches de la journée</span>
           <span v-if="matchPredictions.length" class="pronos-count">{{ matchPredictions.length }} · serrées en tête</span>
         </div>
-        <div v-if="matchPredictions.length" class="pred-list">
-          <div v-for="p in matchPredictions" :key="p.key" class="pred-row">
-            <div class="pred-rowtop">
-              <span class="pred-div">{{ p.div }}</span>
-              <span v-if="p.unknown" class="pred-tag tag-unknown">Incertain</span>
-              <span v-else class="pred-tag" :class="'tag-' + p.gapTone">{{ p.gapTier }}</span>
+        <div v-if="matchPredictions.length" class="pred-split">
+          <div v-for="g in groups" :key="g.div" class="pred-col">
+            <div class="pred-col-head">
+              <span class="pred-div" :class="'pred-div--' + g.div.toLowerCase()">{{ g.div }}</span>
+              <span class="pred-col-title">{{ g.label }}</span>
+              <span class="pred-col-count">{{ g.items.length }}</span>
             </div>
-            <div class="pred-vs">
-              <span class="pred-pname" :class="{ fav: !p.close && p.favorite === p.p1 }">{{ p.p1 }}</span>
-              <span class="pred-pct" :class="{ fav: !p.close && p.favorite === p.p1 }">{{ p.prob1 }}%</span>
-              <span class="pred-pct pred-pct--r" :class="{ fav: !p.close && p.favorite === p.p2 }">{{ 100 - p.prob1 }}%</span>
-              <span class="pred-pname pred-pname--r" :class="{ fav: !p.close && p.favorite === p.p2 }">{{ p.p2 }}</span>
+            <div class="pred-list">
+              <div v-for="p in g.items" :key="p.key" class="pred-row">
+                <div class="pred-rowtop">
+                  <span v-if="p.unknown" class="pred-tag tag-unknown">Incertain</span>
+                  <span v-else class="pred-tag" :class="'tag-' + p.gapTone">{{ p.gapTier }}</span>
+                </div>
+                <div class="pred-vs">
+                  <span class="pred-pname" :class="{ fav: !p.close && p.favorite === p.p1 }">{{ p.p1 }}</span>
+                  <span class="pred-pct" :class="{ fav: !p.close && p.favorite === p.p1 }">{{ p.prob1 }}%</span>
+                  <span class="pred-pct pred-pct--r" :class="{ fav: !p.close && p.favorite === p.p2 }">{{ 100 - p.prob1 }}%</span>
+                  <span class="pred-pname pred-pname--r" :class="{ fav: !p.close && p.favorite === p.p2 }">{{ p.p2 }}</span>
+                </div>
+                <div class="pred-bar"><div class="pred-bar-fill" :style="{ width: p.prob1 + '%' }" /></div>
+              </div>
             </div>
-            <div class="pred-bar"><div class="pred-bar-fill" :style="{ width: p.prob1 + '%' }" /></div>
           </div>
         </div>
         <p v-else class="pronos-empty">Aucune affiche programmée pour l'instant. Les pronostics s'afficheront dès que la grille sera composée.</p>
@@ -57,13 +65,18 @@
 
 <script setup>
 // Panneau « Pronostics » partagé : accueil membre et page Journées.
-defineProps({
+import { computed } from 'vue'
+const props = defineProps({
   titleRace: { type: Array, default: () => [] },
   titleConfidence: { type: Object, default: null },
   formPlayer: { type: Object, default: null },
   matchPredictions: { type: Array, default: () => [] },
   subtitle: { type: String, default: 'Estimations · prochaine journée' },
 })
+const groups = computed(() =>
+  [['D1', 'Division 1'], ['D2', 'Division 2']]
+    .map(([div, label]) => ({ div, label, items: props.matchPredictions.filter((p) => p.div === div) }))
+    .filter((g) => g.items.length))
 </script>
 
 <style scoped>
@@ -102,7 +115,14 @@ defineProps({
 .pronos-form-line .muted { color: var(--muted); }
 
 /* Affiches : grille de cartes compactes, sans défilement interne */
-.pred-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: .55rem; max-height: 360px; overflow-y: auto; padding-right: .35rem; scrollbar-width: thin; }
+.pred-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: .8rem; }
+.pred-col { min-width: 0; }
+.pred-col-head { display: flex; align-items: center; gap: .45rem; margin-bottom: .45rem; }
+.pred-col-title { font-size: .74rem; font-weight: 800; letter-spacing: .04em; }
+.pred-col-count { margin-left: auto; font-size: .66rem; font-weight: 700; color: var(--muted); }
+.pred-div--d1 { color: #22c55e; border-color: color-mix(in srgb, #22c55e 40%, var(--border)); }
+.pred-div--d2 { color: #5f8dff; border-color: color-mix(in srgb, #5f8dff 40%, var(--border)); }
+.pred-list { display: flex; flex-direction: column; gap: .5rem; max-height: 360px; overflow-y: auto; padding-right: .35rem; scrollbar-width: thin; }
 .pred-row { padding: .5rem .65rem .6rem; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--border) 55%, transparent); background: color-mix(in srgb, var(--panel) 50%, transparent); }
 .pred-rowtop { display: flex; align-items: center; gap: .4rem; margin-bottom: .3rem; }
 .pred-div { font-size: .56rem; font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: .04rem .42rem; }
