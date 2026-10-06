@@ -118,99 +118,49 @@
         <NewsAnnouncements />
       </div>
 
-      <!-- Pronostics -->
-      <section v-if="hasPronostics" class="card pronos-card reveal delay-1">
-        <div class="pronos-head">
-          <h3 class="font-semibold">Pronostics</h3>
-          <span class="pronos-sub">Estimations · prochaine journée</span>
-        </div>
-
-        <div class="pronos-grid">
-          <!-- Course au titre -->
-          <div v-if="titleRace.length" class="pronos-block">
-            <div class="pronos-block-head">
-              <span class="pronos-block-title">Course au titre</span>
-              <span v-if="titleConfidence" class="pronos-chip" :class="`tone-${titleConfidence.tone}`">{{ titleConfidence.label }}</span>
-            </div>
-            <div class="title-race">
-              <div v-for="row in titleRace" :key="row.id" class="tr-row" :class="{ leader: row.rank === 1 }">
-                <span class="tr-rank">{{ row.rank }}</span>
-                <span class="tr-name">{{ row.id }}</span>
-                <span class="tr-moy">{{ row.moyenne.toFixed(2) }}</span>
-                <span class="tr-gap">{{ row.rank === 1 ? 'leader' : '−' + row.gap.toFixed(2) }}</span>
-              </div>
-            </div>
-            <p v-if="formPlayer" class="pronos-form-line">
-              <span class="dot" /> En forme : <strong>{{ formPlayer.name }}</strong>
-              <span class="muted">{{ formPlayer.pts }} pts · {{ formPlayer.bp }} buts (2 dern. J)</span>
-            </p>
-
-            <!-- Invités en vue (sous la course au titre) -->
-            <div v-if="hasGuests" class="guests-inline">
-              <div class="pronos-block-head">
-                <span class="pronos-block-title">Invités en vue</span>
-                <span class="pronos-count">{{ featuredGuests.length }} classé(s) · ≥5 sorties</span>
-              </div>
-
-              <RouterLink v-if="topGuest" :to="`/invite/${topGuest.id}`" class="guest-hero guest-hero--link" :title="`Voir le profil de ${topGuest.id}`">
-                <div class="guest-hero-id">
-                  <span class="guest-avatar">{{ guestInitials(topGuest) }}</span>
-                  <div class="min-w-0">
-                    <div class="guest-hero-name">{{ topGuest.id }}</div>
-                    <div class="guest-hero-sub">
-                      {{ topGuest.apps }} sortie(s) · journées + tournois
-                      <template v-if="topGuest.lastRank"> · dernière journée {{ rankLabel(topGuest.lastRank) }} en {{ topGuest.lastDivision || 'D?' }}</template>
-                    </div>
-                  </div>
-                  <span class="guest-badge">Top invité</span>
-                </div>
-                <div v-if="topGuestStats" class="guest-hero-stats">
-                  <div class="ghs"><span class="ghs-v">{{ topGuestStats.pts }}</span><span class="ghs-l">pts/J</span></div>
-                  <div class="ghs"><span class="ghs-v">{{ topGuestStats.bp }}</span><span class="ghs-l">BP/J</span></div>
-                  <div class="ghs"><span class="ghs-v">{{ topGuestStats.bc }}</span><span class="ghs-l">BC/J</span></div>
-                  <div class="ghs"><span class="ghs-v" :class="topGuestStats.diffPos ? 'pos' : 'neg'">{{ topGuestStats.diff }}</span><span class="ghs-l">Diff/J</span></div>
-                </div>
-              </RouterLink>
-
-              <div v-if="featuredGuests.length > 1" class="guest-list">
-                <RouterLink v-for="(g, i) in featuredGuests.slice(1, 5)" :key="g.id" :to="`/invite/${g.id}`" class="guest-row guest-row--link">
-                  <span class="guest-rank">{{ i + 2 }}</span>
-                  <span class="guest-name">{{ g.id }}</span>
-                  <span class="guest-meta">{{ g.apps }} sorties · {{ diffPerJLabel(g) }} diff</span>
-                  <span class="guest-avg">{{ g.avg.toFixed(1) }}<small> pts/J</small></span>
-                </RouterLink>
-              </div>
-            </div>
+      <!-- Pronostics (panneau partagé avec la page Journées) -->
+      <PronosticsPanel v-if="hasPronostics" class="reveal delay-1"
+        :title-race="titleRace" :title-confidence="titleConfidence"
+        :form-player="formPlayer" :match-predictions="matchPredictions">
+        <template #left-extra>
+        <!-- Invités en vue (sous la course au titre) -->
+        <div v-if="hasGuests" class="guests-inline">
+          <div class="pronos-block-head">
+            <span class="pronos-block-title">Invités en vue</span>
+            <span class="pronos-count">{{ featuredGuests.length }} classé(s) · ≥5 sorties</span>
           </div>
 
-          <!-- Affiches de la journée -->
-          <div class="pronos-block">
-            <div class="pronos-block-head">
-              <span class="pronos-block-title">Affiches de la journée</span>
-              <span v-if="matchPredictions.length" class="pronos-count">{{ matchPredictions.length }} · serrées en tête</span>
-            </div>
-            <div v-if="matchPredictions.length" class="pred-list">
-              <div v-for="p in matchPredictions" :key="p.key" class="pred-row">
-                <div class="pred-rowtop">
-                  <span class="pred-div">{{ p.div }}</span>
-                  <span v-if="p.unknown" class="pred-tag tag-unknown">Incertain</span>
-                  <span v-else class="pred-tag" :class="'tag-' + p.gapTone">{{ p.gapTier }}</span>
-                </div>
-                <div class="pred-player" :class="{ fav: !p.close && p.favorite === p.p1 }">
-                  <span class="pred-pname">{{ p.p1 }}</span>
-                  <span class="pred-pct">{{ p.prob1 }}%</span>
-                </div>
-                <div class="pred-bar"><div class="pred-bar-fill" :style="{ width: p.prob1 + '%' }" /></div>
-                <div class="pred-player" :class="{ fav: !p.close && p.favorite === p.p2 }">
-                  <span class="pred-pname">{{ p.p2 }}</span>
-                  <span class="pred-pct">{{ 100 - p.prob1 }}%</span>
+          <RouterLink v-if="topGuest" :to="`/invite/${topGuest.id}`" class="guest-hero guest-hero--link" :title="`Voir le profil de ${topGuest.id}`">
+            <div class="guest-hero-id">
+              <span class="guest-avatar">{{ guestInitials(topGuest) }}</span>
+              <div class="min-w-0">
+                <div class="guest-hero-name">{{ topGuest.id }}</div>
+                <div class="guest-hero-sub">
+                  {{ topGuest.apps }} sortie(s) · journées + tournois
+                  <template v-if="topGuest.lastRank"> · dernière journée {{ rankLabel(topGuest.lastRank) }} en {{ topGuest.lastDivision || 'D?' }}</template>
                 </div>
               </div>
+              <span class="guest-badge">Top invité</span>
             </div>
-            <p v-else class="pronos-empty">Aucune affiche programmée pour l'instant. Les pronostics s'afficheront dès que la grille sera composée.</p>
+            <div v-if="topGuestStats" class="guest-hero-stats">
+              <div class="ghs"><span class="ghs-v">{{ topGuestStats.pts }}</span><span class="ghs-l">pts/J</span></div>
+              <div class="ghs"><span class="ghs-v">{{ topGuestStats.bp }}</span><span class="ghs-l">BP/J</span></div>
+              <div class="ghs"><span class="ghs-v">{{ topGuestStats.bc }}</span><span class="ghs-l">BC/J</span></div>
+              <div class="ghs"><span class="ghs-v" :class="topGuestStats.diffPos ? 'pos' : 'neg'">{{ topGuestStats.diff }}</span><span class="ghs-l">Diff/J</span></div>
+            </div>
+          </RouterLink>
+
+          <div v-if="featuredGuests.length > 1" class="guest-list">
+            <RouterLink v-for="(g, i) in featuredGuests.slice(1, 5)" :key="g.id" :to="`/invite/${g.id}`" class="guest-row guest-row--link">
+              <span class="guest-rank">{{ i + 2 }}</span>
+              <span class="guest-name">{{ g.id }}</span>
+              <span class="guest-meta">{{ g.apps }} sorties · {{ diffPerJLabel(g) }} diff</span>
+              <span class="guest-avg">{{ g.avg.toFixed(1) }}<small> pts/J</small></span>
+            </RouterLink>
           </div>
         </div>
-      </section>
+        </template>
+      </PronosticsPanel>
 
       <!-- Quick-link cards -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 reveal delay-2">
@@ -248,6 +198,8 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import NewsAnnouncements from '@/components/NewsAnnouncements.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useAPI } from '@/composables/useAPI'
+import PronosticsPanel from '@/components/PronosticsPanel.vue'
+import { usePronostics, sc, averagePtsPerMatch, collectDivisionForm } from '@/composables/usePronostics'
 import { loadHomeMedia } from '@/composables/useClubMedia'
 import { useSiteSettings } from '@/stores/siteSettings'
 import { onRealtimeEvent } from '@/composables/useRealtimeSocket'
@@ -338,137 +290,12 @@ const nameById = computed(() => {
 function labelOf(token) {
   return String(token || '')
 }
-const moyenneById = computed(() => {
-  const m = new Map()
-  for (const r of seasonStandings.value) m.set(String(r.id), Number(r.moyenne) || 0)
-  return m
-})
-const titleThreshold = computed(() => (knownDaysCount.value ? Math.ceil(knownDaysCount.value * 0.25) : 0))
-
-const titleRace = computed(() => {
-  const classed = seasonStandings.value
-    .filter(r => Number(r.participations || 0) >= titleThreshold.value)
-    .slice()
-    .sort((a, b) => Number(b.moyenne || 0) - Number(a.moyenne || 0) || Number(b.total || 0) - Number(a.total || 0))
-  const leader = classed[0]
-  return classed.slice(0, 3).map((r, i) => ({
-    rank: i + 1,
-    id: r.id,
-    name: r.name || r.id,
-    moyenne: Number(r.moyenne || 0),
-    gap: leader ? +(Number(leader.moyenne || 0) - Number(r.moyenne || 0)).toFixed(2) : 0,
-  }))
-})
-
-const titleConfidence = computed(() => {
-  const r = titleRace.value
-  if (r.length < 2) return r.length === 1 ? { label: 'Seul classé', tone: 'open' } : null
-  const lead = r[1].gap // écart du 2e au leader = avance du leader
-  if (lead >= 1.2) return { label: 'Quasi assuré', tone: 'strong' }
-  if (lead >= 0.5) return { label: 'Favori', tone: 'mid' }
-  return { label: 'Course ouverte', tone: 'open' }
-})
-
-// Forme récente : points/match moyens sur les 4 dernières journées (échelle 0-3)
-const formRatingById = computed(() => {
-  const map = new Map()
-  const days = recentConfirmedDays.value.slice(0, 4)
-  if (!days.length) return map
-  for (const r of [...collectDivisionForm(days, 'd1'), ...collectDivisionForm(days, 'd2')]) {
-    map.set(String(r.id), averagePtsPerMatch(r))
-  }
-  return map
-})
-
-// Plages min/max pour normaliser saison et forme sur une échelle 0-1
-const ratingRanges = computed(() => {
-  const range = (arr) => {
-    const vals = arr.filter((v) => Number.isFinite(v))
-    if (!vals.length) return null
-    const mn = Math.min(...vals)
-    const mx = Math.max(...vals)
-    return { mn, span: Math.max(1e-6, mx - mn) }
-  }
-  return {
-    season: range(seasonStandings.value.map((r) => Number(r.moyenne) || 0).filter((v) => v > 0)),
-    form: range([...formRatingById.value.values()]),
-  }
-})
-
-// Force d'un joueur : 60% moyenne saison normalisée + 40% forme récente normalisée
-function strengthOf(id) {
-  const sR = ratingRanges.value.season
-  const fR = ratingRanges.value.form
-  const sVal = moyenneById.value.get(String(id))
-  const fVal = formRatingById.value.get(String(id))
-  const hasS = sVal != null && sVal > 0 && sR
-  const hasF = fVal != null && fR
-  if (!hasS && !hasF) return null
-  const sNorm = hasS ? (sVal - sR.mn) / sR.span : null
-  const fNorm = hasF ? (fVal - fR.mn) / fR.span : null
-  if (sNorm != null && fNorm != null) return 0.6 * sNorm + 0.4 * fNorm
-  return sNorm != null ? sNorm : fNorm
-}
-
-const PRED_K = 0.34 // sensibilité (force 0-1) -> probabilité
-
-function gapInfo(favProb) {
-  if (favProb < 56) return { tier: 'Équilibré', tone: 'close' }
-  if (favProb < 65) return { tier: 'Léger avantage', tone: 'mid' }
-  if (favProb < 78) return { tier: 'Favori net', tone: 'strong' }
-  return { tier: 'Large favori', tone: 'strong' }
-}
-
-const matchPredictions = computed(() => {
-  const p = nextPayloadRef.value
-  if (!p) return []
-  const out = []
-  for (const div of ['d1', 'd2']) {
-    for (const m of (p[div] || [])) {
-      if (!m?.p1 || !m?.p2) continue
-      const s1 = strengthOf(m.p1)
-      const s2 = strengthOf(m.p2)
-      const unknown = s1 == null && s2 == null
-      let prob1
-      if (unknown) {
-        prob1 = 0.5
-      } else {
-        const a = s1 != null ? s1 : Math.max(0, (s2 ?? 0.5) - 0.25)
-        const b = s2 != null ? s2 : Math.max(0, (s1 ?? 0.5) - 0.25)
-        prob1 = 1 / (1 + Math.exp(-(a - b) / PRED_K))
-      }
-      const favIsP1 = prob1 >= 0.5
-      const favProb = Math.round((favIsP1 ? prob1 : 1 - prob1) * 100)
-      const gap = gapInfo(favProb)
-      out.push({
-        key: `${div}-${m.p1}-${m.p2}`,
-        div: div.toUpperCase(),
-        p1: labelOf(m.p1),
-        p2: labelOf(m.p2),
-        prob1: Math.round(prob1 * 100),
-        favorite: favIsP1 ? labelOf(m.p1) : labelOf(m.p2),
-        favProb,
-        close: favProb < 56,
-        unknown,
-        gapTier: gap.tier,
-        gapTone: gap.tone,
-        _interest: unknown ? 999 : favProb, // plus c'est serré, plus c'est intéressant
-      })
-    }
-  }
-  // Affiches serrées en tête, incertaines en fin
-  return out.sort((a, b) => a._interest - b._interest)
-})
-
-const formPlayer = computed(() => {
-  const days = recentConfirmedDays.value.slice(0, 2)
-  if (!days.length) return null
-  const rows = [...collectDivisionForm(days, 'd1'), ...collectDivisionForm(days, 'd2')]
-    .filter(r => inferRoleForPlayer(r.id) !== 'INVITE')
-  if (!rows.length) return null
-  rows.sort((a, b) => averagePtsPerMatch(b) - averagePtsPerMatch(a) || Number(b.PTS || 0) - Number(a.PTS || 0))
-  const t = rows[0]
-  return { id: t.id, name: labelOf(t.id), pts: Number(t.PTS || 0), bp: Number(t.BP || 0) }
+const { titleRace, titleConfidence, matchPredictions, formPlayer } = usePronostics({
+  payload: nextPayloadRef,
+  seasonStandings,
+  recentDays: recentConfirmedDays,
+  knownDaysCount,
+  isGuest: (id) => inferRoleForPlayer(id) === 'INVITE',
 })
 
 const hasPronostics = computed(() => titleRace.value.length > 0 || matchPredictions.value.length > 0)
@@ -532,12 +359,6 @@ function fmtDate(d) {
   } catch (_) { return d }
 }
 
-function sc(v) {
-  if (v === null || v === undefined || v === '') return null
-  const n = Number(v)
-  return isNaN(n) ? null : n
-}
-
 function inferRoleForPlayer(id) {
   const key = String(id || '')
   if (!key) return 'MEMBRE'
@@ -576,54 +397,9 @@ function tournamentStatusLabel(status) {
   }[status] || String(status || '').trim() || '—'
 }
 
-function averagePtsPerMatch(row) {
-  const j = Number(row?.J || 0)
-  if (!j) return 0
-  return Number(row?.PTS || 0) / j
-}
-
 function rankLabel(rank) {
   if (!rank) return '—'
   return rank === 1 ? '1er' : `${rank}e`
-}
-
-function addLegToForm(agg, homeId, awayId, homeGoals, awayGoals) {
-  if (!homeId || !awayId) return
-  if (homeGoals === null || homeGoals === undefined || awayGoals === null || awayGoals === undefined) return
-
-  const ensure = (id) => {
-    if (!agg.has(id)) agg.set(id, { id, J: 0, V: 0, N: 0, D: 0, BP: 0, BC: 0 })
-    return agg.get(id)
-  }
-
-  const home = ensure(homeId)
-  const away = ensure(awayId)
-  home.J++; away.J++
-  home.BP += homeGoals; home.BC += awayGoals
-  away.BP += awayGoals; away.BC += homeGoals
-
-  if (homeGoals > awayGoals) {
-    home.V++; away.D++
-  } else if (homeGoals < awayGoals) {
-    away.V++; home.D++
-  } else {
-    home.N++; away.N++
-  }
-}
-
-function collectDivisionForm(recentDays, divisionKey) {
-  const agg = new Map()
-  for (const day of recentDays) {
-    const matches = day?.payload?.[divisionKey] || []
-    for (const m of matches) {
-      const a1 = sc(m.a1), a2 = sc(m.a2), r1 = sc(m.r1), r2 = sc(m.r2)
-      if (a1 !== null && a2 !== null) addLegToForm(agg, m.p1, m.p2, a1, a2)
-      if (r1 !== null && r2 !== null) addLegToForm(agg, m.p2, m.p1, r2, r1)
-    }
-  }
-  return [...agg.values()]
-    .map(r => ({ ...r, PTS: r.V * 3 + r.N, DIFF: r.BP - r.BC }))
-    .sort((a, b) => b.PTS - a.PTS || b.DIFF - a.DIFF || b.BP - a.BP || String(a.id).localeCompare(String(b.id)))
 }
 
 function extractInviteIdsFromPayload(payload) {
@@ -1596,62 +1372,12 @@ async function loadNextFixture() {
   }
 }
 
-/* ====== Pronostics ====== */
-/* Contention : empêcher tout débordement horizontal (min-width:0 sur la chaîne flex/grid) */
-.pronos-card, .guests-card { margin-bottom: 16px; overflow: hidden; min-width: 0; max-width: 100%; }
-.pronos-grid, .pronos-block, .guests-inline, .title-race, .pred-list,
-.guest-hero, .guest-hero-id, .guest-hero-stats, .pred-row, .pred-player, .tr-row, .guest-row { min-width: 0; max-width: 100%; }
-.pronos-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; margin-bottom: 1rem; }
-.pronos-sub { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
-.pronos-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
-@media (min-width: 900px) { .pronos-grid { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); } }
-
+/* ====== Invités en vue (le panneau Pronostics a ses styles dans PronosticsPanel.vue) ====== */
+.guests-card { margin-bottom: 16px; overflow: hidden; min-width: 0; max-width: 100%; }
+.guests-inline, .guest-hero, .guest-hero-id, .guest-hero-stats, .guest-row { min-width: 0; max-width: 100%; }
 .pronos-block-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .6rem; }
 .pronos-block-title { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 .pronos-count { font-size: .68rem; font-weight: 700; color: var(--muted); background: color-mix(in srgb, var(--panel) 70%, transparent); border: 1px solid var(--border); border-radius: 999px; padding: .05rem .45rem; }
-
-.pronos-chip { font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: .12rem .5rem; border-radius: 999px; }
-.pronos-chip.tone-strong { color: #22c55e; background: color-mix(in srgb, #22c55e 16%, transparent); border: 1px solid color-mix(in srgb, #22c55e 35%, transparent); }
-.pronos-chip.tone-mid { color: var(--accent-l, var(--accent)); background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent); }
-.pronos-chip.tone-open { color: #f59e0b; background: color-mix(in srgb, #f59e0b 14%, transparent); border: 1px solid color-mix(in srgb, #f59e0b 32%, transparent); }
-
-/* Course au titre */
-.title-race { display: flex; flex-direction: column; gap: .3rem; }
-.tr-row { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto auto; align-items: center; gap: .55rem; padding: .4rem .55rem; border-radius: 9px; border: 1px solid color-mix(in srgb, var(--border) 55%, transparent); background: color-mix(in srgb, var(--panel) 55%, transparent); }
-.tr-row.leader { border-color: color-mix(in srgb, #22c55e 40%, var(--border)); background: color-mix(in srgb, #22c55e 8%, transparent); }
-.tr-rank { font-weight: 800; font-size: .8rem; color: var(--muted); text-align: center; }
-.tr-row.leader .tr-rank { color: #22c55e; }
-.tr-name { font-weight: 600; font-size: .88rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tr-moy { font-family: var(--font-title); font-weight: 800; font-size: .9rem; font-variant-numeric: tabular-nums; }
-.tr-gap { font-size: .7rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 3.2rem; text-align: right; }
-.tr-row.leader .tr-gap { color: #22c55e; font-weight: 700; }
-
-.pronos-form-line { margin-top: .65rem; font-size: .78rem; display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
-.pronos-form-line .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
-.pronos-form-line .muted { color: var(--muted); }
-
-/* Affiches */
-.pred-list { display: flex; flex-direction: column; gap: .6rem; max-height: 360px; overflow-y: auto; padding-right: .35rem; scrollbar-width: thin; }
-.pred-list::-webkit-scrollbar { width: 7px; }
-.pred-list::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--muted) 35%, transparent); border-radius: 999px; }
-.pred-list::-webkit-scrollbar-track { background: transparent; }
-.pred-row { padding: .65rem .75rem; border-radius: 11px; border: 1px solid color-mix(in srgb, var(--border) 55%, transparent); background: color-mix(in srgb, var(--panel) 50%, transparent); }
-.pred-rowtop { display: flex; align-items: center; gap: .4rem; margin-bottom: .35rem; }
-.pred-div { font-size: .56rem; font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: .04rem .42rem; }
-.pred-tag { margin-left: auto; font-size: .56rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: .06rem .42rem; border-radius: 999px; }
-.tag-close { color: #f59e0b; background: color-mix(in srgb, #f59e0b 15%, transparent); }
-.tag-mid { color: var(--accent-l, var(--accent)); background: color-mix(in srgb, var(--accent) 14%, transparent); }
-.tag-strong { color: #22c55e; background: color-mix(in srgb, #22c55e 15%, transparent); }
-.tag-unknown { color: var(--muted); background: color-mix(in srgb, var(--muted) 15%, transparent); }
-.pred-player { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .12rem 0; }
-.pred-pname { font-size: .9rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.pred-pct { font-size: .85rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); flex: none; }
-.pred-player.fav .pred-pname { color: var(--accent-l, var(--accent)); font-weight: 800; }
-.pred-player.fav .pred-pct { color: var(--accent-l, var(--accent)); }
-.pred-bar { height: 6px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--muted) 22%, transparent); margin: .3rem 0; }
-.pred-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-l, var(--accent))); transition: width .4s ease; }
-
-.pronos-empty { font-size: .82rem; color: var(--muted); line-height: 1.5; padding: .4rem 0; }
 
 /* ====== Invités en vue ====== */
 .guests-card { margin-bottom: 16px; }

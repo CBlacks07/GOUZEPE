@@ -42,6 +42,11 @@
             <button @click="loadDay" class="btn text-xs p-2" title="Rafraîchir">
               <RefreshCwIcon class="w-3.5 h-3.5" />
             </button>
+            <button @click="togglePronos" class="btn text-xs gap-1" :class="{ 'pronos-toggle-on': showPronos }"
+                    :aria-pressed="String(showPronos)" title="Afficher les pronostics de cette journée">
+              <SparklesIcon class="w-3.5 h-3.5" />
+              <span class="hidden sm:inline">Pronos</span>
+            </button>
 
             <RouterLink v-if="auth.isAdmin && !canEdit"
                         :to="{ path: '/admin/journees', query: selectedDate ? { day: selectedDate } : {} }"
@@ -216,6 +221,12 @@
           </div>
         </div>
 
+        <!-- Pronostics : calculés sur les confrontations affichées (suivent la saisie en direct) -->
+        <PronosticsPanel v-if="showPronos" class="day-pronos reveal"
+          :title-race="titleRace" :title-confidence="titleConfidence"
+          :form-player="formPlayer" :match-predictions="matchPredictions"
+          subtitle="Estimations · cette journée" />
+
         <div v-if="loadingDay" class="day-loading">
           <div class="day-spinner" />
           <span>Chargement de la journée…</span>
@@ -230,7 +241,7 @@
               <span class="day-div-count">{{ d1Matches.length }} confrontation(s)</span>
               <button v-if="canEdit" @click="addMatch('d1')" class="btn text-xs ml-auto" title="Ajouter une ligne">+ Ajouter</button>
             </div>
-            <div class="overflow-x-auto table-shell" style="max-height:480px;overflow-y:auto;-webkit-overflow-scrolling:touch">
+            <div class="overflow-x-auto table-shell">
               <table class="w-full text-sm matches-table" style="border-collapse:separate;border-spacing:0 4px">
                 <thead>
                   <tr class="text-xs uppercase" style="color:var(--muted)">
@@ -260,7 +271,11 @@
                     </td>
                     <td class="p-1 text-center">
                       <!-- Aller row -->
-                      <div class="flex items-center gap-1 justify-center mb-1">
+                      <div v-if="!canEdit" class="m-legs">
+                        <span class="m-leg" title="Aller">{{ legText(m.a1, m.a2) }}</span>
+                        <span class="m-leg m-leg--ret" title="Retour">{{ legText(m.r1, m.r2) }}</span>
+                      </div>
+                      <div v-if="canEdit" class="flex items-center gap-1 justify-center mb-1">
                         <input v-if="canEdit" v-model="m.a1" type="number" min="0"
                                class="input text-sm text-center px-1 py-1" style="width:44px"
                                @input="onMatchInput" />
@@ -272,7 +287,7 @@
                         <span v-else class="text-center" style="width:24px">{{ m.a2 ?? '—' }}</span>
                       </div>
                       <!-- Retour row -->
-                      <div class="flex items-center gap-1 justify-center" style="opacity:.7">
+                      <div v-if="canEdit" class="flex items-center gap-1 justify-center" style="opacity:.7">
                         <input v-if="canEdit" v-model="m.r1" type="number" min="0"
                                class="input text-sm text-center px-1 py-1" style="width:44px"
                                @input="onMatchInput" />
@@ -354,7 +369,7 @@
               <span class="day-div-count">{{ d2Matches.length }} confrontation(s)</span>
               <button v-if="canEdit" @click="addMatch('d2')" class="btn text-xs ml-auto" title="Ajouter une ligne">+ Ajouter</button>
             </div>
-            <div class="overflow-x-auto table-shell" style="max-height:480px;overflow-y:auto;-webkit-overflow-scrolling:touch">
+            <div class="overflow-x-auto table-shell">
               <table class="w-full text-sm matches-table" style="border-collapse:separate;border-spacing:0 4px">
                 <thead>
                   <tr class="text-xs uppercase" style="color:var(--muted)">
@@ -383,7 +398,11 @@
                       <span v-else class="font-medium player-id-text">{{ m.p1 || '—' }}</span>
                     </td>
                     <td class="p-1 text-center">
-                      <div class="flex items-center gap-1 justify-center mb-1">
+                      <div v-if="!canEdit" class="m-legs">
+                        <span class="m-leg" title="Aller">{{ legText(m.a1, m.a2) }}</span>
+                        <span class="m-leg m-leg--ret" title="Retour">{{ legText(m.r1, m.r2) }}</span>
+                      </div>
+                      <div v-if="canEdit" class="flex items-center gap-1 justify-center mb-1">
                         <input v-if="canEdit" v-model="m.a1" type="number" min="0"
                                class="input text-sm text-center px-1 py-1" style="width:44px"
                                @input="onMatchInput" />
@@ -394,7 +413,7 @@
                                @input="onMatchInput" />
                         <span v-else class="text-center" style="width:24px">{{ m.a2 ?? '—' }}</span>
                       </div>
-                      <div class="flex items-center gap-1 justify-center" style="opacity:.7">
+                      <div v-if="canEdit" class="flex items-center gap-1 justify-center" style="opacity:.7">
                         <input v-if="canEdit" v-model="m.r1" type="number" min="0"
                                class="input text-sm text-center px-1 py-1" style="width:44px"
                                @input="onMatchInput" />
@@ -645,8 +664,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, onActivated } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, onActivated } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import PronosticsPanel from '@/components/PronosticsPanel.vue'
+import { usePronostics, usePronosticsData } from '@/composables/usePronostics'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -655,7 +676,7 @@ import { useSiteSettings } from '@/stores/siteSettings'
 import { useToast } from '@/composables/useToast'
 import { useSessionState } from '@/composables/useSessionState'
 import { onRealtimeEvent, joinRealtimeRoom, leaveRealtimeRoom } from '@/composables/useRealtimeSocket'
-import { Loader2Icon, Trash2Icon, RefreshCcwIcon, SearchIcon, PrinterIcon, SaveIcon, UsersIcon, MoreVerticalIcon, RefreshCwIcon, TrophyIcon, PencilIcon } from 'lucide-vue-next'
+import { Loader2Icon, Trash2Icon, RefreshCcwIcon, SearchIcon, PrinterIcon, SaveIcon, UsersIcon, MoreVerticalIcon, RefreshCwIcon, TrophyIcon, PencilIcon, SparklesIcon } from 'lucide-vue-next'
 
 const SVG_TROPHY = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>'
 
@@ -672,6 +693,8 @@ const isAdminEditRoute = route.meta.adminEdit === true
 const canEdit = computed(() => auth.isAdmin && isAdminEditRoute)
 const { success, error: toastError, info: toastInfo } = useToast()
 const MATCH_SORT_STORAGE_KEY = 'gz_journees_match_sort_v1'
+const PRONOS_STORAGE_KEY = 'gz_journees_pronos_open_v1'
+const legText = (a, b) => (a == null || a === '' || b == null || b === '' ? '—' : `${a}–${b}`)
 
 /* ====== State ====== */
 const currentSeason   = ref(null)
@@ -690,6 +713,26 @@ const publishing       = ref(false)
 // Matches: plain reactive arrays of plain objects
 const d1Matches = ref([]) // [{p1, p2, a1, a2, r1, r2}]
 const d2Matches = ref([])
+
+/* ====== Pronostics ====== */
+const pronoData = usePronosticsData(api)
+const pronoPayload = computed(() => ({ d1: d1Matches.value, d2: d2Matches.value }))
+const { titleRace, titleConfidence, matchPredictions, formPlayer } = usePronostics({
+  payload: pronoPayload,
+  seasonStandings: pronoData.seasonStandings,
+  recentDays: pronoData.recentDays,
+  knownDaysCount: pronoData.knownDaysCount,
+  isGuest: pronoData.isGuest,
+})
+let storedPronos = false
+try { storedPronos = localStorage.getItem(PRONOS_STORAGE_KEY) === '1' } catch (_) {}
+const showPronos = ref(storedPronos)
+function togglePronos() {
+  showPronos.value = !showPronos.value
+  try { localStorage.setItem(PRONOS_STORAGE_KEY, showPronos.value ? '1' : '0') } catch (_) {}
+}
+// Les données ne sont chargées qu'à la première ouverture du panneau (et à l'ouverture si c'est déjà l'état mémorisé)
+watch([showPronos, currentSeason], ([open, season]) => { if (open && season?.id) pronoData.load(season.id) }, { immediate: true })
 const tempGuests = ref([]) // [{player_id, name}] — éphémères pour cette journée
 const barrage = reactive({ ids: '', winner: null, notes: '' })
 const matchSort = reactive({
@@ -1731,18 +1774,25 @@ async function printDaySheet() {
 }
 
 .standings-table { min-width: 520px; }
-.matches-table { min-width: 480px; }
+.matches-table { min-width: 420px; table-layout: fixed; }
+.matches-table th:nth-child(1), .matches-table td:nth-child(1) { text-align: right; }
+.matches-table th:nth-child(3), .matches-table td:nth-child(3) { text-align: left; }
+.matches-table th:nth-child(2), .matches-table td:nth-child(2) { width: 9.5rem; text-align: center; }
+.matches-table th:nth-child(4), .matches-table td:nth-child(4) { width: 2.5rem; }
+.m-legs { display: flex; justify-content: center; align-items: baseline; gap: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.m-leg--ret { opacity: .72; }
+.matches-table .player-id-text { display: block; max-width: none; min-width: 0; }
 
 .matches-table th:nth-child(1),
 .matches-table td:nth-child(1),
 .matches-table th:nth-child(3),
 .matches-table td:nth-child(3) {
-  min-width: 150px;
+  min-width: 0;
 }
 
 .matches-table th:nth-child(2),
 .matches-table td:nth-child(2) {
-  min-width: 150px;
+  min-width: 0;
 }
 
 .player-id-input {
@@ -1952,6 +2002,8 @@ button[title] {
 @keyframes spinDay { to { transform: rotate(360deg); } }
 
 /* Deux divisions côte à côte seulement si chacune a au moins 500 px (avec la barre latérale admin, 300 px était trop juste) */
+.pronos-toggle-on { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: color-mix(in srgb, var(--accent) 14%, var(--card)); color: var(--accent-l); }
+.day-pronos { margin-bottom: 1rem; }
 .day-divisions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr)); gap: 1rem; }
 
 .day-division-card {
