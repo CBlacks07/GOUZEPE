@@ -5,7 +5,7 @@
       <span class="pronos-sub">{{ subtitle }}</span>
     </div>
 
-    <div class="pronos-grid">
+    <div class="pronos-grid" :class="{ 'pronos-grid--solo': !titleRace.length }">
       <!-- Course au titre -->
       <div v-if="titleRace.length" class="pronos-block">
         <div class="pronos-block-head">
@@ -34,7 +34,7 @@
           <span v-if="matchPredictions.length" class="pronos-count">{{ matchPredictions.length }} · serrées en tête</span>
         </div>
         <div v-if="matchPredictions.length" class="pred-list">
-          <div v-for="p in shown" :key="p.key" class="pred-row">
+          <div v-for="p in matchPredictions" :key="p.key" class="pred-row">
             <div class="pred-rowtop">
               <span class="pred-div">{{ p.div }}</span>
               <span v-if="p.unknown" class="pred-tag tag-unknown">Incertain</span>
@@ -49,9 +49,6 @@
             <div class="pred-bar"><div class="pred-bar-fill" :style="{ width: p.prob1 + '%' }" /></div>
           </div>
         </div>
-        <button v-if="matchPredictions.length > LIMIT" type="button" class="pred-more" @click="expanded = !expanded">
-          {{ expanded ? 'Réduire la liste' : `Voir les ${matchPredictions.length} affiches` }}
-        </button>
         <p v-else class="pronos-empty">Aucune affiche programmée pour l'instant. Les pronostics s'afficheront dès que la grille sera composée.</p>
       </div>
     </div>
@@ -60,17 +57,13 @@
 
 <script setup>
 // Panneau « Pronostics » partagé : accueil membre et page Journées.
-import { computed, ref } from 'vue'
-const LIMIT = 12
-const expanded = ref(false)
-const props = defineProps({
+defineProps({
   titleRace: { type: Array, default: () => [] },
   titleConfidence: { type: Object, default: null },
   formPlayer: { type: Object, default: null },
   matchPredictions: { type: Array, default: () => [] },
   subtitle: { type: String, default: 'Estimations · prochaine journée' },
 })
-const shown = computed(() => (expanded.value ? props.matchPredictions : props.matchPredictions.slice(0, LIMIT)))
 </script>
 
 <style scoped>
@@ -82,6 +75,7 @@ const shown = computed(() => (expanded.value ? props.matchPredictions : props.ma
 .pronos-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; margin-bottom: 1rem; }
 .pronos-sub { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
 .pronos-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
+@media (min-width: 900px) { .pronos-grid:not(.pronos-grid--solo) { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); } }
 
 .pronos-block-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .6rem; }
 .pronos-block-title { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
@@ -93,7 +87,7 @@ const shown = computed(() => (expanded.value ? props.matchPredictions : props.ma
 .pronos-chip.tone-open { color: #f59e0b; background: color-mix(in srgb, #f59e0b 14%, transparent); border: 1px solid color-mix(in srgb, #f59e0b 32%, transparent); }
 
 /* Course au titre */
-.title-race { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: .4rem; }
+.title-race { display: flex; flex-direction: column; gap: .3rem; }
 .tr-row { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto auto; align-items: center; gap: .55rem; padding: .4rem .55rem; border-radius: 9px; border: 1px solid color-mix(in srgb, var(--border) 55%, transparent); background: color-mix(in srgb, var(--panel) 55%, transparent); }
 .tr-row.leader { border-color: color-mix(in srgb, #22c55e 40%, var(--border)); background: color-mix(in srgb, #22c55e 8%, transparent); }
 .tr-rank { font-weight: 800; font-size: .8rem; color: var(--muted); text-align: center; }
@@ -108,7 +102,7 @@ const shown = computed(() => (expanded.value ? props.matchPredictions : props.ma
 .pronos-form-line .muted { color: var(--muted); }
 
 /* Affiches : grille de cartes compactes, sans défilement interne */
-.pred-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: .55rem; }
+.pred-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: .55rem; max-height: 360px; overflow-y: auto; padding-right: .35rem; scrollbar-width: thin; }
 .pred-row { padding: .5rem .65rem .6rem; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--border) 55%, transparent); background: color-mix(in srgb, var(--panel) 50%, transparent); }
 .pred-rowtop { display: flex; align-items: center; gap: .4rem; margin-bottom: .3rem; }
 .pred-div { font-size: .56rem; font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: .04rem .42rem; }
@@ -124,8 +118,6 @@ const shown = computed(() => (expanded.value ? props.matchPredictions : props.ma
 .pred-pname.fav, .pred-pct.fav { color: var(--accent-l, var(--accent)); font-weight: 800; }
 .pred-bar { height: 5px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, #f59e0b 55%, transparent); margin-top: .4rem; }
 .pred-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-l, var(--accent))); transition: width .4s ease; }
-.pred-more { margin-top: .7rem; width: 100%; font-size: .78rem; font-weight: 700; color: var(--accent-l, var(--accent)); padding: .45rem; border-radius: 9px; border: 1px dashed var(--border); background: transparent; cursor: pointer; }
-.pred-more:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 
 .pronos-empty { font-size: .82rem; color: var(--muted); line-height: 1.5; padding: .4rem 0; }
 

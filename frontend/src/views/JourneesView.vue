@@ -241,7 +241,7 @@
               <span class="day-div-count">{{ d1Matches.length }} confrontation(s)</span>
               <button v-if="canEdit" @click="addMatch('d1')" class="btn text-xs ml-auto" title="Ajouter une ligne">+ Ajouter</button>
             </div>
-            <div class="overflow-x-auto table-shell" :class="{ 'shell-scroll': canEdit }">
+            <div class="overflow-x-auto table-shell" :class="{ 'shell-scroll': d1Matches.length >= 10, 'shell-scroll--edit': canEdit }">
               <table class="w-full text-sm matches-table" style="border-collapse:separate;border-spacing:0 4px">
                 <thead>
                   <tr class="text-xs uppercase" style="color:var(--muted)">
@@ -369,7 +369,7 @@
               <span class="day-div-count">{{ d2Matches.length }} confrontation(s)</span>
               <button v-if="canEdit" @click="addMatch('d2')" class="btn text-xs ml-auto" title="Ajouter une ligne">+ Ajouter</button>
             </div>
-            <div class="overflow-x-auto table-shell" :class="{ 'shell-scroll': canEdit }">
+            <div class="overflow-x-auto table-shell" :class="{ 'shell-scroll': d2Matches.length >= 10, 'shell-scroll--edit': canEdit }">
               <table class="w-full text-sm matches-table" style="border-collapse:separate;border-spacing:0 4px">
                 <thead>
                   <tr class="text-xs uppercase" style="color:var(--muted)">
@@ -1745,7 +1745,8 @@ async function printDaySheet() {
   -webkit-overflow-scrolling: touch;
 }
 
-.table-shell.shell-scroll { max-height: min(70vh, 640px); overflow-y: auto; }
+.table-shell.shell-scroll { max-height: 340px; overflow-y: auto; scrollbar-width: thin; }
+.table-shell.shell-scroll--edit { max-height: min(70vh, 640px); }
 .table-shell.shell-scroll .matches-table thead th { position: sticky; top: 0; z-index: 2; background: var(--card, #0f172a); }
 .table-shell .matches-table thead th,
 .table-shell .standings-table thead th {
