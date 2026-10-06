@@ -2462,6 +2462,132 @@ app.get('/tournaments/member/day/:date', auth, async (req, res) => {
   }
 });
 
+/* Modifier les participants d'un tournoi « toutes rondes » EN COURS (retard, forfait, oubli).
+   Contrairement à PUT .../participants (qui repart de zéro et efface tous les scores), on applique
+   seulement la différence avec la liste actuelle :
+   - un joueur ajouté reçoit ses matchs contre tous les autres (aller/retour selon le tournoi) ;
+   - un joueur retiré perd ses matchs et ses résultats ;
+   - tous les autres scores restent intacts.
+   Les formats à élimination / groupes ne sont pas concernés : leur tableau dépend de la liste. */
+function liveParticipantsHandler(gameType) {
+  return async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
+    const raw = Array.isArray(req.body?.names) ? req.body.names : [];
+    const names = raw.map((x) => String(x || '').trim()).filter(Boolean);
+    if (names.length < 2) return bad(res, 400, 'Au moins 2 participants requis');
+    if (new Set(names.map((n) => n.toLowerCase())).size !== names.length) return bad(res, 400, 'Noms en doublon');
+    if (names.some((n) => n.length > 64)) return bad(res, 400, 'Nom trop long (max 64)');
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const t = await client.query(
+        `SELECT id, status, format, rr_match_mode, member_tournament FROM tournaments WHERE id=$1 AND game_type=$2 FOR UPDATE`,
+        [id, gameType]
+      );
+      if (!t.rowCount) { await client.query('ROLLBACK'); return bad(res, 404, 'Tournoi introuvable'); }
+      const trn = t.rows[0];
+      if (['completed', 'archived'].includes(trn.status)) {
+        await client.query('ROLLBACK');
+        return bad(res, 400, 'Tournoi verrouillé : repasse-le d\'abord « En direct » pour modifier les participants');
+      }
+      if (trn.status === 'draft') {
+        await client.query('ROLLBACK');
+        return bad(res, 400, 'Le tournoi n\'est pas encore lancé : modifie les participants avant de générer le tableau');
+      }
+      if (trn.format !== 'round_robin') {
+        await client.query('ROLLBACK');
+        return bad(res, 400, 'En cours, seuls les tournois « Toutes rondes » acceptent un changement de participants (le tableau des autres formats dépend de la liste)');
+      }
+      const withHomeAway = String(trn.rr_match_mode || 'single') === 'home_away';
+
+      // Liste souhaitée : joueurs du club (pôle vérifié pour Tekken) ou noms libres.
+      const memberMode = gameType === 'tekken' ? true : trn.member_tournament !== false;
+      const desired = [];
+      const seen = new Set();
+      for (const token of names) {
+        if (!memberMode) { desired.push({ display_name: token, player_id: null }); continue; }
+        const found = await client.query(`
+          SELECT player_id, name, main_game FROM players
+          WHERE lower(player_id)=lower($1) OR lower(name)=lower($1)
+          ORDER BY CASE WHEN lower(player_id)=lower($1) THEN 0 ELSE 1 END, player_id ASC LIMIT 3
+        `, [token]);
+        if (!found.rowCount) { await client.query('ROLLBACK'); return bad(res, 400, `Joueur introuvable: ${token}`); }
+        const exact = found.rows.some((r) => String(r.player_id).toLowerCase() === token.toLowerCase());
+        if (!exact && found.rowCount > 1) { await client.query('ROLLBACK'); return bad(res, 400, `Nom ambigu: ${token}`); }
+        const picked = found.rows[0];
+        if (gameType === 'tekken') {
+          const pg = picked.main_game || 'efoot';
+          if (pg !== 'tekken' && pg !== 'both') { await client.query('ROLLBACK'); return bad(res, 403, `${picked.name || picked.player_id} n'est pas du pole Tekken`); }
+        }
+        if (seen.has(picked.player_id)) { await client.query('ROLLBACK'); return bad(res, 400, `Doublon joueur: ${picked.name || picked.player_id}`); }
+        seen.add(picked.player_id);
+        desired.push({ display_name: picked.name || picked.player_id, player_id: picked.player_id });
+      }
+      if (desired.length < 2) { await client.query('ROLLBACK'); return bad(res, 400, 'Au moins 2 participants requis'); }
+
+      const keyOf = (p) => (p.player_id ? `p:${String(p.player_id).toLowerCase()}` : `n:${String(p.display_name).toLowerCase()}`);
+      const cur = await client.query(
+        `SELECT id, display_name, player_id, seed FROM tournament_participants WHERE tournament_id=$1 ORDER BY seed ASC NULLS LAST, id ASC`, [id]);
+      const desiredKeys = new Set(desired.map(keyOf));
+      const curKeys = new Set(cur.rows.map(keyOf));
+      const removed = cur.rows.filter((p) => !desiredKeys.has(keyOf(p)));
+      const added = desired.filter((p) => !curKeys.has(keyOf(p)));
+
+      // Retraits : leurs matchs (et résultats) disparaissent avec eux.
+      let removedMatches = 0;
+      for (const p of removed) {
+        const d = await client.query(
+          `DELETE FROM tournament_matches WHERE tournament_id=$1 AND (p1_participant_id=$2 OR p2_participant_id=$2)`, [id, p.id]);
+        removedMatches += d.rowCount;
+        await client.query(`DELETE FROM tournament_participants WHERE id=$1`, [p.id]);
+      }
+
+      // Ajouts : un nouveau participant joue contre chacun des autres.
+      const slots = await client.query(`SELECT round_no, MAX(slot_no)::int AS m FROM tournament_matches WHERE tournament_id=$1 GROUP BY round_no`, [id]);
+      const nextSlot = { 1: 1, 2: 1 };
+      for (const r of slots.rows) nextSlot[r.round_no] = r.m + 1;
+      let seedMax = (await client.query(`SELECT COALESCE(MAX(seed),0)::int AS m FROM tournament_participants WHERE tournament_id=$1`, [id])).rows[0].m;
+      let addedMatches = 0;
+      for (const p of added) {
+        const ins = await client.query(
+          `INSERT INTO tournament_participants(tournament_id, display_name, player_id, seed) VALUES($1,$2,$3,$4) RETURNING id`,
+          [id, p.display_name, p.player_id, ++seedMax]);
+        const newId = ins.rows[0].id;
+        const others = await client.query(`SELECT id FROM tournament_participants WHERE tournament_id=$1 AND id<>$2 ORDER BY seed ASC NULLS LAST, id ASC`, [id, newId]);
+        for (const o of others.rows) {
+          await client.query(`
+            INSERT INTO tournament_matches(tournament_id,round_no,slot_no,p1_participant_id,p2_participant_id,status,bracket_side)
+            VALUES($1,1,$2,$3,$4,'ready','W')`, [id, nextSlot[1]++, o.id, newId]);
+          addedMatches++;
+          if (withHomeAway) {
+            await client.query(`
+              INSERT INTO tournament_matches(tournament_id,round_no,slot_no,p1_participant_id,p2_participant_id,status,bracket_side)
+              VALUES($1,2,$2,$3,$4,'ready','W')`, [id, nextSlot[2]++, newId, o.id]);
+            addedMatches++;
+          }
+        }
+      }
+
+      // Plus aucun match restant à jouer (retrait) : le tournoi se termine ; sinon on rafraîchit le leader.
+      await checkRoundRobinCompletion(client, id);
+      await updateRoundRobinStandings(client, id);
+      await client.query('COMMIT');
+      const bundle = await getTournamentBundle(id);
+      emitTournamentRealtime(bundle, 'participants');
+      ok(res, { ...bundle, changes: { added: added.length, removed: removed.length, added_matches: addedMatches, removed_matches: removedMatches } });
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      bad(res, 500, e.message || 'Modification des participants impossible');
+    } finally {
+      client.release();
+    }
+  };
+}
+app.put('/admin/tournaments/:id/participants/live', auth, adminOnly, liveParticipantsHandler('efoot'));
+app.put('/admin/tekken/tournaments/:id/participants/live', auth, adminOnly, liveParticipantsHandler('tekken'));
+
 app.put('/admin/tournaments/:id/participants', auth, adminOnly, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return bad(res, 400, 'id invalide');
