@@ -346,7 +346,7 @@
 
   .page-wrap {
     /* ── Layout ── */
-    max-width: 80rem;
+    max-width: none; /* pages pleine largeur */
     margin: 0 auto;
     padding: 1.5rem 1rem;
     @media (min-width: 640px) {

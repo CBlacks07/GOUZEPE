@@ -24,11 +24,13 @@
           <span class="dot" /> En forme : <strong>{{ formPlayer.name }}</strong>
           <span class="muted">{{ formPlayer.pts }} pts · {{ formPlayer.bp }} buts (2 dern. J)</span>
         </p>
-        <div v-if="flashes.length" class="pronos-flashes">
-          <p v-for="f in flashes" :key="f.tag" class="pronos-flash">
-            <span class="pronos-flash-tag">{{ f.tag }}</span>
-            <span class="pronos-flash-text">{{ f.text }}</span>
-          </p>
+        <div v-if="currentFlash" class="pronos-flashes" aria-live="polite">
+          <Transition name="flash" mode="out-in">
+            <p :key="currentFlash.tag" class="pronos-flash" :title="currentFlash.text">
+              <span class="pronos-flash-tag">{{ currentFlash.tag }}</span>
+              <span class="pronos-flash-text">{{ currentFlash.text }}</span>
+            </p>
+          </Transition>
         </div>
         <slot name="left-extra" />
       </div>
@@ -71,7 +73,7 @@
 
 <script setup>
 // Panneau « Pronostics » partagé : accueil membre et page Journées.
-import { computed } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 const props = defineProps({
   titleRace: { type: Array, default: () => [] },
   titleConfidence: { type: Object, default: null },
@@ -80,6 +82,17 @@ const props = defineProps({
   flashes: { type: Array, default: () => [] },
   subtitle: { type: String, default: 'Estimations · prochaine journée' },
 })
+// Temps forts : une seule ligne, qui défile d'un fait au suivant
+const flashIndex = ref(0)
+const currentFlash = computed(() => props.flashes[flashIndex.value % (props.flashes.length || 1)] || null)
+let flashTimer = null
+watch(() => props.flashes.length, (n) => {
+  clearInterval(flashTimer)
+  flashIndex.value = 0
+  if (n > 1) flashTimer = setInterval(() => { flashIndex.value = (flashIndex.value + 1) % n }, 4200)
+}, { immediate: true })
+onBeforeUnmount(() => clearInterval(flashTimer))
+
 const groups = computed(() =>
   [['D1', 'Division 1'], ['D2', 'Division 2']]
     .map(([div, label]) => ({ div, label, items: props.matchPredictions.filter((p) => p.div === div) }))
@@ -122,14 +135,19 @@ const groups = computed(() =>
 .pronos-form-line .muted { color: var(--muted); }
 
 /* Temps forts de la journée */
-.pronos-flashes { margin-top: .7rem; display: flex; flex-direction: column; gap: .35rem; }
-.pronos-flash { display: flex; align-items: baseline; gap: .6rem; padding: .5rem .7rem; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--border) 55%, transparent); background: color-mix(in srgb, var(--panel) 55%, transparent); font-size: .82rem; line-height: 1.35; }
+.pronos-flashes { margin-top: .7rem; overflow: hidden; border-radius: 10px; }
+.pronos-flash { display: flex; align-items: baseline; gap: .6rem; padding: .55rem .75rem; border: 1px solid color-mix(in srgb, var(--border) 55%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--panel) 55%, transparent); font-size: .82rem; white-space: nowrap; }
 .pronos-flash-tag { flex: none; font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #22c55e; }
-.pronos-flash-text { min-width: 0; color: var(--text); opacity: .85; }
+.pronos-flash-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text); opacity: .85; }
+.flash-enter-active, .flash-leave-active { transition: transform .45s cubic-bezier(.22, 1, .36, 1), opacity .35s ease; }
+.flash-enter-from { transform: translateY(70%); opacity: 0; }
+.flash-leave-to { transform: translateY(-70%); opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .flash-enter-active, .flash-leave-active { transition: none; } }
 
 /* Affiches : grille de cartes compactes, sans défilement interne */
-.pred-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: .8rem; }
-.pred-col { min-width: 0; }
+.pred-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+@media (max-width: 479px) { .pred-split { grid-template-columns: minmax(0, 1fr); } }
+.pred-col { min-width: 0; container-type: inline-size; }
 .pred-col-head { display: flex; align-items: center; gap: .45rem; margin-bottom: .45rem; }
 .pred-col-title { font-size: .74rem; font-weight: 800; letter-spacing: .04em; }
 .pred-col-count { margin-left: auto; font-size: .66rem; font-weight: 700; color: var(--muted); }
@@ -149,6 +167,13 @@ const groups = computed(() =>
 .pred-pname--r { text-align: right; }
 .pred-pct { font-size: .8rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
 .pred-pname.fav, .pred-pct.fav { color: var(--accent-l, var(--accent)); font-weight: 800; }
+/* colonne étroite (tablette) : un joueur par ligne, pourcentage à droite */
+@container (max-width: 260px) {
+  .pred-vs { grid-template-columns: minmax(0, 1fr) auto; row-gap: .1rem; }
+  .pred-pname--r { text-align: left; }
+  .pred-pct--r { order: 1; }
+  .pred-pct { text-align: right; }
+}
 .pred-bar { height: 5px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, #f59e0b 55%, transparent); margin-top: .4rem; }
 .pred-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-l, var(--accent))); transition: width .4s ease; }
 
