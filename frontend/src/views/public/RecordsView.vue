@@ -2,7 +2,7 @@
   <div class="rec">
     <PublicNav />
 
-    <section class="section">
+    <section class="reveal-scroll section">
       <div class="section-head">
         <h1>Records du club</h1>
         <p>Les performances qui marquent l'histoire.</p>

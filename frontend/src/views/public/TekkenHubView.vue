@@ -45,7 +45,7 @@
     </section>
 
     <!-- Championnat + ladder -->
-    <section class="section">
+    <section class="reveal-scroll section">
       <div class="boards">
         <div class="mini-board">
           <div class="mini-head">
@@ -82,7 +82,7 @@
     </section>
 
     <!-- Tournois -->
-    <section class="section">
+    <section class="reveal-scroll section">
       <div class="section-head"><h2>Tournois</h2><p>Les compétitions Tekken du club, brackets compris.</p></div>
       <div v-if="tournaments.length" class="tourn-grid">
         <RouterLink v-for="t in tournaments.slice(0, 6)" :key="t.id" :to="`/tournoi/${t.id}`" class="tourn-card">
@@ -116,7 +116,7 @@
     </section>
 
     <!-- Comment ça marche -->
-    <section class="section">
+    <section class="reveal-scroll section">
       <div class="feat-grid">
         <article class="feat-card">
           <CalendarDaysIcon class="feat-ic" />
@@ -136,7 +136,7 @@
       </div>
     </section>
 
-    <section class="section join-band">
+    <section class="reveal-scroll section join-band">
       <h2>Rejoins l'arène</h2>
       <p>Inscris-toi et choisis Tekken comme jeu.</p>
       <RouterLink to="/inscription" class="btn-primary cta-lg">Devenir membre</RouterLink>

@@ -41,18 +41,18 @@
               </div>
               <div class="space-y-2">
                 <label class="inline-flex items-center gap-2 text-sm text-gz-text cursor-pointer">
-                  <input v-model="newT.memberTournament" type="checkbox" class="accent-[var(--green)]" />
+                  <input v-model="newT.memberTournament" type="checkbox" class="accent-(--green)" />
                   Tournoi membre
                 </label>
                 <div v-if="newT.memberTournament" class="pl-5 space-y-1.5 border-l-2 border-gz-green/30">
                   <p class="text-xs text-gz-muted font-medium">Comptant pour le titre D1 ?</p>
                   <div class="flex gap-4">
                     <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input v-model="newT.countsForTitle" type="radio" :value="true" class="accent-[var(--green)]" />
+                      <input v-model="newT.countsForTitle" type="radio" :value="true" class="accent-(--green)" />
                       <span class="text-gz-text">Oui</span>
                     </label>
                     <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input v-model="newT.countsForTitle" type="radio" :value="false" class="accent-[var(--green)]" />
+                      <input v-model="newT.countsForTitle" type="radio" :value="false" class="accent-(--green)" />
                       <span class="text-gz-text">Non</span>
                     </label>
                   </div>
@@ -81,7 +81,7 @@
                 :class="[
                   'w-full text-left px-2.5 py-1.5 rounded-lg border text-sm transition-all',
                   selected?.id === t.id
-                    ? 'border-gz-green/50 bg-gz-green/8 text-gz-text shadow-sm'
+                    ? 'border-gz-green/50 bg-gz-green/8 text-gz-text shadow-xs'
                     : 'border-transparent hover:border-gz-border hover:bg-gz-card text-gz-muted'
                 ]"
                 :title="`Ouvrir ${t.name}`"
@@ -190,19 +190,19 @@
               <div class="mt-3 space-y-2">
                 <!-- Date, mode des matchs et classement sur une seule ligne (retour à la ligne sur petit écran) -->
                 <div class="flex flex-wrap items-end gap-2">
-                  <div class="flex-1 min-w-[13rem]">
+                  <div class="flex-1 min-w-52">
                     <label class="label">Date & heure du tournoi</label>
                     <input v-model="selectedStartsAtInput" type="datetime-local" class="input" />
                   </div>
                   <template v-if="selected?.format === 'round_robin'">
-                    <div class="flex-1 min-w-[10rem]">
+                    <div class="flex-1 min-w-40">
                       <label class="label">Matchs (Round Robin)</label>
                       <select v-model="selectedRrMatchMode" class="input">
                         <option value="single">Match simple</option>
                         <option value="home_away">Aller / Retour</option>
                       </select>
                     </div>
-                  <div class="flex-1 min-w-[12rem]">
+                  <div class="flex-1 min-w-48">
                     <label class="label">Classement</label>
                     <select v-model="selectedRrStandingsMode" class="input">
                       <option value="goals">Points + buts (BM/BC/DIFF)</option>
@@ -217,7 +217,7 @@
                     <textarea
                       v-model="selectedDayComment"
                       rows="2"
-                      class="input min-h-[3.25rem]"
+                      class="input min-h-13"
                       placeholder="Commentaire de la journée tournoi..."
                     />
                   </div>
@@ -241,7 +241,7 @@
                       :checked="isMemberTournament"
                       @change="setTournamentMemberMode($event.target.checked)"
                       type="checkbox"
-                      class="accent-[var(--green)]"
+                      class="accent-(--green)"
                     />
                     Tournoi membre
                   </label>
@@ -259,7 +259,7 @@
                         @change="setCountsForTitle(true)"
                         type="radio"
                         name="counts_for_title"
-                        class="accent-[var(--green)]"
+                        class="accent-(--green)"
                       />
                       <span class="text-gz-text">Oui</span>
                     </label>
@@ -269,7 +269,7 @@
                         @change="setCountsForTitle(false)"
                         type="radio"
                         name="counts_for_title"
-                        class="accent-[var(--green)]"
+                        class="accent-(--green)"
                       />
                       <span class="text-gz-text">Non <span class="text-[11px] text-gz-muted">(amical)</span></span>
                     </label>
@@ -294,7 +294,7 @@
                       v-model="memberSelection"
                       type="checkbox"
                       :value="p.player_id"
-                      class="accent-[var(--green)]"
+                      class="accent-(--green)"
                     />
                     <span class="truncate">{{ p.name || p.player_id }}</span>
                     <span class="text-gz-muted text-xs">({{ p.player_id }})</span>
@@ -366,7 +366,7 @@
                   <input v-model="memberSelectionSearch" type="text" class="input" placeholder="Rechercher un joueur..." />
                   <div class="member-picker">
                     <label v-for="p in filteredMemberPlayers" :key="p.player_id" class="member-picker-item">
-                      <input v-model="memberSelection" type="checkbox" :value="p.player_id" class="accent-[var(--green)]" />
+                      <input v-model="memberSelection" type="checkbox" :value="p.player_id" class="accent-(--green)" />
                       <span class="truncate">{{ p.name || p.player_id }}</span>
                       <span class="text-gz-muted text-xs">({{ p.player_id }})</span>
                     </label>
@@ -1592,18 +1592,6 @@ async function printTournamentResults() {
   background: color-mix(in srgb, var(--panel) 84%, transparent);
 }
 
-.reveal {
-  animation: rise-in 420ms ease both;
-}
-
-.delay-1 {
-  animation-delay: 80ms;
-}
-
-.delay-2 {
-  animation-delay: 150ms;
-}
-
 .group-table-scroll {
   width: 100%;
   overflow-x: auto;
@@ -1640,17 +1628,6 @@ async function printTournamentResults() {
   background: color-mix(in srgb, var(--panel) 62%, var(--blue) 38%);
 }
 
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @media (min-width: 1024px) {
   .admin-tournois-wrap {

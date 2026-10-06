@@ -220,9 +220,9 @@ const loadingHist = ref(false)
 const historyColspan = computed(() => (auth.isAdmin ? 6 : 5))
 
 const resultOptions = [
-  { v: 'A', label: 'A gagne', activeClass: 'border-gz-green/60 bg-gz-green/15 text-[var(--green-l)]' },
+  { v: 'A', label: 'A gagne', activeClass: 'border-gz-green/60 bg-gz-green/15 text-(--green-l)' },
   { v: 'D', label: 'Nul',     activeClass: 'border-gz-border bg-gz-border/30 text-gz-text' },
-  { v: 'B', label: 'B gagne', activeClass: 'border-gz-blue/60 bg-gz-blue/15 text-[var(--blue-l)]' },
+  { v: 'B', label: 'B gagne', activeClass: 'border-gz-blue/60 bg-gz-blue/15 text-(--blue-l)' },
 ]
 
 // ── Computed ───────────────────────────────────────────────────
@@ -440,28 +440,6 @@ function leaderLabel(r) {
   width: 100%;
 }
 
-.reveal {
-  animation: rise-in 420ms ease both;
-}
-
-.delay-1 {
-  animation-delay: 80ms;
-}
-
-.delay-2 {
-  animation-delay: 150ms;
-}
-
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @media (min-width: 1024px) {
   .duel-wrap {

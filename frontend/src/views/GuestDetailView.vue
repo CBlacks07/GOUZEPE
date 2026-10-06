@@ -208,10 +208,6 @@ watch(() => route.params.id, load)
 .gd-pts { font-family: var(--font-title); font-weight: 800; font-size: .95rem; font-variant-numeric: tabular-nums; }
 .gd-pts small { font-size: .58rem; font-weight: 600; color: var(--muted); }
 
-.reveal { animation: rise-in .4s ease both; }
-.delay-1 { animation-delay: 80ms; }
-.delay-2 { animation-delay: 160ms; }
-@keyframes rise-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 560px) {
   .gd-stats { width: 100%; justify-content: space-between; gap: .5rem; }

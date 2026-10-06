@@ -2,7 +2,7 @@
   <div class="pp">
     <PublicNav />
 
-    <section class="section">
+    <section class="reveal-scroll section">
       <RouterLink to="/membres" class="back"><ArrowLeftIcon class="w-4 h-4" /> Membres</RouterLink>
 
       <div v-if="loading" class="empty">Chargement…</div>

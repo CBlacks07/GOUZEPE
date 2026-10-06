@@ -761,10 +761,6 @@ async function uploadPhoto(e) {
   border-color: var(--accent); color: var(--accent);
 }
 
-.reveal { animation: riseIn .4s ease both; }
-.delay-1 { animation-delay: 80ms; }
-.delay-2 { animation-delay: 160ms; }
-@keyframes riseIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
 @media (max-width: 640px) {
   .match-row { grid-template-columns: 60px 22px 1fr 50px 28px; }

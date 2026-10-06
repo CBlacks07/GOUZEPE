@@ -560,24 +560,6 @@ function fmtDate(s) {
   border-bottom: none;
 }
 
-.reveal {
-  animation: rise-in 420ms ease both;
-}
-
-.delay-1 {
-  animation-delay: 80ms;
-}
-
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @media (min-width: 1024px) {
   .admin-utilisateurs-wrap {

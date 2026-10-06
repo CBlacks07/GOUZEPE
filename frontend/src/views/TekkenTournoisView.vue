@@ -18,7 +18,7 @@
                 :class="[
                   'w-full text-left px-3 py-2.5 rounded-xl border transition-all duration-200 relative overflow-hidden',
                   selected?.id === t.id
-                    ? 'border-gz-green/40 bg-gz-green/8 text-gz-text shadow-sm'
+                    ? 'border-gz-green/40 bg-gz-green/8 text-gz-text shadow-xs'
                     : 'border-gz-border/30 hover:border-gz-green/25 hover:bg-gz-card text-gz-muted hover:text-gz-text'
                 ]"
               >
@@ -56,7 +56,7 @@
                 :class="i === 0 ? 'bg-gz-amber/6' : ''"
               >
                 <span
-                  class="rank-badge text-[10px] flex-shrink-0"
+                  class="rank-badge text-[10px] shrink-0"
                   :class="{ 'rank-gold': i === 0, 'rank-silver': i === 1, 'rank-bronze': i === 2 }"
                 >{{ row.rank }}</span>
                 <div class="flex-1 min-w-0">
@@ -67,7 +67,7 @@
                     {{ row.name }}
                   </div>
                 </div>
-                <div class="text-right flex-shrink-0">
+                <div class="text-right shrink-0">
                   <div v-if="row.stage" class="text-[10px] font-semibold mb-0.5"
                     :class="row.rank === 1 ? 'text-gz-amber' : 'text-gz-muted'">{{ row.stage }}</div>
                   <div>
@@ -752,22 +752,6 @@ async function printTournamentResults() {
   background: color-mix(in srgb, var(--panel) 84%, transparent);
 }
 
-.reveal {
-  animation: rise-in 420ms ease both;
-}
-
-.delay-1 {
-  animation-delay: 80ms;
-}
-
-.delay-2 {
-  animation-delay: 150ms;
-}
-
-.delay-3 {
-  animation-delay: 220ms;
-}
-
 .knockout-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -913,17 +897,6 @@ async function printTournamentResults() {
   min-width: 560px;
 }
 
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 @media (min-width: 1024px) {
   .tournois-wrap {

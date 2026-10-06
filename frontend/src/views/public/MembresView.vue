@@ -13,7 +13,7 @@
     </section>
 
     <!-- Annuaire -->
-    <section class="section">
+    <section class="reveal-scroll section">
       <div class="game-tabs">
         <button :class="['gt', { on: activeGame === 'efoot' }]" @click="selectGame('efoot')">eFootball</button>
         <button :class="['gt', { on: activeGame === 'tekken' }]" @click="selectGame('tekken')">Tekken</button>
@@ -48,7 +48,7 @@
       </div>
     </section>
 
-    <section class="section join-band">
+    <section class="reveal-scroll section join-band">
       <h2>Rejoins-les</h2>
       <p>Deviens membre et entre dans la compétition.</p>
       <RouterLink to="/inscription" class="btn-primary cta-lg">Devenir membre</RouterLink>

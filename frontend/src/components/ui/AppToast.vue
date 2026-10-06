@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
-    <div class="fixed bottom-4 right-4 z-[200] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
-      <TransitionGroup name="toast">
+    <div class="fixed bottom-4 right-4 z-200 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+      <TransitionGroup enter-active-class="animate-slide-in-right animate-duration-fast" leave-active-class="animate-fade-out animate-duration-faster">
         <div
           v-for="t in toasts"
           :key="t.id"
@@ -39,8 +39,4 @@ function toastIcon(type) {
 </script>
 
 <style scoped>
-.toast-enter-active { transition: all 0.25s ease; }
-.toast-leave-active { transition: all 0.2s ease; }
-.toast-enter-from   { opacity: 0; transform: translateY(8px) scale(0.97); }
-.toast-leave-to     { opacity: 0; transform: translateX(20px); }
 </style>
