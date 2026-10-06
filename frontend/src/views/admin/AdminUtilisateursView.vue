@@ -2,10 +2,6 @@
   <AppLayout season-label="Utilisateurs">
     <div class="page-wrap admin-utilisateurs-wrap">
 
-      <RouterLink to="/admin" class="inline-flex items-center gap-1.5 text-sm font-semibold text-gz-muted hover:text-gz-text mb-4">
-        <ArrowLeftIcon class="w-3.5 h-3.5" /> Console
-      </RouterLink>
-
       <!-- Créer un utilisateur -->
       <section class="card mb-4 reveal">
         <h2 class="font-semibold text-gz-text mb-4">Créer un utilisateur</h2>

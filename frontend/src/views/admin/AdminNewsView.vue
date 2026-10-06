@@ -2,10 +2,6 @@
   <AppLayout season-label="Actualités">
     <div class="page-wrap news-admin">
 
-      <RouterLink to="/admin" class="inline-flex items-center gap-1.5 text-sm font-semibold text-gz-muted hover:text-gz-text mb-4">
-        <ArrowLeftIcon class="w-3.5 h-3.5" /> Console
-      </RouterLink>
-
       <!-- Créer / modifier -->
       <section class="card mb-4 reveal">
         <h2 class="font-semibold text-gz-text mb-4">{{ editingId ? 'Modifier l\'annonce' : 'Nouvelle annonce' }}</h2>
@@ -158,7 +154,7 @@ onMounted(load)
 </script>
 
 <style scoped>
-.news-admin { max-width: 50rem; }
+.news-admin { max-width: 64rem; }
 .news-row { display: flex; align-items: flex-start; justify-content: space-between; gap: .8rem; padding: .8rem; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
 .news-row-main { min-width: 0; flex: 1; }
 .news-row-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .3rem; }

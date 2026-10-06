@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-dvh flex flex-col">
+  <div class="min-h-dvh flex flex-col" :class="{ 'adm-compact': isAdminArea }">
     <a href="#main-content" class="skip-link">Aller au contenu</a>
     <AppHeader :season-label="seasonLabel" :drawer-open="drawerOpen" @open-drawer="drawerOpen = true" />
     <AppDrawer :open="drawerOpen" @close="drawerOpen = false" />
