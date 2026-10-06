@@ -2,10 +2,6 @@
   <AppLayout season-label="Apparence du site">
     <div class="page-wrap site-admin">
 
-      <RouterLink to="/admin" class="inline-flex items-center gap-1.5 text-sm font-semibold text-gz-muted hover:text-gz-text mb-4">
-        <ArrowLeftIcon class="w-3.5 h-3.5" /> Console
-      </RouterLink>
-
       <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
           <h1 class="text-xl font-bold" style="font-family:var(--font-title);letter-spacing:.04em;text-transform:uppercase">Apparence &amp; Contenu du site</h1>
@@ -21,7 +17,7 @@
 
       <p v-if="msg" class="mb-4 text-sm" :class="msgOk ? 'text-gz-green' : 'text-gz-red'">{{ msg }}</p>
 
-      <div class="grid gap-5" style="grid-template-columns:1fr">
+      <div class="site-grid">
 
         <!-- Marque -->
         <section class="card">
@@ -335,9 +331,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.site-admin { max-width: 60rem; }
-.sec-title { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: 1rem; margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
-.grid2 { display: grid; gap: .9rem; grid-template-columns: 1fr; }
+.site-admin { max-width: none; }
+.site-grid { display: grid; gap: .75rem; grid-template-columns: 1fr; }
+/* Colonnes continues : les cartes de hauteurs inégales se rangent sans trous */
+@media (min-width: 1100px) { .site-grid { display: block; column-count: 2; column-gap: .75rem; } .site-grid > .card { break-inside: avoid; margin-bottom: .75rem; } }
+.sec-title { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: 1rem; margin-bottom: .6rem; padding-bottom: .35rem; border-bottom: 1px solid var(--border); }
+.grid2 { display: grid; gap: .6rem; grid-template-columns: 1fr; }
 .media-row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
 .media-row .input { flex: 1; min-width: 12rem; }
 .media-prev { width: 48px; height: 48px; border-radius: 8px; object-fit: contain; background: var(--panel); border: 1px solid var(--border); flex: none; }

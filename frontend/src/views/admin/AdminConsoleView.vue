@@ -34,19 +34,19 @@ const { pendingCount } = useMembershipNotif()
 </script>
 
 <style scoped>
-.console { max-width: 64rem; }
+.console { max-width: none; }
 .title { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 1.5rem; }
 .sub { color: var(--muted); margin-top: .25rem; }
 
-.grp { margin-bottom: 2rem; }
-.grp-head { display: flex; align-items: center; gap: .6rem; font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .95rem; margin-bottom: 1rem; }
+.grp { margin-bottom: 1rem; }
+.grp-head { display: flex; align-items: center; gap: .6rem; font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .95rem; margin-bottom: .5rem; }
 .grp-head .dot { width: .7rem; height: .7rem; border-radius: 50%; }
 .grp-head.efoot .dot { background: #3b82f6; }
 .grp-head.tekken .dot { background: #ff5a2c; }
 .grp-head.club .dot { background: var(--muted); }
 
-.cards { display: grid; gap: .9rem; grid-template-columns: 1fr; }
-.ac { display: flex; align-items: center; gap: .9rem; padding: 1rem 1.1rem; background: var(--card); border: 1px solid var(--border); border-radius: 14px; text-decoration: none; color: var(--text); transition: transform .15s, border-color .15s; }
+.cards { display: grid; gap: .5rem; grid-template-columns: 1fr; }
+.ac { display: flex; align-items: center; gap: .7rem; padding: .6rem .8rem; background: var(--card); border: 1px solid var(--border); border-radius: 14px; text-decoration: none; color: var(--text); transition: transform .15s, border-color .15s; }
 .ac:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
 .ac-ic { width: 1.5rem; height: 1.5rem; color: var(--accent); flex: none; }
 .ac strong { display: block; font-weight: 600; }
@@ -56,5 +56,5 @@ const { pendingCount } = useMembershipNotif()
 .badge-count { display: inline-grid; place-items: center; min-width: 1.1rem; height: 1.1rem; padding: 0 .25rem; border-radius: 999px; background: var(--red); color: #fff; font-size: .7rem; font-weight: 700; margin-left: .35rem; }
 
 @media (min-width: 640px) { .cards { grid-template-columns: 1fr 1fr; } }
-@media (min-width: 1000px) { .cards { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1000px) { .cards { grid-template-columns: repeat(4, 1fr); } }
 </style>

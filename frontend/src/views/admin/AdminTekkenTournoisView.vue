@@ -1,7 +1,7 @@
 <template>
   <AppLayout :season-label="isJournee ? 'Admin Journées Tekken' : 'Admin Tournois Tekken'">
     <div class="page-wrap admin-tournois-wrap">
-      <div class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-4 md:gap-6 items-start">
+      <div class="grid grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)] gap-3 items-start">
         <aside class="space-y-4 reveal admin-sidebar">
           <section class="card">
             <h2 class="font-semibold text-gz-text mb-4">{{ isJournee ? 'Nouvelle journée' : 'Nouveau tournoi' }}</h2>
@@ -78,17 +78,17 @@
                 :key="t.id"
                 @click="selectTournament(t)"
                 :class="[
-                  'w-full text-left px-3 py-2 rounded-lg border text-sm transition-all',
+                  'w-full text-left px-2.5 py-1.5 rounded-lg border text-sm transition-all',
                   selected?.id === t.id
                     ? 'border-gz-green/50 bg-gz-green/8 text-gz-text shadow-sm'
                     : 'border-transparent hover:border-gz-border hover:bg-gz-card text-gz-muted'
                 ]"
                 :title="`Ouvrir ${t.name}`"
               >
-                <div class="font-medium truncate">{{ t.name }}</div>
-                <BaseBadge :variant="statusVariant(t.status)" class="text-[10px] mt-0.5">
-                  {{ statusLabel(t.status) }}
-                </BaseBadge>
+                <div class="flex items-center justify-between gap-2">
+                  <span class="font-medium truncate">{{ t.name }}</span>
+                  <BaseBadge :variant="statusVariant(t.status)" class="text-[10px] shrink-0">{{ statusLabel(t.status) }}</BaseBadge>
+                </div>
               </button>
               <p v-if="!tournaments.length" class="text-gz-muted text-sm text-center py-3">{{ isJournee ? 'Aucune journée.' : 'Aucun tournoi.' }}</p>
             </div>
@@ -1643,7 +1643,11 @@ async function printTournamentResults() {
 }
 
 .member-picker {
-  max-height: 260px;
+  /* plusieurs colonnes : la liste des joueurs prend moins de hauteur */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  align-content: start;
+  max-height: 190px;
   overflow: auto;
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 12px;

@@ -223,3 +223,26 @@ textarea:focus-visible,
   transition: transform .15s ease;
 }
 .skip-link:focus { transform: translateY(0); outline: 2px solid #fff; outline-offset: 2px; }
+
+
+/* ── Espace admin : mode compact ─────────────────────────────────────────────
+   Appliqué par AppLayout (classe adm-compact) sur toutes les pages /admin :
+   les écrans de gestion sont denses (tableaux, formulaires), on y gagne de la
+   hauteur sans toucher aux pages membres ni publiques. */
+.adm-compact .page-wrap { padding-top: .875rem; padding-bottom: .875rem; }
+@media (min-width: 640px) { .adm-compact .page-wrap { padding-left: 1rem; padding-right: 1rem; } }
+.adm-compact .card { padding: .75rem; border-radius: 10px; }
+.adm-compact .input { padding: .3rem .6rem; font-size: .8125rem; }
+.adm-compact .btn, .adm-compact .btn-primary, .adm-compact .btn-danger, .adm-compact .btn-ghost { padding: .3rem .7rem; font-size: .8125rem; }
+.adm-compact .label { margin-bottom: .125rem; }
+.adm-compact .data-table th { padding: .35rem .6rem; }
+.adm-compact .data-table td { padding: .3rem .6rem; }
+.adm-compact .mb-3 { margin-bottom: .5rem; }
+.adm-compact .mb-4 { margin-bottom: .625rem; }
+.adm-compact .mb-5 { margin-bottom: .75rem; }
+.adm-compact .mb-6 { margin-bottom: .875rem; }
+.adm-compact .gap-4 { gap: .625rem; }
+.adm-compact .gap-5, .adm-compact .gap-6 { gap: .75rem; }
+.adm-compact .space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: .5rem; }
+.adm-compact .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: .625rem; }
+.adm-compact .data-table td .btn, .adm-compact .data-table td .btn-danger { padding: .2rem .55rem; }
