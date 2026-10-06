@@ -241,7 +241,7 @@
               <span class="day-div-count">{{ d1Matches.length }} confrontation(s)</span>
               <button v-if="canEdit" @click="addMatch('d1')" class="btn text-xs ml-auto" title="Ajouter une ligne">+ Ajouter</button>
             </div>
-            <div class="overflow-x-auto table-shell">
+            <div class="overflow-x-auto table-shell" :class="{ 'shell-scroll': canEdit }">
               <table class="w-full text-sm matches-table" style="border-collapse:separate;border-spacing:0 4px">
                 <thead>
                   <tr class="text-xs uppercase" style="color:var(--muted)">
@@ -369,7 +369,7 @@
               <span class="day-div-count">{{ d2Matches.length }} confrontation(s)</span>
               <button v-if="canEdit" @click="addMatch('d2')" class="btn text-xs ml-auto" title="Ajouter une ligne">+ Ajouter</button>
             </div>
-            <div class="overflow-x-auto table-shell">
+            <div class="overflow-x-auto table-shell" :class="{ 'shell-scroll': canEdit }">
               <table class="w-full text-sm matches-table" style="border-collapse:separate;border-spacing:0 4px">
                 <thead>
                   <tr class="text-xs uppercase" style="color:var(--muted)">
@@ -724,8 +724,8 @@ const { titleRace, titleConfidence, matchPredictions, formPlayer } = usePronosti
   knownDaysCount: pronoData.knownDaysCount,
   isGuest: pronoData.isGuest,
 })
-let storedPronos = false
-try { storedPronos = localStorage.getItem(PRONOS_STORAGE_KEY) === '1' } catch (_) {}
+let storedPronos = true // actif par défaut, sauf si l'utilisateur l'a fermé
+try { storedPronos = localStorage.getItem(PRONOS_STORAGE_KEY) !== '0' } catch (_) {}
 const showPronos = ref(storedPronos)
 function togglePronos() {
   showPronos.value = !showPronos.value
@@ -1745,6 +1745,8 @@ async function printDaySheet() {
   -webkit-overflow-scrolling: touch;
 }
 
+.table-shell.shell-scroll { max-height: min(70vh, 640px); overflow-y: auto; }
+.table-shell.shell-scroll .matches-table thead th { position: sticky; top: 0; z-index: 2; background: var(--card, #0f172a); }
 .table-shell .matches-table thead th,
 .table-shell .standings-table thead th {
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
