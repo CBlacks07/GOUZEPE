@@ -1,5 +1,5 @@
 <template>
-  <div class="hub">
+  <div class="hub fx-heads">
     <PublicNav />
 
     <!-- Hero -->
@@ -9,13 +9,13 @@
         <div class="hub-hero-tint"></div>
       </div>
       <div class="hub-hero-content">
-        <span class="eyebrow">Pôle compétition</span>
-        <h1 class="hub-title">eFootball</h1>
-        <p class="hub-lead">
+        <span class="eyebrow animate-fade-in-down animate-duration-slow">Pôle compétition</span>
+        <h1 class="hub-title fx-shimmer bg-linear-to-r from-gz-text via-(--accent-l) to-gz-text bg-clip-text text-transparent drop-shadow-[0_8px_28px_rgba(var(--accent-rgb),0.35)] animate-fade-in-up animate-delay-150 animate-duration-slower">eFootball</h1>
+        <p class="hub-lead animate-fade-in-up animate-delay-300 animate-duration-slower">
           Le championnat du club : <strong>journées D1/D2</strong>, saisons, classement général,
           tournois et duels. Toute la rivalité, saison après saison.
         </p>
-        <div class="hub-cta">
+        <div class="hub-cta animate-fade-in-up animate-delay-500 animate-duration-slower">
           <RouterLink to="/efootball/journees" class="btn-primary cta-lg">Voir les journées</RouterLink>
           <RouterLink to="/classements" class="btn cta-lg">Classement</RouterLink>
           <RouterLink to="/inscription" class="btn cta-lg">Rejoindre</RouterLink>

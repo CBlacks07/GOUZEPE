@@ -1,32 +1,32 @@
 <template>
-  <div class="landing">
+  <div class="landing fx-heads">
 
     <PublicNav />
 
     <!-- ── Hero ── -->
     <section id="top" class="hero">
-      <div class="hero-bg" aria-hidden="true">
+      <div class="hero-bg fx-hero-bg mask-b-from-70%" aria-hidden="true">
         <video ref="heroVideoEl" class="hero-video" :key="heroVideo" :src="heroVideo" autoplay muted loop playsinline preload="none" poster="/assets/fond.png"></video>
         <div class="hero-tint"></div>
       </div>
 
-      <div class="hero-content">
+      <div class="hero-content fx-hero-content">
         <div class="hero-badges">
-          <span class="hero-eyebrow">{{ s.home.eyebrow }}</span>
-          <a v-if="liveTournament" href="#resultats" class="hero-live" @click="setFeed(liveTournament.game_type === 'tekken' ? 'tekken' : 'efoot')">
+          <span class="hero-eyebrow animate-fade-in-down animate-duration-slow">{{ s.home.eyebrow }}</span>
+          <a v-if="liveTournament" href="#resultats" class="hero-live animate-zoom-in animate-delay-500 animate-duration-slow" @click="setFeed(liveTournament.game_type === 'tekken' ? 'tekken' : 'efoot')">
             <span class="hero-live-dot"></span> En direct · {{ liveTournament.name }}
           </a>
         </div>
-        <h1 class="hero-title">{{ s.home.title }}</h1>
-        <p class="hero-lead">{{ s.home.lead }}</p>
-        <div class="hero-cta">
-          <RouterLink to="/inscription" class="btn-primary cta-lg">{{ s.home.ctaPrimary }}</RouterLink>
+        <h1 class="hero-title fx-shimmer bg-linear-to-r from-gz-text via-(--accent-l) to-gz-text bg-clip-text text-transparent drop-shadow-[0_8px_28px_rgba(var(--accent-rgb),0.35)] animate-fade-in-up animate-delay-150 animate-duration-slower">{{ s.home.title }}</h1>
+        <p class="hero-lead animate-fade-in-up animate-delay-300 animate-duration-slower">{{ s.home.lead }}</p>
+        <div class="hero-cta animate-fade-in-up animate-delay-500 animate-duration-slower">
+          <RouterLink to="/inscription" class="btn-primary cta-lg fx-sweep">{{ s.home.ctaPrimary }}</RouterLink>
           <a href="#univers" class="btn cta-lg">{{ s.home.ctaSecondary }}</a>
         </div>
 
-        <div class="hero-stats">
-          <div class="hstat"><span class="hstat-n">{{ stats.players }}</span><span class="hstat-l">Joueurs</span></div>
-          <div class="hstat"><span class="hstat-n">{{ stats.tournaments }}</span><span class="hstat-l">Tournois</span></div>
+        <div class="hero-stats animate-fade-in-up animate-delay-700 animate-duration-slower">
+          <div class="hstat"><span class="hstat-n tabular-nums">{{ playersShown }}</span><span class="hstat-l">Joueurs</span></div>
+          <div class="hstat"><span class="hstat-n tabular-nums">{{ tournamentsShown }}</span><span class="hstat-l">Tournois</span></div>
           <div class="hstat"><span class="hstat-n">2</span><span class="hstat-l">Jeux</span></div>
         </div>
       </div>
@@ -45,25 +45,29 @@
       </div>
 
       <div class="univers-grid">
-        <article class="uni-card uni-efoot" @mouseenter="game.set('efoot')">
+        <div class="fx-in-left">
+        <article v-tilt class="uni-card uni-efoot" @mouseenter="game.set('efoot')">
           <img class="uni-media" :src="mediaUrl(s.efoot.cardImage) || '/fonds/efootball-bg.png'" alt="eFootball" loading="lazy" />
           <div class="uni-body">
             <span class="uni-tag">eFootball</span>
             <h3>{{ s.efoot.cardTitle }}</h3>
             <p>{{ s.efoot.cardText }}</p>
-            <RouterLink to="/efootball" class="btn-primary">Entrer <ArrowRightIcon class="w-4 h-4" /></RouterLink>
+            <RouterLink to="/efootball" class="btn-primary fx-sweep">Entrer <ArrowRightIcon class="w-4 h-4" /></RouterLink>
           </div>
         </article>
+        </div>
 
-        <article class="uni-card uni-tekken" @mouseenter="game.set('tekken')">
+        <div class="fx-in-right">
+        <article v-tilt class="uni-card uni-tekken" @mouseenter="game.set('tekken')">
           <img class="uni-media" :src="mediaUrl(s.tekken.cardImage) || '/fonds/tekken-bg.png'" alt="Tekken" loading="lazy" />
           <div class="uni-body">
             <span class="uni-tag tekken">Tekken</span>
             <h3>{{ s.tekken.cardTitle }}</h3>
             <p>{{ s.tekken.cardText }}</p>
-            <RouterLink to="/tekken" class="btn-primary">Découvrir <ArrowRightIcon class="w-4 h-4" /></RouterLink>
+            <RouterLink to="/tekken" class="btn-primary fx-sweep">Découvrir <ArrowRightIcon class="w-4 h-4" /></RouterLink>
           </div>
         </article>
+        </div>
       </div>
     </section>
 
@@ -79,8 +83,9 @@
         <button :class="['ct', { on: feedGame === 'tekken' }]" @click="setFeed('tekken')">Tekken</button>
       </div>
 
+      <Transition mode="out-in" enter-active-class="animate-fade-in-up animate-duration-fast" leave-active-class="animate-fade-out animate-duration-faster">
       <!-- eFootball -->
-      <template v-if="feedGame === 'efoot'">
+      <div v-if="feedGame === 'efoot'" key="efoot">
         <h3 class="comp-sub">Derniers résultats <span v-if="latestDay?.day" class="comp-sub-day">· {{ fmtDate(latestDay.day) }}</span></h3>
         <div class="res-grid">
           <!-- Champions -->
@@ -121,7 +126,7 @@
 
         <h3 class="comp-sub" style="margin-top:2.25rem">Tournois</h3>
         <div v-if="tournaments.length" class="tourn-grid">
-          <article v-for="t in tournaments.slice(0, 6)" :key="t.id" class="tourn-card">
+          <article v-for="t in tournaments.slice(0, 6)" :key="t.id" v-spot class="tourn-card">
             <div class="tourn-top">
               <span :class="['tourn-status', t.status === 'live' ? 'live' : '']">{{ t.status === 'live' ? 'En cours' : 'Terminé' }}</span>
               <span class="tourn-fmt">{{ formatLabel(t.format) }}</span>
@@ -134,10 +139,10 @@
           </article>
         </div>
         <p v-else class="empty">Aucun tournoi pour le moment.</p>
-      </template>
+      </div>
 
       <!-- Tekken -->
-      <template v-else>
+      <div v-else key="tekken">
         <h3 class="comp-sub">Top Ladder</h3>
         <div v-if="!tkLadder.length" class="empty">Aucun joueur dans le ladder.</div>
         <div v-else class="mini-boards">
@@ -163,9 +168,10 @@
         <p v-else class="empty">Aucun duel enregistre.</p>
 
         <div style="margin-top:1.5rem">
-          <RouterLink to="/tekken" class="btn-primary cta-lg">Decouvrir le pole Tekken</RouterLink>
+          <RouterLink to="/tekken" class="btn-primary cta-lg fx-sweep">Découvrir le pôle Tekken</RouterLink>
         </div>
-      </template>
+      </div>
+      </Transition>
     </section>
 
     <!-- ── Découvrir le club ── -->
@@ -175,7 +181,7 @@
         <p>Champions, records et membres — explore ce que le club a déjà accompli.</p>
       </div>
       <div class="discover-grid">
-        <RouterLink to="/palmares" class="discover-card">
+        <RouterLink to="/palmares" v-tilt class="discover-card">
           <TrophyIcon class="discover-ic" />
           <span class="discover-label">Palmarès</span>
           <p v-if="discoverChampion" class="discover-detail">Champion actuel : <strong>{{ discoverChampion }}</strong></p>
@@ -183,7 +189,7 @@
           <span class="discover-link">Voir le palmarès <ArrowRightIcon class="w-3.5 h-3.5" /></span>
         </RouterLink>
 
-        <RouterLink to="/records" class="discover-card">
+        <RouterLink to="/records" v-tilt class="discover-card">
           <ZapIcon class="discover-ic" />
           <span class="discover-label">Records</span>
           <p v-if="discoverRecord" class="discover-detail">{{ discoverRecord }}</p>
@@ -191,7 +197,7 @@
           <span class="discover-link">Voir les records <ArrowRightIcon class="w-3.5 h-3.5" /></span>
         </RouterLink>
 
-        <RouterLink to="/membres" class="discover-card">
+        <RouterLink to="/membres" v-tilt class="discover-card">
           <UsersIcon class="discover-ic" />
           <span class="discover-label">Membres</span>
           <p class="discover-detail">{{ stats.players !== '—' ? stats.players + ' membre(s) actif(s)' : 'La communauté qui fait vivre le club' }}</p>
@@ -204,7 +210,7 @@
     <section class="reveal-scroll section join-band">
       <h2>Prêt à rejoindre la communauté ?</h2>
       <p>Crée ta demande d'adhésion et entre dans la compétition.</p>
-      <RouterLink to="/inscription" class="btn-primary cta-lg">Devenir membre</RouterLink>
+      <RouterLink to="/inscription" class="btn-primary cta-lg fx-glow fx-sweep">Devenir membre</RouterLink>
     </section>
 
     <PublicFooter />
@@ -223,6 +229,7 @@ import { useGameStore } from '@/stores/game'
 import { useSiteSettings } from '@/stores/siteSettings'
 import { resolveBaseURL, mediaUrl } from '@/composables/useAPI'
 import { useHeroVideo } from '@/composables/useHeroVideo'
+import { vTilt, vSpot, useCountUp } from '@/composables/useFx'
 
 const heroVideoEl = ref(null)
 useHeroVideo(heroVideoEl)
@@ -246,6 +253,9 @@ const latestDay   = ref(null)
 const topD1       = ref([])
 const topD2       = ref([])
 const stats       = ref({ players: '—', tournaments: '—' })
+// Les chiffres du héros comptent de 0 jusqu'à leur valeur à l'arrivée des données
+const playersShown     = useCountUp(computed(() => stats.value.players))
+const tournamentsShown = useCountUp(computed(() => stats.value.tournaments))
 const tkLadder    = ref([])
 const tkDuels     = ref([])
 const discoverChampion = ref('')
@@ -354,7 +364,7 @@ onMounted(async () => {
 .btn-join { font-family: var(--font-title); letter-spacing: .03em; }
 
 /* ── Hero ── */
-.hero { position: relative; min-height: 88vh; display: grid; align-items: center; overflow: hidden; }
+.hero { position: relative; min-height: 88vh; display: grid; align-items: center; overflow: clip; }
 .hero-bg { position: absolute; inset: 0; z-index: 0; }
 .hero-video { width: 100%; height: 100%; object-fit: cover; opacity: .42; }
 .hero-tint {
@@ -397,6 +407,8 @@ onMounted(async () => {
 
 /* ── Univers ── */
 .univers-grid { display: grid; gap: 1.25rem; grid-template-columns: 1fr; }
+.univers-grid > div { height: 100%; }
+.univers-grid > div > .uni-card { height: 100%; }
 .uni-card { position: relative; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: var(--card); transition: transform .2s, border-color .2s, box-shadow .2s; }
 .uni-card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); box-shadow: 0 18px 40px rgba(3,8,24,.5); }
 .uni-media { display: block; width: 100%; height: clamp(200px, 24vw, 320px); object-fit: cover; object-position: center; background: #0a1428; }

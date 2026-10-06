@@ -1,5 +1,5 @@
 <template>
-  <div class="hub">
+  <div class="hub fx-heads">
     <PublicNav />
 
     <!-- Hero -->
@@ -9,13 +9,13 @@
         <div class="hub-hero-tint"></div>
       </div>
       <div class="hub-hero-content">
-        <span class="eyebrow">Pôle combat</span>
-        <h1 class="hub-title">Tekken</h1>
-        <p class="hub-lead">
+        <span class="eyebrow animate-fade-in-down animate-duration-slow">Pôle combat</span>
+        <h1 class="hub-title fx-shimmer bg-linear-to-r from-gz-text via-(--accent-l) to-gz-text bg-clip-text text-transparent drop-shadow-[0_8px_28px_rgba(var(--accent-rgb),0.35)] animate-fade-in-up animate-delay-150 animate-duration-slower">Tekken</h1>
+        <p class="hub-lead animate-fade-in-up animate-delay-300 animate-duration-slower">
           L'arène versus du club : un <strong>championnat par journées</strong>, un <strong>ladder ELO</strong>
           alimenté par chaque match, des <strong>duels classés</strong> et des <strong>tournois</strong>.
         </p>
-        <div class="hub-cta">
+        <div class="hub-cta animate-fade-in-up animate-delay-500 animate-duration-slower">
           <RouterLink to="/tekken/journees" class="btn-primary cta-lg">Voir les journées</RouterLink>
           <RouterLink to="/inscription" class="btn cta-lg">Rejoindre le club</RouterLink>
         </div>

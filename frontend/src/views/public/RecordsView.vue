@@ -1,5 +1,5 @@
 <template>
-  <div class="rec">
+  <div class="rec fx-heads">
     <PublicNav />
 
     <section class="reveal-scroll section">

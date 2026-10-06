@@ -1,5 +1,6 @@
 <template>
   <header class="pnav">
+    <div class="fx-progress" aria-hidden="true"></div>
     <div class="pnav-inner">
       <RouterLink to="/" class="brand" @click="mobileOpen = false">
         <img class="brand-logo" :src="logo" alt="logo" />

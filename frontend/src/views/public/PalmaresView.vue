@@ -1,5 +1,5 @@
 <template>
-  <div class="palm">
+  <div class="palm fx-heads">
     <PublicNav />
 
     <section class="reveal-scroll section">

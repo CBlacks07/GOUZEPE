@@ -461,6 +461,93 @@ p { text-wrap: pretty; }
   @media (prefers-reduced-motion: reduce) { .reveal-scroll { animation: none; } }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   EFFETS « FX » — vitrine Tailwind v4 / CSS moderne (accueil et pages publiques)
+   Défilement piloté (animation-timeline), propriétés typées (@property), 3D, masques.
+   Tout est désactivé avec « réduire les animations » ; les navigateurs sans timeline de défilement
+   affichent simplement le contenu, sans animation.
+   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+@property --fx-ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+@keyframes fx-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes fx-spin { to { --fx-ang: 360deg; } }
+@keyframes fx-shimmer { to { background-position: -200% 0; } }
+@keyframes fx-parallax { to { transform: translateY(16vh) scale(1.08); } }
+@keyframes fx-hero-out { to { opacity: 0; transform: translateY(-36px) scale(0.985); } }
+@keyframes fx-in-left { from { opacity: 0; transform: translateX(-56px); } to { opacity: 1; transform: none; } }
+@keyframes fx-in-right { from { opacity: 0; transform: translateX(56px); } to { opacity: 1; transform: none; } }
+@keyframes fx-in-up { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: none; } }
+@keyframes fx-sweep { from { translate: -120% 0; } to { translate: 220% 0; } }
+
+/* Barre de progression de lecture, en haut de la page */
+.fx-progress {
+  display: none;
+  position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 60;
+  background: linear-gradient(90deg, var(--accent), var(--accent-l));
+  transform-origin: left; transform: scaleX(0);
+  pointer-events: none;
+}
+
+/* Titre à reflet : le dégradé défile lentement dans le texte */
+.fx-shimmer { background-size: 220% 100%; animation: fx-shimmer 9s linear infinite; }
+
+/* Halo lumineux qui suit la souris (position posée par v-tilt / v-spot) */
+.fx-spot { position: relative; }
+.fx-spot::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(var(--accent-rgb), 0.2), transparent 55%);
+  transition: opacity 0.25s;
+}
+.fx-spot:hover::after { opacity: 1; }
+
+/* Inclinaison 3D vers la souris (écran à souris uniquement) */
+.fx-tilt {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--lift, 0px)) !important;
+  transition: transform 0.18s ease-out, box-shadow 0.3s, border-color 0.2s;
+  will-change: transform;
+}
+.fx-tilt:hover { --lift: -4px; box-shadow: 0 24px 50px -22px rgba(var(--accent-rgb), 0.55); }
+
+/* Bordure lumineuse qui tourne autour d'un bouton (angle animé grâce à @property) */
+.fx-glow { position: relative; isolation: isolate; }
+.fx-glow::before {
+  content: ''; position: absolute; inset: -2px; border-radius: inherit; z-index: -1;
+  background: conic-gradient(from var(--fx-ang), transparent 0 52%, var(--accent) 74%, var(--accent-l) 88%, transparent 100%);
+  animation: fx-spin 3.4s linear infinite;
+}
+/* Reflet qui balaye le bouton au survol */
+.fx-sweep { position: relative; overflow: hidden; }
+.fx-sweep::after {
+  content: ''; position: absolute; inset: 0 auto 0 0; width: 40%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  translate: -120% 0; transform: skewX(-18deg);
+}
+.fx-sweep:hover::after { animation: fx-sweep 0.7s ease-out; }
+
+@supports (animation-timeline: view()) {
+  .fx-progress { display: block; animation: fx-grow linear both; animation-timeline: scroll(root); }
+
+  /* Le fond du héros glisse plus lentement que la page (profondeur) et le texte s'efface en sortant */
+  .fx-hero-bg { animation: fx-parallax linear both; animation-timeline: scroll(root); animation-range: 0 100vh; }
+  .fx-hero-content { animation: fx-hero-out linear both; animation-timeline: view(); animation-range: exit 0% exit 75%; }
+
+  /* Entrées au défilement : même keyframes que tailwind-animations, pilotées par la position */
+  .fx-in-left  { animation: fx-in-left 1s linear both; animation-timeline: view(); animation-range: entry 0% cover 32%; }
+  .fx-in-right { animation: fx-in-right 1s linear both; animation-timeline: view(); animation-range: entry 0% cover 32%; }
+  .fx-in-up    { animation: fx-in-up 1s linear both; animation-timeline: view(); animation-range: entry 0% cover 30%; }
+
+  /* Le trait sous les titres de section se déploie à l'arrivée */
+  .fx-heads .section-head h1::after, .fx-heads .section-head h2::after {
+    transform-origin: left;
+    animation: fx-grow linear both; animation-timeline: view(); animation-range: entry 15% cover 34%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-progress, .fx-hero-bg, .fx-hero-content, .fx-in-left, .fx-in-right, .fx-in-up, .fx-shimmer, .fx-glow::before,
+  .fx-heads .section-head h1::after, .fx-heads .section-head h2::after { animation: none !important; }
+  .fx-tilt { transform: none !important; }
+}
+
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
 

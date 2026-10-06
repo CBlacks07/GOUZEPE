@@ -1,5 +1,5 @@
 <template>
-  <div class="hub">
+  <div class="hub fx-heads">
     <PublicNav />
 
     <!-- Hero compact -->
