@@ -363,6 +363,48 @@
               </div>
             </section>
 
+            <!-- Participants d'un tournoi en cours : on ajuste la liste sans perdre les scores déjà saisis. -->
+            <section v-if="canEditLiveParticipants" class="card reveal delay-2">
+              <details @toggle="onLiveParticipantsToggle">
+                <summary class="cursor-pointer font-semibold text-gz-text select-none">
+                  Modifier les participants ({{ selected.participants?.length || 0 }})
+                </summary>
+                <p class="text-xs text-gz-muted mt-2 mb-3">
+                  Les scores déjà saisis sont conservés. Un joueur ajouté reçoit ses matchs contre tous les autres ;
+                  un joueur retiré perd ses matchs et ses résultats.
+                </p>
+
+                <div v-if="isMemberTournament" class="space-y-2">
+                  <input v-model="memberSelectionSearch" type="text" class="input" placeholder="Rechercher un joueur..." />
+                  <div class="member-picker">
+                    <label v-for="p in filteredMemberPlayers" :key="p.player_id" class="member-picker-item">
+                      <input v-model="memberSelection" type="checkbox" :value="p.player_id" class="accent-[var(--green)]" />
+                      <span class="truncate">{{ p.name || p.player_id }}</span>
+                      <span class="text-gz-muted text-xs">({{ p.player_id }})</span>
+                    </label>
+                  </div>
+                </div>
+                <div v-else class="space-y-2">
+                  <textarea v-model="manualNamesText" class="input min-h-[110px]" placeholder="Un nom par ligne, ou séparés par virgules" />
+                </div>
+
+                <div class="flex gap-2 flex-col sm:flex-row sm:items-center mt-3">
+                  <button @click="applyLiveParticipants" :disabled="savingLiveParticipants" class="btn-primary w-full sm:w-auto justify-center">
+                    <Loader2Icon v-if="savingLiveParticipants" class="w-3.5 h-3.5 animate-spin" />
+                    Appliquer les changements
+                  </button>
+                  <span v-if="isMemberTournament" class="text-xs text-gz-muted">{{ memberSelection.length }} sélectionné(s)</span>
+                </div>
+              </details>
+            </section>
+
+            <section v-else-if="liveParticipantsLocked" class="card reveal delay-2">
+              <p class="text-sm text-gz-muted">
+                Participants figés : le tableau de ce format dépend de la liste des joueurs. En cours de tournoi,
+                seul le format « Toutes rondes » permet d'ajouter ou de retirer un joueur.
+              </p>
+            </section>
+
             <section v-if="selected.status !== 'draft'" class="card bracket-shell reveal delay-2">
               <div v-if="loadingBracket" class="text-gz-muted text-sm py-8 text-center">Chargement...</div>
               <template v-else>
@@ -889,6 +931,51 @@ async function saveDayScoring() {
 
 // Les points suivent les matchs : toute mise à jour des matchs (score, sélection, statut) les recharge.
 watch(matches, () => { if (isJournee) loadDayPoints() })
+
+
+// ===== Participants d'un tournoi en cours (format « Toutes rondes » uniquement) =====
+const canEditLiveParticipants = computed(() => selected.value?.status === 'live' && selected.value?.format === 'round_robin')
+const liveParticipantsLocked = computed(() => selected.value?.status === 'live' && selected.value?.format !== 'round_robin')
+const savingLiveParticipants = ref(false)
+
+// Champ « noms libres » : on y recopie la liste actuelle à l'ouverture du panneau.
+function onLiveParticipantsToggle(e) {
+  if (e.target?.open && !isMemberTournament.value) manualNamesText.value = (selected.value?.participants || []).join('\n')
+}
+
+async function applyLiveParticipants() {
+  if (!selected.value || savingLiveParticipants.value) return
+  const names = isMemberTournament.value
+    ? [...new Set((memberSelection.value || []).map((x) => String(x || '').trim()).filter(Boolean))]
+    : parseManualNames(manualNamesText.value)
+  if (names.length < 2) { toastError('Il faut au moins 2 participants'); return }
+
+  const lower = (v) => String(v || '').toLowerCase()
+  const current = selected.value.participants || []
+  const keep = new Set(names.map(lower))
+  const removed = current.filter((t) => !keep.has(lower(t)))
+  const added = names.filter((n) => !current.some((c) => lower(c) === lower(n)))
+  if (!removed.length && !added.length) { toastError('Aucun changement dans la liste'); return }
+
+  // Un joueur retiré qui a déjà des résultats : on prévient avant d'effacer.
+  const played = removed.filter((token) => matches.value.some((m) =>
+    isMatchCompleted(m) && [m.p1_player_id || m.p1_name, m.p2_player_id || m.p2_name].some((x) => lower(x) === lower(token))))
+  if (played.length && !confirm(
+    `${played.join(', ')} ${played.length > 1 ? 'ont' : 'a'} déjà des résultats : ils seront supprimés avec le joueur et le classement sera recalculé.\n\nContinuer ?`)) return
+
+  savingLiveParticipants.value = true
+  saveGuard.begin()
+  try {
+    await api.put(`/admin/tekken/tournaments/${selected.value.id}/participants/live`, { names })
+    await selectTournament(selected.value, { quiet: true })
+    success(`Participants mis à jour (${added.length} ajouté(s), ${removed.length} retiré(s))`)
+  } catch (e) {
+    toastError(e.response?.data?.error || 'Modification impossible')
+  } finally {
+    saveGuard.end()
+    savingLiveParticipants.value = false
+  }
+}
 
 async function removeParticipant(pid) {
   const names = (selected.value.participants || []).filter((p) => p !== pid)
