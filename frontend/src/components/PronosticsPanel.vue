@@ -88,7 +88,7 @@ const groups = computed(() =>
 .pronos-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; margin-bottom: 1rem; }
 .pronos-sub { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
 .pronos-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
-@media (min-width: 900px) { .pronos-grid:not(.pronos-grid--solo) { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); } }
+@media (min-width: 640px) { .pronos-grid:not(.pronos-grid--solo) { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); } }
 
 .pronos-block-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .6rem; }
 .pronos-block-title { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
@@ -115,7 +115,7 @@ const groups = computed(() =>
 .pronos-form-line .muted { color: var(--muted); }
 
 /* Affiches : grille de cartes compactes, sans défilement interne */
-.pred-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: .8rem; }
+.pred-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: .8rem; }
 .pred-col { min-width: 0; }
 .pred-col-head { display: flex; align-items: center; gap: .45rem; margin-bottom: .45rem; }
 .pred-col-title { font-size: .74rem; font-weight: 800; letter-spacing: .04em; }
