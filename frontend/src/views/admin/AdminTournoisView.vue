@@ -190,41 +190,43 @@
                   </button>
                 </div>
               </div>
-              <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-3 mt-3">
-                <div class="space-y-2">
-                  <div>
+              <div class="mt-3 space-y-2">
+                <!-- Date, mode des matchs et classement sur une seule ligne (retour à la ligne sur petit écran) -->
+                <div class="flex flex-wrap items-end gap-2">
+                  <div class="flex-1 min-w-[13rem]">
                     <label class="label">Date & heure du tournoi</label>
                     <input v-model="selectedStartsAtInput" type="datetime-local" class="input" />
                   </div>
-                  <div>
-                    <label class="label">Commentaire du tournoi (affiché sur l'accueil à cette date)</label>
-                    <textarea
-                      v-model="selectedDayComment"
-                      class="input min-h-[92px]"
-                      placeholder="Commentaire de la journée tournoi..."
-                    />
-                  </div>
                   <template v-if="selected?.format === 'round_robin'">
-                    <div>
-                      <label class="label">Mode matchs (Round Robin)</label>
+                    <div class="flex-1 min-w-[10rem]">
+                      <label class="label">Matchs (Round Robin)</label>
                       <select v-model="selectedRrMatchMode" class="input">
                         <option value="single">Match simple</option>
                         <option value="home_away">Aller / Retour</option>
                       </select>
                     </div>
-                    <div>
-                      <label class="label">Mode classement (Round Robin)</label>
-                      <select v-model="selectedRrStandingsMode" class="input">
-                        <option value="goals">Points + buts (BM/BC/DIFF)</option>
-                        <option value="wins">Victoires uniquement</option>
-                      </select>
-                    </div>
+                  <div class="flex-1 min-w-[12rem]">
+                    <label class="label">Classement</label>
+                    <select v-model="selectedRrStandingsMode" class="input">
+                      <option value="goals">Points + buts (BM/BC/DIFF)</option>
+                      <option value="wins">Victoires uniquement</option>
+                    </select>
+                  </div>
                   </template>
                 </div>
-                <div class="flex items-end">
-                  <button @click="saveTournamentMeta" :disabled="savingMeta" class="btn w-full lg:w-auto justify-center" title="Sauvegarder date, heure et commentaire">
+                <div class="flex items-end gap-2 flex-wrap sm:flex-nowrap">
+                  <div class="flex-1 min-w-0 w-full">
+                    <label class="label">Commentaire (affiché sur l'accueil à cette date)</label>
+                    <textarea
+                      v-model="selectedDayComment"
+                      rows="2"
+                      class="input min-h-[3.25rem]"
+                      placeholder="Commentaire de la journée tournoi..."
+                    />
+                  </div>
+                  <button @click="saveTournamentMeta" :disabled="savingMeta" class="btn w-full sm:w-auto justify-center shrink-0" title="Sauvegarder date, heure, modes et commentaire">
                     <Loader2Icon v-if="savingMeta" class="w-3.5 h-3.5 animate-spin" />
-                    Enregistrer meta
+                    Enregistrer
                   </button>
                 </div>
               </div>
