@@ -60,7 +60,12 @@
           </div>
 
           <div v-else-if="!stats" class="profil-unlinked reveal delay-1">
-            <p class="text-gz-muted text-sm">Votre compte n'est lie a aucun joueur. Contactez un administrateur.</p>
+            <EmptyState
+              title="Compte non lié à un joueur"
+              :hint="auth.isAdmin ? 'Associe ce compte à un joueur depuis la liste des joueurs pour voir tes statistiques.' : 'Ton compte n'est rattaché à aucun joueur. Contacte un administrateur pour le lier.'"
+              :to="auth.isAdmin ? '/admin/joueurs' : '/'"
+              :cta="auth.isAdmin ? 'Gérer les joueurs' : 'Retour à l'accueil'"
+            />
           </div>
 
           <template v-else>
@@ -280,6 +285,7 @@
 </template>
 
 <script setup>
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAPI, mediaUrl, resolveBaseURL } from '@/composables/useAPI'
