@@ -1,28 +1,32 @@
 <template>
-  <div :class="['min-h-screen text-gz-text app-root', themeClass]">
-    <div class="app-bg-wrap" aria-hidden="true">
-      <div class="app-bg-logo"></div>
-      <div class="app-bg-overlay"></div>
-      <div class="app-bg-vignette"></div>
-    </div>
+  <!-- reduced-motion="user" : les animations Motion respectent le réglage système « réduire les animations » -->
+  <MotionConfig reduced-motion="user" :transition="{ type: 'spring', stiffness: 260, damping: 28 }">
+    <div :class="['min-h-screen text-gz-text app-root', themeClass]">
+      <div class="app-bg-wrap" aria-hidden="true">
+        <div class="app-bg-logo"></div>
+        <div class="app-bg-overlay"></div>
+        <div class="app-bg-vignette"></div>
+      </div>
 
-    <div class="app-shell">
-      <RouterView v-slot="{ Component, route }">
-        <Transition mode="out-in" enter-active-class="animate-fade-in-up animate-duration-fast" leave-active-class="animate-fade-out animate-duration-faster">
-          <KeepAlive v-if="route.meta?.keepAlive !== false">
-            <component :is="Component" :key="route.name || route.path" />
-          </KeepAlive>
-          <component v-else :is="Component" :key="route.fullPath" />
-        </Transition>
-      </RouterView>
-      <AppToast />
+      <div class="app-shell">
+        <RouterView v-slot="{ Component, route }">
+          <Transition mode="out-in" enter-active-class="animate-fade-in-up animate-duration-fast" leave-active-class="animate-fade-out animate-duration-faster">
+            <KeepAlive v-if="route.meta?.keepAlive !== false">
+              <component :is="Component" :key="route.name || route.path" />
+            </KeepAlive>
+            <component v-else :is="Component" :key="route.fullPath" />
+          </Transition>
+        </RouterView>
+        <AppToast />
+      </div>
     </div>
-  </div>
+  </MotionConfig>
 </template>
 
 <script setup>
 import { computed, onMounted, onUnmounted } from 'vue'
 import { RouterView } from 'vue-router'
+import { MotionConfig } from 'motion-v'
 import { useThemeStore } from '@/stores/theme'
 import { useGameStore } from '@/stores/game'
 import { useSiteSettings } from '@/stores/siteSettings'
