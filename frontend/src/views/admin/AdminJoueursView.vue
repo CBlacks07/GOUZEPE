@@ -45,7 +45,13 @@
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h2 class="font-semibold text-gz-text">Joueurs enregistrés</h2>
           <div class="flex gap-2">
-            <input v-model="search" type="text" class="input w-56" placeholder="Rechercher (ID/nom)…" />
+            <input v-model="search" type="search" class="input w-56" placeholder="Rechercher (ID/nom)…" aria-label="Rechercher un joueur" />
+            <select v-model="poleFilter" class="input" aria-label="Filtrer par pôle">
+              <option value="all">Tous les pôles</option>
+              <option value="efoot">eFootball</option>
+              <option value="tekken">Tekken</option>
+              <option value="both">Les deux</option>
+            </select>
             <button @click="loadPlayers" class="btn flex items-center gap-1">
               <RefreshCwIcon class="w-3.5 h-3.5" /> Rafraîchir
             </button>
@@ -75,7 +81,7 @@
                   <td colspan="6" class="text-center text-gz-muted py-8">Chargement...</td>
                 </tr>
                 <tr v-else-if="!filteredMembers.length">
-                  <td colspan="6" class="text-center text-gz-muted py-6">Aucun membre.</td>
+                  <td colspan="6" class="text-center text-gz-muted py-6">{{ search || poleFilter !== 'all' ? 'Aucun membre ne correspond à ce filtre.' : 'Aucun membre.' }}</td>
                 </tr>
                 <tr v-for="p in filteredMembers" :key="p.player_id">
                   <td class="font-mono text-gz-muted text-xs">{{ p.player_id }}</td>
@@ -238,6 +244,7 @@ const api = useAPI()
 
 const players   = ref([])
 const search    = ref('')
+const poleFilter = ref('all')
 const loading   = ref(false)
 const modal     = ref(false)
 const saving    = ref(false)
