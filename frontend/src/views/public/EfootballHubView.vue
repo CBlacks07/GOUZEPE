@@ -44,7 +44,7 @@
       <div class="boards">
         <div v-for="b in boards" :key="b.div" class="mini-board">
           <div class="mini-head">{{ b.div }} — Top {{ b.rows.length }}</div>
-          <div v-if="!b.rows.length" class="mini-empty">Aucune donnée.</div>
+          <EmptyState v-if="!b.rows.length" compact title="Classement à venir" hint="Le top s'affichera dès la première journée confirmée de la saison." />
           <div v-for="(r, i) in b.rows" :key="r.id" class="mini-row">
             <span class="mini-rank">{{ i + 1 }}</span>
             <span class="mini-name">{{ r.id }}</span>
@@ -70,7 +70,7 @@
           </div>
         </RouterLink>
       </div>
-      <p v-else class="empty">Aucun tournoi pour le moment.</p>
+      <EmptyState v-else title="Aucun tournoi pour le moment" hint="Les prochaines compétitions du club apparaîtront ici dès leur création." />
     </section>
 
     <section v-if="!auth.isValid" class="reveal-scroll section join-band">
@@ -84,6 +84,7 @@
 </template>
 
 <script setup>
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { useAuthStore } from '@/stores/auth'
 const auth = useAuthStore()
 import { ref, computed, onMounted } from 'vue'

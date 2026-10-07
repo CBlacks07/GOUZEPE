@@ -14,7 +14,7 @@
       </div>
 
       <SkeletonBlock v-if="loading" :count="3" />
-      <div v-else-if="!seasons.length" class="empty">Aucune saison enregistrée.</div>
+      <EmptyState v-else-if="!seasons.length" title="Aucune saison enregistrée" hint="Les champions apparaîtront ici à la clôture de chaque saison." />
 
       <div v-else class="seasons">
         <article v-for="s in seasons" :key="s.id" class="season-card">
@@ -71,6 +71,7 @@
 </template>
 
 <script setup>
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { ref, onMounted } from 'vue'
 import { useGameStore } from '@/stores/game'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'

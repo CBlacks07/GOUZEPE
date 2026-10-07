@@ -52,7 +52,7 @@
             Championnat — saison en cours
             <RouterLink to="/tekken/classement" class="mini-link">Tout voir</RouterLink>
           </div>
-          <div v-if="!season.length" class="mini-empty">Le classement démarre avec la première journée terminée.</div>
+          <EmptyState v-if="!season.length" compact title="Classement à venir" hint="Il démarre avec la première journée terminée." />
           <div v-for="r in season.slice(0, 5)" :key="r.player_id || r.name" class="mini-row">
             <span class="mini-rank">{{ r.rank }}</span>
             <span class="mini-name">{{ r.name }}</span>
@@ -66,7 +66,7 @@
             Ladder ELO
             <RouterLink to="/classements" class="mini-link">Tout voir</RouterLink>
           </div>
-          <div v-if="!ladder.length" class="mini-empty">Aucun joueur classé pour le moment.</div>
+          <EmptyState v-if="!ladder.length" compact title="Ladder vide" hint="Un joueur y entre après son premier duel ou match de tournoi." />
           <div v-for="(p, i) in ladder.slice(0, 5)" :key="p.player_id" class="mini-row">
             <span class="mini-rank">{{ i + 1 }}</span>
             <span class="podium-avatar sm">
@@ -97,7 +97,7 @@
           </div>
         </RouterLink>
       </div>
-      <p v-else class="empty">Aucun tournoi pour le moment.</p>
+      <EmptyState v-else title="Aucun tournoi pour le moment" hint="Les prochaines compétitions du club apparaîtront ici dès leur création." />
     </section>
 
     <!-- Derniers duels -->
@@ -147,6 +147,7 @@
 </template>
 
 <script setup>
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { useAuthStore } from '@/stores/auth'
 const auth = useAuthStore()
 import { ref, computed, onMounted } from 'vue'

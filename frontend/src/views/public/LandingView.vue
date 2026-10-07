@@ -72,7 +72,7 @@
           <!-- Top D1 -->
           <div class="mini-board">
             <div class="mini-head">Top D1</div>
-            <div v-if="!topD1.length" class="mini-empty">Aucune donnée.</div>
+            <EmptyState v-if="!topD1.length" compact title="Classement à venir" hint="Il apparaîtra après la première journée confirmée." />
             <div v-for="(r, i) in topD1" :key="r.id" class="mini-row">
               <span class="mini-rank">{{ i + 1 }}</span>
               <span class="mini-name">{{ r.id }}</span>
@@ -82,7 +82,7 @@
           <!-- Top D2 -->
           <div class="mini-board">
             <div class="mini-head">Top D2</div>
-            <div v-if="!topD2.length" class="mini-empty">Aucune donnée.</div>
+            <EmptyState v-if="!topD2.length" compact title="Classement à venir" hint="Il apparaîtra après la première journée confirmée." />
             <div v-for="(r, i) in topD2" :key="r.id" class="mini-row">
               <span class="mini-rank">{{ i + 1 }}</span>
               <span class="mini-name">{{ r.id }}</span>
@@ -105,13 +105,13 @@
             </div>
           </article>
         </div>
-        <p v-else class="empty">Aucun tournoi pour le moment.</p>
+        <EmptyState v-else title="Aucun tournoi pour le moment" hint="Les prochaines compétitions du club apparaîtront ici dès leur création." />
       </div>
 
       <!-- Tekken -->
       <div v-else key="tekken">
         <h3 class="comp-sub">Top Ladder</h3>
-        <div v-if="!tkLadder.length" class="empty">Aucun joueur dans le ladder.</div>
+        <EmptyState v-if="!tkLadder.length" title="Ladder vide" hint="Un joueur y entre après son premier duel ou match de tournoi." />
         <div v-else class="mini-boards">
           <div class="mini-board" style="flex:1">
             <div class="mini-head">Ladder ELO</div>
@@ -132,7 +132,7 @@
             <span :class="{ 'tk-duel-winner': d.winner_id === d.p2_id }">{{ d.p2_name }}</span>
           </article>
         </div>
-        <p v-else class="empty">Aucun duel enregistre.</p>
+        <EmptyState v-else title="Aucun duel enregistré" hint="Les duels classés entre membres s'afficheront ici." />
 
         <div style="margin-top:1.5rem">
           <RouterLink to="/tekken" class="btn-primary cta-lg fx-sweep">Découvrir le pôle Tekken</RouterLink>
@@ -220,6 +220,7 @@
 </template>
 
 <script setup>
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { useAuthStore } from '@/stores/auth'
 const auth = useAuthStore()
 import { ref, computed, onMounted } from 'vue'

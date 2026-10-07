@@ -56,7 +56,7 @@
           <p>Chaque match joué au club (journée, duel, tournoi) fait bouger l'ELO.</p>
         </div>
         <SkeletonBlock v-if="loading" :count="8" />
-        <div v-else-if="!tekkenLadder.length" class="empty">Aucun joueur dans le ladder Tekken.</div>
+        <EmptyState v-else-if="!tekkenLadder.length" title="Ladder Tekken vide" hint="Un joueur y entre après son premier duel ou match de tournoi." />
         <div v-else class="overflow-x-auto tk-table-wrap">
           <table class="tk-table">
             <thead>
@@ -93,7 +93,7 @@
         </div>
 
         <SkeletonBlock v-if="loading" :count="8" />
-        <div v-else-if="!classed.length" class="empty">Aucun joueur classé pour le moment.</div>
+        <EmptyState v-else-if="!classed.length" title="Aucun joueur classé" :hint="`Il faut au moins ${threshold} journée(s) jouée(s) pour apparaître au classement.`" />
         <div v-else class="table-shell">
           <table class="data-table">
             <thead>
@@ -146,6 +146,7 @@
 </template>
 
 <script setup>
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { useAuthStore } from '@/stores/auth'
 const auth = useAuthStore()
 import { ref, computed, onMounted } from 'vue'
