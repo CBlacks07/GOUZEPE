@@ -154,7 +154,7 @@ onMounted(load)
 </script>
 
 <style scoped>
-.news-admin { max-width: 64rem; }
+.news-admin { max-width: none; }
 .news-row { display: flex; align-items: flex-start; justify-content: space-between; gap: .8rem; padding: .8rem; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
 .news-row-main { min-width: 0; flex: 1; }
 .news-row-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .3rem; }

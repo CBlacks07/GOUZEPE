@@ -253,7 +253,7 @@ onMounted(loadSeasons)
 </script>
 
 <style scoped>
-.adm-saisons { max-width: 64rem; }
+.adm-saisons { max-width: none; }
 .head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
 .title { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 1.5rem; }
 .sub { color: var(--muted); margin-top: .25rem; font-size: .9rem; }

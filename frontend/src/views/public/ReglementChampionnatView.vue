@@ -336,12 +336,12 @@ const lastUpdate = '29 août 2026'
 <style scoped>
 .legal { position: relative; z-index: 1; color: var(--text); }
 .section { max-width: none; padding: 4rem clamp(1.25rem, 4vw, 4rem); }
-.section-head { max-width: 46rem; margin: 0 auto 2rem; }
+.section-head { max-width: none; margin: 0 0 2rem; }
 .section-head h1 { font-family: var(--font-title); font-weight: 700; font-size: clamp(1.6rem, 4vw, 2.4rem); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 .5rem; }
 .section-head h1::after { content: ''; display: block; width: 3rem; height: 3px; margin-top: .7rem; border-radius: 3px; background: var(--accent); }
 .section-head p { color: var(--muted); margin: 0; font-size: .85rem; }
 
-.legal-card { max-width: 46rem; margin: 0 auto; padding: 1.75rem clamp(1.25rem, 4vw, 2.25rem); line-height: 1.7; }
+.legal-card { max-width: none; margin: 0; padding: 1.75rem clamp(1.25rem, 4vw, 2.25rem); line-height: 1.7; }
 .legal-card h2 {
   font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
   font-size: 1.15rem; color: var(--accent-l, var(--accent)); margin: 2.4rem 0 1rem;

@@ -155,7 +155,7 @@ watch(() => route.params.id, load)
 </script>
 
 <style scoped>
-.guest-detail { max-width: 56rem; }
+.guest-detail { max-width: none; }
 .back-link { display: inline-flex; align-items: center; gap: .35rem; color: var(--muted); text-decoration: none; font-size: .85rem; font-weight: 600; margin-bottom: 1rem; }
 .back-link:hover { color: var(--accent-l); }
 

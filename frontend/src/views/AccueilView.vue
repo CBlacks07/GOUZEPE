@@ -1294,7 +1294,7 @@ async function loadNextFixture() {
 
 .hero-sub {
   margin: 12px 0 0;
-  max-width: 920px;
+  max-width: none;
   color: var(--muted);
   font-size: clamp(14px, 1.8vw, 18px);
 }

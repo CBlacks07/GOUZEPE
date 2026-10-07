@@ -22,8 +22,14 @@
           <button :class="['gs-btn', { active: game.isEfoot }]" @click="pick('efoot')">eFoot</button>
           <button :class="['gs-btn', { active: game.isTekken }]" @click="pick('tekken')">Tekken</button>
         </div>
-        <RouterLink to="/login" class="btn btn-login">Connexion</RouterLink>
-        <RouterLink to="/inscription" class="btn-primary btn-join">Rejoindre</RouterLink>
+        <template v-if="auth.isValid">
+          <RouterLink v-if="auth.isAdmin" to="/admin" class="btn btn-login">Admin</RouterLink>
+          <RouterLink to="/profil" class="btn-primary btn-join">Mon espace</RouterLink>
+        </template>
+        <template v-else>
+          <RouterLink to="/login" class="btn btn-login">Connexion</RouterLink>
+          <RouterLink to="/inscription" class="btn-primary btn-join">Rejoindre</RouterLink>
+        </template>
         <button class="pnav-burger" :class="{ on: mobileOpen }" @click="mobileOpen = !mobileOpen"
                 :aria-expanded="mobileOpen" aria-label="Menu">
           <MenuIcon v-if="!mobileOpen" class="w-5 h-5" />
@@ -43,7 +49,11 @@
         <RouterLink to="/records" active-class="on" @click="mobileOpen = false">Records</RouterLink>
         <RouterLink to="/membres" active-class="on" @click="mobileOpen = false">Membres</RouterLink>
         <div class="pnav-mobile-sep"></div>
-        <RouterLink to="/login" @click="mobileOpen = false">Connexion</RouterLink>
+        <template v-if="auth.isValid">
+          <RouterLink to="/profil" @click="mobileOpen = false">Mon espace</RouterLink>
+          <RouterLink v-if="auth.isAdmin" to="/admin" @click="mobileOpen = false">Admin</RouterLink>
+        </template>
+        <RouterLink v-else to="/login" @click="mobileOpen = false">Connexion</RouterLink>
         <div class="pnav-mobile-sep pnav-mobile-sep--switch"></div>
         <div class="game-switch game-switch--mobile" role="tablist" aria-label="Choix du jeu">
           <button :class="['gs-btn', { active: game.isEfoot }]" @click="pick('efoot')">eFoot</button>
@@ -55,14 +65,16 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { MenuIcon, XIcon } from 'lucide-vue-next'
 import { useGameStore } from '@/stores/game'
+import { useAuthStore } from '@/stores/auth'
 import { useSiteSettings } from '@/stores/siteSettings'
 import { mediaUrl } from '@/composables/useAPI'
 
 const game = useGameStore()
+const auth = useAuthStore()
 const router = useRouter()
 const site = useSiteSettings()
 
@@ -71,6 +83,10 @@ const logo = computed(() => mediaUrl(site.settings.brand.logo))
 
 const mobileOpen = ref(false)
 watch(() => router.currentRoute.value.fullPath, () => { mobileOpen.value = false })
+
+function onKey(e) { if (e.key === 'Escape') mobileOpen.value = false }
+onMounted(() => window.addEventListener('keydown', onKey))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 
 function pick(g) {
   game.set(g)
@@ -96,8 +112,12 @@ function pick(g) {
 .brand-sub { font-size: .58rem; color: var(--muted); letter-spacing: .22em; margin-top: 2px; }
 
 .pnav-links { display: none; gap: 1.4rem; margin-left: 1rem; }
-.pnav-links a { color: var(--muted); text-decoration: none; font-size: .9rem; font-weight: 600; font-family: var(--font-title); letter-spacing: .03em; transition: color .15s; }
+.pnav-links a { position: relative; padding: .3rem 0; color: var(--muted); text-decoration: none; font-size: .9rem; font-weight: 600; font-family: var(--font-title); letter-spacing: .03em; transition: color .15s; }
+.pnav-links a::after { content: ''; position: absolute; left: 0; right: 0; bottom: -.2rem; height: 2px; border-radius: 2px; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform .2s ease; }
 .pnav-links a:hover, .pnav-links a.on { color: var(--accent-l); }
+.pnav-links a:hover::after, .pnav-links a.on::after { transform: scaleX(1); }
+.pnav-links a:focus-visible, .gs-btn:focus-visible, .pnav-burger:focus-visible { outline: 2px solid var(--accent-l); outline-offset: 3px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .pnav-links a::after { transition: none; } }
 
 .pnav-right { display: flex; align-items: center; gap: .6rem; margin-left: auto; }
 .game-switch { display: inline-flex; padding: 3px; border-radius: 999px; border: 1px solid var(--border); background: color-mix(in srgb, var(--card) 70%, transparent); }

@@ -152,7 +152,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.tk-page { max-width: 64rem; }
+.tk-page { max-width: none; }
 .section-head { margin-bottom: 1rem; }
 .section-head h1 { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: clamp(1.5rem, 3vw, 2rem); margin: 0 0 .3rem; }
 .section-head h1::after { content: ''; display: block; width: 3rem; height: 3px; margin-top: .5rem; border-radius: 3px; background: var(--accent); }

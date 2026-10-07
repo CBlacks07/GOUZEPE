@@ -398,7 +398,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.tk-admin { max-width: 64rem; }
+.tk-admin { max-width: none; }
 .title { font-family: var(--font-title); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 1.5rem; margin-top: .4rem; }
 
 .tabs { display: inline-flex; gap: .35rem; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); margin-bottom: 1.2rem; }

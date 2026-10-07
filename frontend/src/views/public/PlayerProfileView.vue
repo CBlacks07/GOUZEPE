@@ -136,7 +136,7 @@ watch(() => route.params.id, load)
 
 <style scoped>
 .pp { position: relative; z-index: 1; color: var(--text); min-height: 100dvh; }
-.section { padding: 2rem clamp(1.25rem, 4vw, 4rem) 3rem; max-width: 62rem; }
+.section { padding: 2rem clamp(1.25rem, 4vw, 4rem) 3rem; }
 .back { display: inline-flex; align-items: center; gap: .35rem; color: var(--muted); text-decoration: none; font-size: .85rem; font-weight: 600; margin-bottom: 1.2rem; }
 .back:hover { color: var(--accent-l); }
 .empty { color: var(--muted); padding: 2rem 0; }

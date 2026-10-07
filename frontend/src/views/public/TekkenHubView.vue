@@ -240,7 +240,7 @@ onMounted(async () => {
 .section-head p { color: var(--muted); margin: 0; }
 
 /* Ladder podium */
-.ladder-podium { display: flex; flex-direction: column; gap: .7rem; max-width: 36rem; }
+.ladder-podium { display: flex; flex-direction: column; gap: .7rem; }
 .podium-card { display: flex; align-items: center; gap: .8rem; padding: .85rem 1rem; background: var(--card); border: 1px solid var(--border); border-radius: 14px; transition: transform .15s, border-color .15s; }
 .podium-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
 .podium-card.pos-1 { border-color: color-mix(in srgb, gold 30%, var(--border)); }
@@ -260,7 +260,7 @@ onMounted(async () => {
 .pl { color: var(--red, #ef4444); font-weight: 600; }
 
 /* Duels list */
-.duels-list { display: flex; flex-direction: column; gap: .5rem; max-width: 36rem; }
+.duels-list { display: flex; flex-direction: column; gap: .5rem; }
 .duel-card { display: flex; align-items: center; gap: .8rem; padding: .7rem 1rem; background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
 .duel-date { font-size: .72rem; color: var(--muted); min-width: 3.5rem; }
 .duel-match { flex: 1; display: flex; align-items: center; justify-content: center; gap: .6rem; font-weight: 600; }
@@ -280,7 +280,7 @@ onMounted(async () => {
 @media (min-width: 720px) { .feat-grid { grid-template-columns: repeat(3, 1fr); } }
 
 /* Journée mise en avant */
-.live-card { display: grid; grid-template-columns: 1fr; gap: .6rem; align-items: center; max-width: 52rem; padding: 1.1rem 1.25rem;
+.live-card { display: grid; grid-template-columns: 1fr; gap: .6rem; align-items: center; padding: 1.1rem 1.25rem;
   border-radius: 16px; border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border)); text-decoration: none; color: var(--text);
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, var(--card)), var(--card)); transition: transform .18s, border-color .18s; }
 .live-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 70%, var(--border)); }
