@@ -142,7 +142,12 @@
           </div>
 
           <div v-else-if="!tkLadder" class="profil-unlinked reveal delay-1">
-            <p class="text-gz-muted text-sm">Vous n'etes pas inscrit au ladder Tekken.</p>
+            <EmptyState
+              title="Pas encore dans le ladder Tekken"
+              hint="Tu y entres automatiquement après ton premier duel ou match de tournoi Tekken."
+              to="/tekken"
+              cta="Découvrir le pôle Tekken"
+            />
           </div>
 
           <template v-else>
