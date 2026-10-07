@@ -24,12 +24,12 @@
             <div class="day-search-wrap">
               <input v-model="matchSearch" type="text" class="input day-search-input"
                      placeholder="Rechercher joueur…" @keydown.enter="searchMatch" />
-              <select v-model="matchSearchDiv" class="input day-search-div">
+              <select v-model="matchSearchDiv" class="input day-search-div" aria-label="Division">
                 <option value="all">D1+D2</option>
                 <option value="d1">D1</option>
                 <option value="d2">D2</option>
               </select>
-              <button @click="searchMatch" class="btn text-xs px-2" title="Chercher">
+              <button @click="searchMatch" class="btn text-xs px-2" title="Chercher" aria-label="Chercher un joueur">
                 <SearchIcon class="w-3.5 h-3.5" />
               </button>
             </div>
@@ -39,7 +39,7 @@
               <PrinterIcon class="w-3.5 h-3.5" />
               <span class="hidden sm:inline">PDF</span>
             </button>
-            <button @click="loadDay" class="btn text-xs p-2" title="Rafraîchir">
+            <button @click="loadDay" class="btn text-xs p-2" title="Rafraîchir" aria-label="Rafraîchir la journée">
               <RefreshCwIcon class="w-3.5 h-3.5" />
             </button>
             <button @click="togglePronos" class="btn text-xs gap-1" :class="{ 'pronos-toggle-on': showPronos }"
@@ -57,23 +57,23 @@
 
             <!-- Actions admin -->
             <template v-if="canEdit">
-              <button @click="openParticipantsModal" class="btn-primary text-xs gap-1">
+              <button @click="openParticipantsModal" class="btn text-xs gap-1" title="Choisir les participants de la journée">
                 <UsersIcon class="w-3.5 h-3.5" />
                 <span class="hidden md:inline">Participants</span>
               </button>
-              <button @click="saveDraft(false)" class="btn text-xs gap-1" :disabled="saving">
+              <button @click="saveDraft(false)" class="btn text-xs gap-1" :disabled="saving" title="Enregistrer en brouillon (sans publier)">
                 <Loader2Icon v-if="saving" class="w-3.5 h-3.5 animate-spin" />
                 <SaveIcon v-else class="w-3.5 h-3.5" />
                 <span class="hidden md:inline">Brouillon</span>
               </button>
-              <button @click="openConfirmModal" class="btn-primary text-xs gap-1" :disabled="publishing">
+              <button @click="openConfirmModal" class="btn-primary text-xs gap-1 day-publish" :disabled="publishing" title="Vérifier puis publier la journée">
                 <Loader2Icon v-if="publishing" class="w-3.5 h-3.5 animate-spin" />
                 <span>Publier</span>
               </button>
 
               <!-- Actions destructives dans un details -->
               <details class="day-danger-menu">
-                <summary class="btn text-xs p-2" title="Actions avancées">
+                <summary class="btn text-xs p-2" title="Actions avancées" aria-label="Actions avancées">
                   <MoreVerticalIcon class="w-3.5 h-3.5" />
                 </summary>
                 <div class="day-danger-dropdown">
@@ -1988,6 +1988,7 @@ button[title] {
 .day-search-div { width: 72px !important; font-size: .78rem; }
 
 /* Dropdown danger menu */
+.day-publish { font-weight: 700; padding-inline: 1rem; box-shadow: 0 3px 12px rgba(var(--accent-rgb), .35); }
 .day-danger-menu { position: relative; }
 .day-danger-menu summary { list-style: none; cursor: pointer; }
 .day-danger-menu summary::-webkit-details-marker { display: none; }

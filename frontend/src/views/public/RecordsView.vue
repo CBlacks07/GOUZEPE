@@ -8,7 +8,7 @@
         <p>Les performances qui marquent l'histoire.</p>
       </div>
 
-      <div v-if="loading" class="empty">Chargement…</div>
+      <SkeletonBlock v-if="loading" :count="3" />
       <h2 v-if="!loading" class="rec-game"><span class="dot efoot" />eFootball</h2>
       <div v-if="!loading" class="rec-grid">
         <article v-if="r.carton" class="rec-card">
@@ -81,6 +81,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import PublicNav from '@/components/public/PublicNav.vue'
 import PublicFooter from '@/components/public/PublicFooter.vue'
 import { resolveBaseURL } from '@/composables/useAPI'

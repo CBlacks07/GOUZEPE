@@ -13,7 +13,7 @@
         <button role="tab" :aria-selected="String(activeGame === 'tekken')" :class="['gt', { on: activeGame === 'tekken' }]" @click="selectGame('tekken')">Tekken</button>
       </div>
 
-      <div v-if="loading" class="empty">Chargement…</div>
+      <SkeletonBlock v-if="loading" :count="3" />
       <div v-else-if="!seasons.length" class="empty">Aucune saison enregistrée.</div>
 
       <div v-else class="seasons">
@@ -73,6 +73,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useGameStore } from '@/stores/game'
+import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import PublicNav from '@/components/public/PublicNav.vue'
 import PublicFooter from '@/components/public/PublicFooter.vue'
 import { resolveBaseURL } from '@/composables/useAPI'

@@ -55,7 +55,7 @@
           <h2>Ladder ELO</h2>
           <p>Chaque match joué au club (journée, duel, tournoi) fait bouger l'ELO.</p>
         </div>
-        <div v-if="loading" class="empty">Chargement...</div>
+        <SkeletonBlock v-if="loading" :count="8" />
         <div v-else-if="!tekkenLadder.length" class="empty">Aucun joueur dans le ladder Tekken.</div>
         <div v-else class="overflow-x-auto tk-table-wrap">
           <table class="tk-table">
@@ -92,7 +92,7 @@
           <p v-if="!loading">Minimum {{ threshold }} journée(s) jouée(s) pour être classé</p>
         </div>
 
-        <div v-if="loading" class="empty">Chargement…</div>
+        <SkeletonBlock v-if="loading" :count="8" />
         <div v-else-if="!classed.length" class="empty">Aucun joueur classé pour le moment.</div>
         <div v-else class="table-shell">
           <table class="data-table">
@@ -147,6 +147,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { RouterLink } from 'vue-router'
 import { TrophyIcon } from 'lucide-vue-next'
 import PublicNav from '@/components/public/PublicNav.vue'

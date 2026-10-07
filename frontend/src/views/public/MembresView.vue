@@ -29,7 +29,7 @@
           <input v-model="search" type="text" class="input m-search" placeholder="Rechercher un membre…" />
         </div>
 
-        <div v-if="loading" class="empty">Chargement…</div>
+        <SkeletonBlock v-if="loading" variant="card" :count="9" />
         <div v-else-if="!filtered.length" class="empty">Aucun membre trouvé.</div>
         <div v-else class="m-grid">
         <RouterLink v-for="m in filtered" :key="m.player_id" :to="`/joueur/${m.player_id}`" class="m-card">
@@ -60,6 +60,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { RouterLink } from 'vue-router'
 import PublicNav from '@/components/public/PublicNav.vue'
 import PublicFooter from '@/components/public/PublicFooter.vue'

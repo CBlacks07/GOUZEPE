@@ -8,11 +8,11 @@
         <div class="flex flex-wrap gap-2 items-end">
           <div class="flex-1 min-w-[200px]">
             <label class="label">Email</label>
-            <input v-model="newU.email" type="text" class="input" placeholder="ex: admin@gz ou user" />
+            <input v-model="newU.email" type="text" class="input" placeholder="ex: admin@gz ou user" autocomplete="off" name="new-user-email" />
           </div>
           <div class="flex-1 min-w-[160px]">
             <label class="label">Mot de passe</label>
-            <input v-model="newU.password" type="password" class="input" placeholder="mot de passe" />
+            <input v-model="newU.password" type="password" class="input" placeholder="mot de passe" autocomplete="new-password" name="new-user-password" />
           </div>
           <div>
             <label class="label">Rôle</label>
@@ -79,7 +79,7 @@
                     <button @click="openEdit(u)" class="btn py-1 px-2 text-xs flex items-center gap-1" title="Modifier cet utilisateur">
                       <PencilIcon class="w-3 h-3" /> <span class="hidden sm:inline">Modifier</span><span class="sr-only sm:hidden">Modifier</span>
                     </button>
-                    <button @click="deleteUser(u.id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1" title="Supprimer cet utilisateur">
+                    <button @click="deleteUser(u.id, u.email)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1" title="Supprimer cet utilisateur">
                       <Trash2Icon class="w-3 h-3" /> <span class="hidden sm:inline">Supprimer</span><span class="sr-only sm:hidden">Supprimer</span>
                     </button>
                   </div>
@@ -511,8 +511,8 @@ async function saveEdit() {
   }
 }
 
-async function deleteUser(id) {
-  if (!confirm('Supprimer cet utilisateur ?')) return
+async function deleteUser(id, email) {
+  if (!confirm(`Supprimer l'utilisateur "${email}" ? Cette action est définitive.`)) return
   try {
     await api.delete('/admin/users/' + id)
     listStatus.value = 'Utilisateur supprimé'
