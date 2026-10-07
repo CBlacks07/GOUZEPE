@@ -51,14 +51,17 @@
           <h2 class="auth-h2">Connexion</h2>
           <p class="auth-hint">Ravi de te revoir. Entre tes identifiants.</p>
 
-          <label class="label" for="email">Email</label>
+          <label class="label" for="email">Email ou identifiant</label>
           <input
             id="email"
             v-model="form.email"
             class="input"
-            type="email"
-            placeholder="ton@email.com"
-            autocomplete="email"
+            type="text"
+            inputmode="email"
+            autocapitalize="none"
+            spellcheck="false"
+            placeholder="ton@email.com ou identifiant"
+            autocomplete="username"
           />
 
           <label class="label mt" for="password">Mot de passe</label>
@@ -84,7 +87,7 @@
             </button>
           </div>
 
-          <p v-if="error" class="msg error">{{ error }}</p>
+          <p v-if="error" class="msg error" role="alert">{{ error }}</p>
           <p v-else-if="bootMessage" class="msg muted">{{ bootMessage }}</p>
 
           <button type="submit" class="btn-primary auth-submit" :disabled="loading">

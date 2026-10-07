@@ -7,9 +7,9 @@
             <CalendarIcon class="w-4 h-4 text-gz-muted" /> Sauvegarde automatique
           </h2>
 
-          <p v-if="scheduleLoading" class="text-gz-muted text-sm">Chargement...</p>
+          <SkeletonBlock v-if="scheduleLoading" :count="2" />
           <p v-else-if="!schedule || !schedule.enabled" class="text-gz-muted text-sm">
-            Sauvegarde automatique desactivee.
+            Sauvegarde automatique désactivée.
           </p>
           <div v-else class="text-sm text-gz-text space-y-1.5">
             <p>
@@ -17,7 +17,7 @@
               <strong>{{ pad(schedule.hour) }}:{{ pad(schedule.minute) }} UTC</strong>
             </p>
             <p v-if="schedule.nextRun" class="text-gz-muted">
-              Prochaine execution: {{ fmtDate(schedule.nextRun) }} (local) • {{ fmtUTC(schedule.nextRun) }} UTC
+              Prochaine exécution : {{ fmtDate(schedule.nextRun) }} (local) • {{ fmtUTC(schedule.nextRun) }} UTC
             </p>
           </div>
         </article>
@@ -76,12 +76,12 @@
               Etat: {{ running ? 'busy' : 'idle' }}
             </span>
           </div>
-          <button @click="loadBackups" class="btn py-1 px-2 text-xs flex items-center gap-1" title="Rafraichir la liste">
-            <RefreshCwIcon class="w-3 h-3" /> Rafraichir
+          <button @click="loadBackups" class="btn py-1 px-2 text-xs flex items-center gap-1" title="Rafraîchir la liste">
+            <RefreshCwIcon class="w-3 h-3" /> Rafraîchir
           </button>
         </div>
 
-        <div v-if="loadingList" class="text-center text-gz-muted py-8 text-sm">Chargement...</div>
+        <SkeletonBlock v-if="loadingList" :count="4" class="p-2" />
         <div v-else-if="!backups.length" class="text-center text-gz-muted py-8 text-sm">
           Aucune sauvegarde disponible.
         </div>
@@ -137,6 +137,7 @@
 </template>
 
 <script setup>
+import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAPI, resolveBaseURL } from '@/composables/useAPI'
@@ -224,7 +225,9 @@ async function downloadBackup(fileName) {
 }
 
 async function restoreExisting(file) {
-  if (!confirm(`Restaurer la base depuis ${file} ?`)) return
+  if (!confirm(`Restaurer la base depuis ${file} ?
+
+ATTENTION : toutes les données actuelles seront remplacées par celles de cette sauvegarde. Pense à créer une sauvegarde avant. Action irréversible.`)) return
   try {
     const { data } = await api.post('/admin/backups/restore-existing', { file })
     toast('Restauration terminee depuis ' + (data.restoredFrom || file), true)
@@ -235,7 +238,7 @@ async function restoreExisting(file) {
 
 async function deleteBackup(fileName) {
   if (!fileName) return
-  if (!confirm(`Supprimer la sauvegarde ${fileName} ?`)) return
+  if (!confirm(`Supprimer définitivement la sauvegarde ${fileName} ?`)) return
   try {
     const encoded = encodeURIComponent(fileName)
     const { data } = await api.delete(`/admin/backups/${encoded}`)
@@ -253,7 +256,9 @@ async function restoreFromUpload() {
     return
   }
   const file = inp.files[0]
-  if (!confirm(`Restaurer la base depuis ${file.name} ?`)) return
+  if (!confirm(`Restaurer la base depuis ${file.name} ?
+
+ATTENTION : toutes les données actuelles seront remplacées par celles de ce fichier. Pense à créer une sauvegarde avant. Action irréversible.`)) return
 
   try {
     const fd = new FormData()
