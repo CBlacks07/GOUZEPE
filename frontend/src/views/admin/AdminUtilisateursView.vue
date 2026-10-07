@@ -2,15 +2,33 @@
   <AppLayout season-label="Utilisateurs">
     <div class="page-wrap admin-utilisateurs-wrap">
 
-      <!-- Créer un utilisateur -->
-      <section class="card mb-4 reveal">
-        <h2 class="font-semibold text-gz-text mb-4">Créer un utilisateur</h2>
-        <div class="flex flex-wrap gap-2 items-end">
-          <div class="flex-1 min-w-[200px]">
+      <!-- En-tête -->
+      <header class="al-head reveal">
+        <div>
+          <h1 class="al-title">Utilisateurs</h1>
+          <p class="al-sub">Comptes de connexion, rôles et demandes d'adhésion.</p>
+          <div class="al-stats">
+            <span class="al-stat"><strong>{{ users.length }}</strong> comptes</span>
+            <span class="al-stat"><strong>{{ users.filter(u => u.role === 'admin').length }}</strong> admins</span>
+            <span class="al-stat"><strong>{{ users.filter(u => !u.player_id).length }}</strong> sans joueur lié</span>
+          </div>
+        </div>
+        <button class="btn-primary flex items-center gap-1.5" :aria-expanded="String(showCreate)" @click="showCreate = !showCreate">
+          <XIcon v-if="showCreate" class="w-4 h-4" />
+          <UserPlusIcon v-else class="w-4 h-4" />
+          {{ showCreate ? 'Fermer' : 'Nouvel utilisateur' }}
+        </button>
+      </header>
+
+      <!-- Création -->
+      <section v-if="showCreate" class="al-panel reveal">
+        <h2 class="al-panel-title"><UserPlusIcon class="w-4 h-4" /> Créer un utilisateur</h2>
+        <div class="al-form">
+          <div>
             <label class="label">Email</label>
             <input v-model="newU.email" type="text" class="input" placeholder="ex: admin@gz ou user" autocomplete="off" name="new-user-email" />
           </div>
-          <div class="flex-1 min-w-[160px]">
+          <div>
             <label class="label">Mot de passe</label>
             <input v-model="newU.password" type="password" class="input" placeholder="mot de passe" autocomplete="new-password" name="new-user-password" />
           </div>
@@ -21,74 +39,77 @@
               <option value="admin">admin</option>
             </select>
           </div>
-          <button @click="addUser" :disabled="adding" class="btn-primary flex items-center gap-1.5">
+          <button @click="addUser" :disabled="adding" class="btn-primary flex items-center justify-center gap-1.5">
             <Loader2Icon v-if="adding" class="w-3.5 h-3.5 animate-spin" />
             <PlusIcon v-else class="w-3.5 h-3.5" />
             Ajouter
           </button>
         </div>
-        <p class="text-xs text-gz-muted mt-2">
-          Astuce : si vous ne mettez pas de domaine, <code>@gz.local</code> sera ajouté automatiquement.
-        </p>
+        <p class="al-muted mt-2">Si vous ne mettez pas de domaine, <code>@gz.local</code> sera ajouté automatiquement.</p>
       </section>
 
-      <!-- Liste utilisateurs -->
-      <section class="card reveal delay-1">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <h2 class="font-semibold text-gz-text">Utilisateurs enregistrés</h2>
-          <div class="flex gap-2">
-            <input v-model="search" type="text" class="input w-56" placeholder="Rechercher (email)…" />
-            <button @click="loadUsers" class="btn flex items-center gap-1">
-              <RefreshCwIcon class="w-3.5 h-3.5" /> Rafraîchir
-            </button>
-          </div>
+      <!-- Barre d'outils -->
+      <div class="al-toolbar reveal delay-1">
+        <div class="al-seg" role="group" aria-label="Rôle">
+          <button v-for="o in roleOptions" :key="o.v" :class="{ on: roleFilter === o.v }" :aria-pressed="String(roleFilter === o.v)" @click="roleFilter = o.v">{{ o.l }}</button>
         </div>
+        <div class="al-search">
+          <SearchIcon class="w-4 h-4" />
+          <input v-model="search" type="search" class="input" placeholder="Rechercher un email…" aria-label="Rechercher un utilisateur" />
+        </div>
+        <span class="al-spacer"></span>
+        <span class="al-muted">{{ filtered.length }} résultat(s)</span>
+        <button @click="loadUsers" class="al-icon" title="Rafraîchir la liste" aria-label="Rafraîchir la liste">
+          <RefreshCwIcon class="w-4 h-4" :class="{ 'animate-spin': loading }" />
+        </button>
+      </div>
 
-        <div class="overflow-x-auto table-shell">
-          <table class="data-table">
+      <!-- Liste -->
+      <section class="al-card reveal delay-2">
+        <SkeletonBlock v-if="loading && !users.length" :count="6" class="p-3" />
+        <div v-else-if="!filtered.length" class="al-empty">
+          <strong>{{ search || roleFilter !== 'all' ? 'Aucun résultat' : 'Aucun utilisateur' }}</strong>
+          <span v-if="search || roleFilter !== 'all'">Essaie un autre email ou retire le filtre de rôle.</span>
+          <span v-else>Utilise « Nouvel utilisateur » pour créer un compte.</span>
+        </div>
+        <div v-else class="overflow-x-auto">
+          <table class="al-table">
             <thead>
               <tr>
-                <th>Email</th>
+                <th>Compte</th>
                 <th>Rôle</th>
-                <th class="hidden sm:table-cell">Player ID</th>
-                <th class="hidden sm:table-cell">Créé</th>
-                <th>Actions</th>
+                <th class="hidden sm:table-cell">Joueur lié</th>
+                <th class="hidden md:table-cell">Créé le</th>
+                <th style="text-align:right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-if="loading">
-                <td colspan="5" class="text-center text-gz-muted py-8">Chargement…</td>
-              </tr>
-              <tr v-else-if="!filtered.length">
-                <td colspan="5" class="text-center text-gz-muted py-8">Aucun utilisateur.</td>
-              </tr>
               <tr v-for="u in filtered" :key="u.id">
-                <td class="font-medium">{{ u.email }}</td>
                 <td>
-                  <span :class="['badge text-xs font-bold px-2 py-0.5 rounded-full border',
-                    u.role === 'admin'
-                      ? 'bg-gz-red/15 text-gz-red border-gz-red/30'
-                      : 'bg-gz-blue/15 text-gz-blue border-gz-blue/30']">
-                    {{ u.role }}
-                  </span>
+                  <div class="al-who">
+                    <span class="al-av" aria-hidden="true">{{ (u.email || '?')[0].toUpperCase() }}</span>
+                    <span class="min-w-0">
+                      <span class="al-name">{{ u.email }}</span>
+                    </span>
+                  </div>
                 </td>
-                <td class="text-gz-muted text-sm font-mono hidden sm:table-cell">{{ u.player_id || '—' }}</td>
-                <td class="text-gz-muted text-xs whitespace-nowrap hidden sm:table-cell">{{ fmtDate(u.created_at) }}</td>
+                <td><span :class="['al-pill', u.role === 'admin' ? 'admin' : 'member']">{{ u.role }}</span></td>
+                <td class="hidden sm:table-cell">
+                  <span v-if="u.player_id" class="al-id" style="font-size:.8rem">{{ u.player_id }}</span>
+                  <span v-else class="al-pill none">Aucun</span>
+                </td>
+                <td class="al-muted hidden md:table-cell">{{ fmtDate(u.created_at) }}</td>
                 <td>
-                  <div class="flex gap-1">
-                    <button @click="openEdit(u)" class="btn py-1 px-2 text-xs flex items-center gap-1" title="Modifier cet utilisateur">
-                      <PencilIcon class="w-3 h-3" /> <span class="hidden sm:inline">Modifier</span><span class="sr-only sm:hidden">Modifier</span>
-                    </button>
-                    <button @click="deleteUser(u.id, u.email)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1" title="Supprimer cet utilisateur">
-                      <Trash2Icon class="w-3 h-3" /> <span class="hidden sm:inline">Supprimer</span><span class="sr-only sm:hidden">Supprimer</span>
-                    </button>
+                  <div class="al-actions">
+                    <button @click="openEdit(u)" class="al-icon" :title="'Modifier ' + u.email" :aria-label="'Modifier ' + u.email"><PencilIcon class="w-4 h-4" /></button>
+                    <button @click="deleteUser(u.id, u.email)" class="al-icon danger" :title="'Supprimer ' + u.email" :aria-label="'Supprimer ' + u.email"><Trash2Icon class="w-4 h-4" /></button>
                   </div>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <p v-if="listStatus" class="text-xs text-gz-muted mt-2">{{ listStatus }}</p>
+        <p v-if="listStatus" class="al-muted" style="padding:.6rem 1rem">{{ listStatus }}</p>
       </section>
 
       <!-- Demandes d'inscription -->
@@ -291,7 +312,8 @@ import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAPI } from '@/composables/useAPI'
 import { useSessionState } from '@/composables/useSessionState'
 import { useToast } from '@/composables/useToast'
-import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon, Loader2Icon, ArrowLeftIcon } from 'lucide-vue-next'
+import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon, Loader2Icon, ArrowLeftIcon, SearchIcon, UserPlusIcon, XIcon } from 'lucide-vue-next'
+import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 
 const { success } = useToast()
 
@@ -300,6 +322,9 @@ const api = useAPI()
 const users      = ref([])
 const players    = ref([])
 const search     = ref('')
+const roleFilter = ref('all')
+const showCreate = ref(false)
+const roleOptions = [{ v: 'all', l: 'Tous' }, { v: 'admin', l: 'Admins' }, { v: 'member', l: 'Membres' }]
 const loading    = ref(false)
 const modal      = ref(false)
 const saving     = ref(false)
@@ -337,7 +362,10 @@ useSessionState('efoot.ui.admin.utilisateurs.v1', {
 
 const filtered = computed(() => {
   const q = search.value.toLowerCase()
-  return users.value.filter(u => !q || (u.email || '').toLowerCase().includes(q))
+  return users.value.filter(u =>
+    (roleFilter.value === 'all' || u.role === roleFilter.value) &&
+    (!q || (u.email || '').toLowerCase().includes(q))
+  )
 })
 
 onMounted(async () => {

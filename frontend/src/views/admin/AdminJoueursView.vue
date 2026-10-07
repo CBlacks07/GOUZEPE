@@ -2,154 +2,124 @@
   <AppLayout season-label="Joueurs">
     <div class="page-wrap admin-joueurs-wrap">
 
-      <!-- Créer un joueur -->
-      <section class="card mb-4 reveal">
-        <h2 class="font-semibold text-gz-text mb-4">Créer / modifier un joueur</h2>
-        <div class="flex flex-wrap gap-2 items-end">
-          <div class="min-w-[150px]">
-            <label class="label">ID (ex: CBlacks_GZ)</label>
-            <input v-model="newP.player_id" type="text" class="input" placeholder="ID joueur" />
+      <!-- En-tête -->
+      <header class="al-head reveal">
+        <div>
+          <h1 class="al-title">Joueurs</h1>
+          <p class="al-sub">Les membres et invités du club, leur pôle et leur compte de connexion.</p>
+          <div class="al-stats">
+            <span class="al-stat"><strong>{{ members.length }}</strong> membres</span>
+            <span class="al-stat"><strong>{{ guests.length }}</strong> invités</span>
+            <span class="al-stat"><strong>{{ players.filter(p => p.user_email).length }}</strong> avec compte</span>
           </div>
-          <div class="flex-1 min-w-[200px]">
+        </div>
+        <button class="btn-primary flex items-center gap-1.5" :aria-expanded="String(showCreate)" @click="showCreate = !showCreate">
+          <XIcon v-if="showCreate" class="w-4 h-4" />
+          <UserPlusIcon v-else class="w-4 h-4" />
+          {{ showCreate ? 'Fermer' : 'Nouveau joueur' }}
+        </button>
+      </header>
+
+      <!-- Création -->
+      <section v-if="showCreate" class="al-panel reveal">
+        <h2 class="al-panel-title"><UserPlusIcon class="w-4 h-4" /> Ajouter un joueur</h2>
+        <div class="al-form">
+          <div>
+            <label class="label">ID (ex: CBlacks_GZ)</label>
+            <input v-model="newP.player_id" type="text" class="input" placeholder="ID joueur" autocomplete="off" />
+          </div>
+          <div>
             <label class="label">Nom complet</label>
-            <input v-model="newP.name" type="text" class="input" placeholder="Nom complet" />
+            <input v-model="newP.name" type="text" class="input" placeholder="Nom complet" autocomplete="off" />
           </div>
           <div>
             <label class="label">Statut</label>
             <select v-model="newP.role" class="input">
-              <option value="MEMBRE">MEMBRE</option>
-              <option value="INVITE">INVITE</option>
+              <option value="MEMBRE">Membre</option>
+              <option value="INVITE">Invité</option>
             </select>
           </div>
           <div>
-            <label class="label">Pole</label>
+            <label class="label">Pôle</label>
             <select v-model="newP.main_game" class="input">
               <option value="efoot">eFootball</option>
               <option value="tekken">Tekken</option>
               <option value="both">Les deux</option>
             </select>
           </div>
-          <button @click="addPlayer" :disabled="adding" class="btn-primary flex items-center gap-1.5">
+          <button @click="addPlayer" :disabled="adding" class="btn-primary flex items-center justify-center gap-1.5">
             <Loader2Icon v-if="adding" class="w-3.5 h-3.5 animate-spin" />
             <PlusIcon v-else class="w-3.5 h-3.5" />
             Ajouter
           </button>
         </div>
-        <p v-if="createMsg" :class="['text-sm mt-2', createOk ? 'text-gz-green' : 'text-gz-red']">
-          {{ createMsg }}
-        </p>
+        <p v-if="createMsg" :class="['text-sm mt-2', createOk ? 'text-gz-green' : 'text-gz-red']">{{ createMsg }}</p>
       </section>
 
-      <!-- Liste joueurs -->
-      <section class="card reveal delay-1">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <h2 class="font-semibold text-gz-text">Joueurs enregistrés</h2>
-          <div class="flex gap-2">
-            <input v-model="search" type="search" class="input w-56" placeholder="Rechercher (ID/nom)…" aria-label="Rechercher un joueur" />
-            <select v-model="poleFilter" class="input" aria-label="Filtrer par pôle">
-              <option value="all">Tous les pôles</option>
-              <option value="efoot">eFootball</option>
-              <option value="tekken">Tekken</option>
-              <option value="both">Les deux</option>
-            </select>
-            <button @click="loadPlayers" class="btn flex items-center gap-1">
-              <RefreshCwIcon class="w-3.5 h-3.5" /> Rafraîchir
-            </button>
-          </div>
+      <!-- Barre d'outils -->
+      <div class="al-toolbar reveal delay-1">
+        <div class="al-seg" role="tablist" aria-label="Statut">
+          <button role="tab" :aria-selected="String(tab === 'members')" :class="{ on: tab === 'members' }" @click="tab = 'members'">Membres<span class="n">{{ filteredMembers.length }}</span></button>
+          <button role="tab" :aria-selected="String(tab === 'guests')" :class="{ on: tab === 'guests' }" @click="tab = 'guests'">Invités<span class="n">{{ filteredGuests.length }}</span></button>
         </div>
-
-        <!-- Membres -->
-        <div class="players-group">
-          <h3 class="players-group-h">
-            <span class="dot dot-member" /> Membres
-            <span class="players-count">{{ filteredMembers.length }}</span>
-          </h3>
-          <div class="overflow-x-auto table-shell">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Nom</th>
-                  <th>Pole</th>
-                  <th class="hidden sm:table-cell">Admission</th>
-                  <th class="hidden sm:table-cell">Compte</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-if="loading">
-                  <td colspan="6" class="text-center text-gz-muted py-8">Chargement...</td>
-                </tr>
-                <tr v-else-if="!filteredMembers.length">
-                  <td colspan="6" class="text-center text-gz-muted py-6">{{ search || poleFilter !== 'all' ? 'Aucun membre ne correspond à ce filtre.' : 'Aucun membre.' }}</td>
-                </tr>
-                <tr v-for="p in filteredMembers" :key="p.player_id">
-                  <td class="font-mono text-gz-muted text-xs">{{ p.player_id }}</td>
-                  <td class="font-medium">{{ p.name || '—' }}</td>
-                  <td class="text-xs font-semibold" :style="poleColor(p.main_game)">{{ poleLabel(p.main_game) }}</td>
-                  <td class="text-gz-muted text-sm hidden sm:table-cell">{{ p.admission_year || '--' }}</td>
-                  <td class="text-gz-muted text-sm hidden sm:table-cell">{{ p.user_email || '—' }}</td>
-                  <td>
-                    <div class="flex gap-1">
-                      <button @click="openEdit(p)" class="btn py-1 px-2 text-xs flex items-center gap-1" title="Modifier ce joueur">
-                        <PencilIcon class="w-3 h-3" /> <span class="hidden sm:inline">Modifier</span><span class="sr-only sm:hidden">Modifier</span>
-                      </button>
-                      <button @click="deletePlayer(p.player_id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1" title="Supprimer ce joueur">
-                        <Trash2Icon class="w-3 h-3" /> <span class="hidden sm:inline">Supprimer</span><span class="sr-only sm:hidden">Supprimer</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div class="al-seg" role="group" aria-label="Pôle">
+          <button v-for="o in poleOptions" :key="o.v" :class="{ on: poleFilter === o.v }" :aria-pressed="String(poleFilter === o.v)" @click="poleFilter = o.v">{{ o.l }}</button>
         </div>
+        <div class="al-search">
+          <SearchIcon class="w-4 h-4" />
+          <input v-model="search" type="search" class="input" placeholder="Rechercher un joueur…" aria-label="Rechercher un joueur" />
+        </div>
+        <span class="al-spacer"></span>
+        <button @click="loadPlayers" class="al-icon" title="Rafraîchir la liste" aria-label="Rafraîchir la liste">
+          <RefreshCwIcon class="w-4 h-4" :class="{ 'animate-spin': loading }" />
+        </button>
+      </div>
 
-        <!-- Invités -->
-        <div class="players-group">
-          <h3 class="players-group-h">
-            <span class="dot dot-guest" /> Invités
-            <span class="players-count">{{ filteredGuests.length }}</span>
-          </h3>
-          <div class="overflow-x-auto table-shell">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Nom</th>
-                  <th>Pole</th>
-                  <th class="hidden sm:table-cell">Admission</th>
-                  <th class="hidden sm:table-cell">Compte</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-if="loading">
-                  <td colspan="6" class="text-center text-gz-muted py-8">Chargement...</td>
-                </tr>
-                <tr v-else-if="!filteredGuests.length">
-                  <td colspan="6" class="text-center text-gz-muted py-6">Aucun invité.</td>
-                </tr>
-                <tr v-for="p in filteredGuests" :key="p.player_id">
-                  <td class="font-mono text-gz-muted text-xs">{{ p.player_id }}</td>
-                  <td class="font-medium">{{ p.name || '—' }}</td>
-                  <td class="text-xs font-semibold" :style="poleColor(p.main_game)">{{ poleLabel(p.main_game) }}</td>
-                  <td class="text-gz-muted text-sm hidden sm:table-cell">{{ p.admission_year || '--' }}</td>
-                  <td class="text-gz-muted text-sm hidden sm:table-cell">{{ p.user_email || '—' }}</td>
-                  <td>
-                    <div class="flex gap-1">
-                      <button @click="openEdit(p)" class="btn py-1 px-2 text-xs flex items-center gap-1" title="Modifier ce joueur">
-                        <PencilIcon class="w-3 h-3" /> <span class="hidden sm:inline">Modifier</span><span class="sr-only sm:hidden">Modifier</span>
-                      </button>
-                      <button @click="deletePlayer(p.player_id)" class="btn-danger py-1 px-2 text-xs flex items-center gap-1" title="Supprimer ce joueur">
-                        <Trash2Icon class="w-3 h-3" /> <span class="hidden sm:inline">Supprimer</span><span class="sr-only sm:hidden">Supprimer</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+      <!-- Liste -->
+      <section class="al-card reveal delay-2">
+        <SkeletonBlock v-if="loading && !players.length" :count="6" class="p-3" />
+        <div v-else-if="!shownRows.length" class="al-empty">
+          <strong>{{ search || poleFilter !== 'all' ? 'Aucun résultat' : tab === 'guests' ? 'Aucun invité' : 'Aucun membre' }}</strong>
+          <span v-if="search || poleFilter !== 'all'">Essaie un autre nom ou retire le filtre de pôle.</span>
+          <span v-else>Utilise « Nouveau joueur » pour en ajouter un.</span>
+        </div>
+        <div v-else class="overflow-x-auto">
+          <table class="al-table">
+            <thead>
+              <tr>
+                <th>Joueur</th>
+                <th>Pôle</th>
+                <th class="hidden sm:table-cell">Admission</th>
+                <th class="hidden md:table-cell">Compte</th>
+                <th style="text-align:right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="p in shownRows" :key="p.player_id">
+                <td>
+                  <div class="al-who">
+                    <span class="al-av" aria-hidden="true">{{ initials(p.name || p.player_id) }}</span>
+                    <span class="min-w-0">
+                      <span class="al-name">{{ p.name || '—' }}</span>
+                      <span class="al-id">{{ p.player_id }}</span>
+                    </span>
+                  </div>
+                </td>
+                <td><span :class="['al-pill', p.main_game || 'efoot']">{{ poleLabel(p.main_game) }}</span></td>
+                <td class="al-muted hidden sm:table-cell">{{ p.admission_year || '—' }}</td>
+                <td class="hidden md:table-cell">
+                  <span v-if="p.user_email" class="al-pill ok" :title="p.user_email">Compte lié</span>
+                  <span v-else class="al-pill none">Aucun compte</span>
+                </td>
+                <td>
+                  <div class="al-actions">
+                    <button @click="openEdit(p)" class="al-icon" :title="'Modifier ' + (p.name || p.player_id)" :aria-label="'Modifier ' + (p.name || p.player_id)"><PencilIcon class="w-4 h-4" /></button>
+                    <button @click="deletePlayer(p.player_id)" class="al-icon danger" :title="'Supprimer ' + (p.name || p.player_id)" :aria-label="'Supprimer ' + (p.name || p.player_id)"><Trash2Icon class="w-4 h-4" /></button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
     </div>
@@ -237,7 +207,8 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAPI } from '@/composables/useAPI'
 import { useSessionState } from '@/composables/useSessionState'
-import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon, Loader2Icon, UnlinkIcon, CameraIcon, ArrowLeftIcon } from 'lucide-vue-next'
+import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon, Loader2Icon, UnlinkIcon, CameraIcon, ArrowLeftIcon, SearchIcon, UserPlusIcon, XIcon } from 'lucide-vue-next'
+import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { resolveBaseURL } from '@/composables/useAPI'
 
 const api = useAPI()
@@ -245,6 +216,9 @@ const api = useAPI()
 const players   = ref([])
 const search    = ref('')
 const poleFilter = ref('all')
+const showCreate = ref(false)
+const tab = ref('members')
+const poleOptions = [{ v: 'all', l: 'Tous' }, { v: 'efoot', l: 'eFootball' }, { v: 'tekken', l: 'Tekken' }, { v: 'both', l: 'Les deux' }]
 const loading   = ref(false)
 const modal     = ref(false)
 const saving    = ref(false)
@@ -286,6 +260,9 @@ const filtered = computed(() => {
 })
 const filteredMembers = computed(() => filtered.value.filter(p => (p.role || 'MEMBRE').toUpperCase() !== 'INVITE'))
 const filteredGuests  = computed(() => filtered.value.filter(p => (p.role || 'MEMBRE').toUpperCase() === 'INVITE'))
+const members = computed(() => players.value.filter(p => (p.role || 'MEMBRE').toUpperCase() !== 'INVITE'))
+const guests  = computed(() => players.value.filter(p => (p.role || 'MEMBRE').toUpperCase() === 'INVITE'))
+const shownRows = computed(() => (tab.value === 'guests' ? filteredGuests.value : filteredMembers.value))
 
 onMounted(() => loadPlayers())
 
