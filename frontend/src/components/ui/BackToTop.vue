@@ -1,9 +1,11 @@
 <template>
+  <Teleport to="body">
   <Transition name="btt">
     <button v-if="visible" class="btt" type="button" aria-label="Revenir en haut de la page" title="Haut de page" @click="toTop">
       <ArrowUpIcon class="w-4 h-4" />
     </button>
   </Transition>
+  </Teleport>
 </template>
 
 <script setup>
