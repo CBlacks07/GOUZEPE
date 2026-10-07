@@ -8,7 +8,7 @@
           <BarChart2Icon class="w-4 h-4" /> Statistiques
         </button>
         <button :class="['profil-tab', activeTab === 'settings' && 'profil-tab--on']" @click="activeTab = 'settings'">
-          <SettingsIcon class="w-4 h-4" /> Parametres
+          <SettingsIcon class="w-4 h-4" /> Paramètres
         </button>
       </div>
 
@@ -31,6 +31,7 @@
         <div class="profil-hero-info">
           <h1 class="profil-name">{{ playerName || linkedPlayerId || 'Mon espace' }}</h1>
           <p class="profil-sub">{{ userEmail }} · Membre GOUZEPE Gaming Club</p>
+          <RouterLink v-if="linkedPlayerId" :to="`/joueur/${linkedPlayerId}`" class="profil-public-link">Voir mon profil public</RouterLink>
         </div>
         <div v-if="activeTab === 'stats'" class="profil-hero-right">
           <select v-model="selectedSeason" @change="load" class="input w-44 text-sm">
@@ -108,7 +109,7 @@
               </div>
 
               <div class="profil-card">
-                <h3 class="profil-card-title">Forme recente</h3>
+                <h3 class="profil-card-title">Forme récente</h3>
                 <div v-if="recentMatches.length" class="form-strip">
                   <span v-for="m in recentMatches.slice(0,10)" :key="m.id"
                         :class="['form-dot', m.gf > m.ga ? 'dot-w' : m.gf < m.ga ? 'dot-l' : 'dot-d']"
@@ -116,7 +117,7 @@
                     {{ m.gf > m.ga ? 'V' : m.gf < m.ga ? 'D' : 'N' }}
                   </span>
                 </div>
-                <div v-if="!recentMatches.length" class="text-gz-muted text-sm py-4">Aucun match recent.</div>
+                <div v-if="!recentMatches.length" class="text-gz-muted text-sm py-4">Aucun match récent.</div>
                 <div v-else class="match-list">
                   <div v-for="m in recentMatches.slice(0,8)" :key="m.id" class="match-row">
                     <span class="match-date">{{ fmtDate(m.match_date) }}</span>
@@ -182,8 +183,8 @@
               </div>
 
               <div class="profil-card">
-                <h3 class="profil-card-title">Duels recents</h3>
-                <div v-if="!tkDuels.length" class="text-gz-muted text-sm py-4">Aucun duel enregistre.</div>
+                <h3 class="profil-card-title">Duels récents</h3>
+                <div v-if="!tkDuels.length" class="text-gz-muted text-sm py-4">Aucun duel enregistré.</div>
                 <div v-else class="match-list">
                   <div v-for="d in tkDuels.slice(0, 8)" :key="d.id" class="match-row">
                     <span class="match-date">{{ fmtDate(d.played_at) }}</span>
@@ -234,7 +235,7 @@
               <div class="setting-field">
                 <label class="setting-label">ID Joueur</label>
                 <input :value="linkedPlayerId || '--'" class="input" disabled style="opacity:.6" />
-                <p class="setting-hint">L'identifiant joueur est gere par l'administrateur.</p>
+                <p class="setting-hint">L'identifiant joueur est géré par l'administrateur.</p>
               </div>
             </div>
           </div>
@@ -244,15 +245,15 @@
             <div class="settings-form">
               <div class="setting-field">
                 <label class="setting-label">Mot de passe actuel</label>
-                <input v-model="formCurrentPwd" type="password" class="input" placeholder="--------" />
+                <input v-model="formCurrentPwd" type="password" class="input" placeholder="--------" autocomplete="current-password" />
               </div>
               <div class="setting-field">
                 <label class="setting-label">Nouveau mot de passe</label>
-                <input v-model="formNewPwd" type="password" class="input" placeholder="6 caracteres minimum" />
+                <input v-model="formNewPwd" type="password" class="input" placeholder="6 caractères minimum" autocomplete="new-password" />
               </div>
               <div class="setting-field">
                 <label class="setting-label">Confirmer</label>
-                <input v-model="formConfirmPwd" type="password" class="input" placeholder="Confirmer le nouveau mot de passe" />
+                <input v-model="formConfirmPwd" type="password" class="input" placeholder="Confirmer le nouveau mot de passe" autocomplete="new-password" />
               </div>
               <button @click="savePassword" class="btn-primary text-sm w-fit" :disabled="savingPwd">
                 <Loader2Icon v-if="savingPwd" class="w-3.5 h-3.5 animate-spin" />
@@ -265,7 +266,7 @@
             <h3 class="profil-card-title">Apparence</h3>
             <div class="settings-form">
               <div class="setting-field">
-                <label class="setting-label">Theme</label>
+                <label class="setting-label">Thème</label>
                 <div class="theme-toggle-row">
                   <button @click="theme.set('light')" :class="['theme-btn', theme.mode === 'light' && 'theme-btn--on']">
                     <SunIcon class="w-4 h-4" /> Clair
@@ -461,12 +462,12 @@ const kpis = computed(() => {
   if (!stats.value) return []
   const s = stats.value
   return [
-    { label: 'Matchs joues', value: s.played ?? 0, icon: SwordsIcon, bg: 'rgba(95,141,255,.12)', accent: '#5f8dff', valClass: 'text-gz-text' },
+    { label: 'Matchs joués', value: s.played ?? 0, icon: SwordsIcon, bg: 'rgba(95,141,255,.12)', accent: '#5f8dff', valClass: 'text-gz-text' },
     { label: 'Victoires',    value: s.wins ?? 0,   icon: TrophyIcon,  bg: 'rgba(34,197,94,.12)', accent: '#22c55e', valClass: 'kpi-green' },
     { label: 'Nuls',         value: s.draws ?? 0,  icon: MinusIcon,   bg: 'rgba(148,163,184,.1)', accent: 'var(--muted)', valClass: 'text-gz-muted' },
-    { label: 'Defaites',     value: s.losses ?? 0, icon: XIcon,       bg: 'rgba(212,60,73,.1)',   accent: '#d43c49', valClass: 'kpi-red' },
-    { label: 'Buts marques', value: s.goals_for ?? 0, icon: TargetIcon, bg: 'rgba(251,191,36,.1)', accent: '#fbbf24', valClass: 'kpi-amber' },
-    { label: 'Buts encaisses', value: s.goals_against ?? 0, icon: ShieldIcon, bg: 'rgba(148,163,184,.08)', accent: 'var(--muted)', valClass: 'text-gz-muted' },
+    { label: 'Défaites',      value: s.losses ?? 0, icon: XIcon,       bg: 'rgba(212,60,73,.1)',   accent: '#d43c49', valClass: 'kpi-red' },
+    { label: 'Buts marqués',  value: s.goals_for ?? 0, icon: TargetIcon, bg: 'rgba(251,191,36,.1)', accent: '#fbbf24', valClass: 'kpi-amber' },
+    { label: 'Buts encaissés', value: s.goals_against ?? 0, icon: ShieldIcon, bg: 'rgba(148,163,184,.08)', accent: 'var(--muted)', valClass: 'text-gz-muted' },
   ]
 })
 
@@ -476,12 +477,12 @@ const tkKpis = computed(() => {
   const total = (l.wins || 0) + (l.losses || 0)
   const wr = total ? Math.round((l.wins / total) * 100) : 0
   return [
-    { label: 'Duels joues',  value: total,          icon: SwordsIcon,  bg: 'rgba(95,141,255,.12)', accent: '#5f8dff', valClass: 'text-gz-text' },
+    { label: 'Duels joués',  value: total,          icon: SwordsIcon,  bg: 'rgba(95,141,255,.12)', accent: '#5f8dff', valClass: 'text-gz-text' },
     { label: 'Victoires',    value: l.wins || 0,    icon: TrophyIcon,  bg: 'rgba(34,197,94,.12)', accent: '#22c55e', valClass: 'kpi-green' },
-    { label: 'Defaites',     value: l.losses || 0,  icon: XIcon,       bg: 'rgba(212,60,73,.1)',   accent: '#d43c49', valClass: 'kpi-red' },
+    { label: 'Défaites',      value: l.losses || 0,  icon: XIcon,       bg: 'rgba(212,60,73,.1)',   accent: '#d43c49', valClass: 'kpi-red' },
     { label: 'Win rate',     value: wr + '%',        icon: TargetIcon,  bg: 'rgba(251,191,36,.1)', accent: '#fbbf24', valClass: 'kpi-amber' },
-    { label: 'Serie',        value: l.streak > 0 ? 'W' + l.streak : l.streak < 0 ? 'L' + Math.abs(l.streak) : '--', icon: FlameIcon, bg: l.streak > 0 ? 'rgba(34,197,94,.12)' : 'rgba(212,60,73,.1)', accent: l.streak > 0 ? '#22c55e' : l.streak < 0 ? '#d43c49' : 'var(--muted)', valClass: l.streak > 0 ? 'kpi-green' : l.streak < 0 ? 'kpi-red' : 'text-gz-muted' },
-    { label: 'Meilleure serie', value: l.best_streak || 0, icon: ZapIcon, bg: 'rgba(251,191,36,.1)', accent: '#fbbf24', valClass: 'kpi-amber' },
+    { label: 'Série',        value: l.streak > 0 ? 'W' + l.streak : l.streak < 0 ? 'L' + Math.abs(l.streak) : '--', icon: FlameIcon, bg: l.streak > 0 ? 'rgba(34,197,94,.12)' : 'rgba(212,60,73,.1)', accent: l.streak > 0 ? '#22c55e' : l.streak < 0 ? '#d43c49' : 'var(--muted)', valClass: l.streak > 0 ? 'kpi-green' : l.streak < 0 ? 'kpi-red' : 'text-gz-muted' },
+    { label: 'Meilleure série', value: l.best_streak || 0, icon: ZapIcon, bg: 'rgba(251,191,36,.1)', accent: '#fbbf24', valClass: 'kpi-amber' },
   ]
 })
 
@@ -526,7 +527,7 @@ function fmtDate(s) {
 }
 
 async function saveName() {
-  if (!formName.value.trim() || formName.value.trim().length < 2) return toastError('Nom trop court (2 caracteres min.)')
+  if (!formName.value.trim() || formName.value.trim().length < 2) return toastError('Nom trop court (2 caractères min.)')
   savingName.value = true
   try {
     const { data } = await api.put('/me/name', { name: formName.value.trim() })
@@ -557,7 +558,7 @@ async function savePassword() {
   try {
     await api.put('/me/password', { currentPassword: formCurrentPwd.value, newPassword: formNewPwd.value })
     formCurrentPwd.value = ''; formNewPwd.value = ''; formConfirmPwd.value = ''
-    success('Mot de passe change')
+    success('Mot de passe modifié')
   } catch (e) { toastError(e?.response?.data?.error || 'Erreur') }
   savingPwd.value = false
 }
@@ -681,7 +682,9 @@ async function uploadPhoto(e) {
 .kpi-amber { color: #fbbf24; }
 
 /* Bottom grid */
-.profil-bottom-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; }
+.profil-public-link { display: inline-block; margin-top: .35rem; font-size: .8rem; font-weight: 600; color: var(--accent-l); text-decoration: none; }
+.profil-public-link:hover { text-decoration: underline; }
+.profil-bottom-grid { align-items: start; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; }
 .profil-card {
   background: color-mix(in srgb, var(--card) 90%, transparent);
   border: 1px solid rgba(148,163,184,.12); border-radius: 18px; padding: 1.25rem 1.5rem;
@@ -700,7 +703,7 @@ async function uploadPhoto(e) {
 .stat-red { color: #d43c49; }
 .stat-amber { color: #fbbf24; }
 
-/* Forme recente */
+/* Forme récente */
 .form-strip { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .85rem; }
 .form-dot {
   width: 26px; height: 26px; border-radius: 7px;
