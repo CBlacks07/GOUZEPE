@@ -135,7 +135,7 @@
       </template>
     </section>
 
-    <section v-if="activeGame === 'efoot'" class="section join-band">
+    <section v-if="activeGame === 'efoot' && !auth.isValid" class="section join-band">
       <h2>Veux-tu y figurer ?</h2>
       <p>Rejoins le club et grimpe au classement.</p>
       <RouterLink to="/inscription" class="btn-primary cta-lg">Devenir membre</RouterLink>
@@ -146,6 +146,8 @@
 </template>
 
 <script setup>
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
 import { ref, computed, onMounted } from 'vue'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { RouterLink } from 'vue-router'

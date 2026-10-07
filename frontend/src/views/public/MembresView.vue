@@ -48,7 +48,7 @@
       </div>
     </section>
 
-    <section class="reveal-scroll section join-band">
+    <section v-if="!auth.isValid" class="reveal-scroll section join-band">
       <h2>Rejoins-les</h2>
       <p>Deviens membre et entre dans la compétition.</p>
       <RouterLink to="/inscription" class="btn-primary cta-lg">Devenir membre</RouterLink>
@@ -59,6 +59,8 @@
 </template>
 
 <script setup>
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
 import { ref, computed, onMounted } from 'vue'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { RouterLink } from 'vue-router'

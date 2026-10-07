@@ -18,7 +18,7 @@
         <div class="hub-cta animate-fade-in-up animate-delay-500 animate-duration-slower">
           <RouterLink to="/efootball/journees" class="btn-primary cta-lg">Voir les journées</RouterLink>
           <RouterLink to="/classements" class="btn cta-lg">Classement</RouterLink>
-          <RouterLink to="/inscription" class="btn cta-lg">Rejoindre</RouterLink>
+          <RouterLink v-if="!auth.isValid" to="/inscription" class="btn cta-lg">Rejoindre</RouterLink>
         </div>
       </div>
     </section>
@@ -73,7 +73,7 @@
       <p v-else class="empty">Aucun tournoi pour le moment.</p>
     </section>
 
-    <section class="reveal-scroll section join-band">
+    <section v-if="!auth.isValid" class="reveal-scroll section join-band">
       <h2>Prêt à jouer la saison ?</h2>
       <p>Rejoins le championnat eFootball du club.</p>
       <RouterLink to="/inscription" class="btn-primary cta-lg">Devenir membre</RouterLink>
@@ -84,6 +84,8 @@
 </template>
 
 <script setup>
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import PublicNav from '@/components/public/PublicNav.vue'

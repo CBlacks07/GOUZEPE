@@ -20,7 +20,8 @@
         <h1 class="hero-title fx-shimmer bg-linear-to-r from-gz-text via-(--accent-l) to-gz-text bg-clip-text text-transparent drop-shadow-[0_8px_28px_rgba(var(--accent-rgb),0.35)] animate-fade-in-up animate-delay-150 animate-duration-slower">{{ s.home.title }}</h1>
         <p class="hero-lead animate-fade-in-up animate-delay-300 animate-duration-slower">{{ s.home.lead }}</p>
         <div class="hero-cta animate-fade-in-up animate-delay-500 animate-duration-slower">
-          <RouterLink to="/inscription" class="btn-primary cta-lg fx-sweep">{{ s.home.ctaPrimary }}</RouterLink>
+          <RouterLink v-if="!auth.isValid" to="/inscription" class="btn-primary cta-lg fx-sweep">{{ s.home.ctaPrimary }}</RouterLink>
+          <RouterLink v-else to="/profil" class="btn-primary cta-lg fx-sweep">Mon espace</RouterLink>
           <a href="#univers" class="btn cta-lg">{{ s.home.ctaSecondary }}</a>
         </div>
 
@@ -35,40 +36,6 @@
     <!-- ── Annonces du club ── -->
     <section class="reveal-scroll section news-section">
       <NewsAnnouncements />
-    </section>
-
-    <!-- ── Les deux univers ── -->
-    <section id="univers" class="section univers">
-      <div class="section-head">
-        <h2>Deux univers, un seul club</h2>
-        <p>Choisis ton terrain de jeu.</p>
-      </div>
-
-      <div class="univers-grid">
-        <div class="fx-in-left">
-        <article v-tilt class="uni-card uni-efoot" @mouseenter="game.set('efoot')">
-          <img class="uni-media" :src="mediaUrl(s.efoot.cardImage) || '/fonds/efootball-bg.png'" alt="eFootball" loading="lazy" />
-          <div class="uni-body">
-            <span class="uni-tag">eFootball</span>
-            <h3>{{ s.efoot.cardTitle }}</h3>
-            <p>{{ s.efoot.cardText }}</p>
-            <RouterLink to="/efootball" class="btn-primary fx-sweep">Entrer <ArrowRightIcon class="w-4 h-4" /></RouterLink>
-          </div>
-        </article>
-        </div>
-
-        <div class="fx-in-right">
-        <article v-tilt class="uni-card uni-tekken" @mouseenter="game.set('tekken')">
-          <img class="uni-media" :src="mediaUrl(s.tekken.cardImage) || '/fonds/tekken-bg.png'" alt="Tekken" loading="lazy" />
-          <div class="uni-body">
-            <span class="uni-tag tekken">Tekken</span>
-            <h3>{{ s.tekken.cardTitle }}</h3>
-            <p>{{ s.tekken.cardText }}</p>
-            <RouterLink to="/tekken" class="btn-primary fx-sweep">Découvrir <ArrowRightIcon class="w-4 h-4" /></RouterLink>
-          </div>
-        </article>
-        </div>
-      </div>
     </section>
 
     <!-- ── Compétition (eFootball / Tekken) ── -->
@@ -174,6 +141,40 @@
       </Transition>
     </section>
 
+    <!-- ── Les deux univers ── -->
+    <section id="univers" class="section univers">
+      <div class="section-head">
+        <h2>Deux univers, un seul club</h2>
+        <p>Choisis ton terrain de jeu.</p>
+      </div>
+
+      <div class="univers-grid">
+        <div class="fx-in-left">
+        <article v-tilt class="uni-card uni-efoot" @mouseenter="game.set('efoot')">
+          <img class="uni-media" :src="mediaUrl(s.efoot.cardImage) || '/fonds/efootball-bg.png'" alt="eFootball" loading="lazy" />
+          <div class="uni-body">
+            <span class="uni-tag">eFootball</span>
+            <h3>{{ s.efoot.cardTitle }}</h3>
+            <p>{{ s.efoot.cardText }}</p>
+            <RouterLink to="/efootball" class="btn-primary fx-sweep">Entrer <ArrowRightIcon class="w-4 h-4" /></RouterLink>
+          </div>
+        </article>
+        </div>
+
+        <div class="fx-in-right">
+        <article v-tilt class="uni-card uni-tekken" @mouseenter="game.set('tekken')">
+          <img class="uni-media" :src="mediaUrl(s.tekken.cardImage) || '/fonds/tekken-bg.png'" alt="Tekken" loading="lazy" />
+          <div class="uni-body">
+            <span class="uni-tag tekken">Tekken</span>
+            <h3>{{ s.tekken.cardTitle }}</h3>
+            <p>{{ s.tekken.cardText }}</p>
+            <RouterLink to="/tekken" class="btn-primary fx-sweep">Découvrir <ArrowRightIcon class="w-4 h-4" /></RouterLink>
+          </div>
+        </article>
+        </div>
+      </div>
+    </section>
+
     <!-- ── Découvrir le club ── -->
     <section class="reveal-scroll section discover">
       <div class="section-head">
@@ -207,7 +208,7 @@
     </section>
 
     <!-- ── CTA final ── -->
-    <section class="reveal-scroll section join-band">
+    <section v-if="!auth.isValid" class="reveal-scroll section join-band">
       <h2>Prêt à rejoindre la communauté ?</h2>
       <p>Crée ta demande d'adhésion et entre dans la compétition.</p>
       <RouterLink to="/inscription" class="btn-primary cta-lg fx-glow fx-sweep">Devenir membre</RouterLink>
@@ -219,6 +220,8 @@
 </template>
 
 <script setup>
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ArrowRightIcon, TrophyIcon, ZapIcon, UsersIcon } from 'lucide-vue-next'

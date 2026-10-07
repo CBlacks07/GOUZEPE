@@ -1,10 +1,11 @@
 <template>
   <footer class="lfoot">
+    <BackToTop />
     <div class="lfoot-top">
       <div class="lfoot-brand">
         <RouterLink to="/" class="brand"><img class="brand-logo" :src="logo" alt="logo" /> {{ brand.name }} {{ brand.tagline }}</RouterLink>
         <p class="lfoot-tag">Communauté eSport basée à Lomé (Togo), dédiée à la compétition eFootball &amp; Tekken.</p>
-        <RouterLink to="/inscription" class="btn-primary lfoot-join">Devenir membre</RouterLink>
+        <RouterLink v-if="!auth.isValid" to="/inscription" class="btn-primary lfoot-join">Devenir membre</RouterLink>
       </div>
 
       <div class="lfoot-col">
@@ -58,6 +59,9 @@
 </template>
 
 <script setup>
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
+import BackToTop from '@/components/ui/BackToTop.vue'
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { MailIcon, PhoneIcon, MessageCircleIcon, HashIcon, ThumbsUpIcon, CameraIcon } from 'lucide-vue-next'

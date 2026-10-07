@@ -17,7 +17,7 @@
         </p>
         <div class="hub-cta animate-fade-in-up animate-delay-500 animate-duration-slower">
           <RouterLink to="/tekken/journees" class="btn-primary cta-lg">Voir les journées</RouterLink>
-          <RouterLink to="/inscription" class="btn cta-lg">Rejoindre le club</RouterLink>
+          <RouterLink v-if="!auth.isValid" to="/inscription" class="btn cta-lg">Rejoindre le club</RouterLink>
         </div>
       </div>
     </section>
@@ -136,7 +136,7 @@
       </div>
     </section>
 
-    <section class="reveal-scroll section join-band">
+    <section v-if="!auth.isValid" class="reveal-scroll section join-band">
       <h2>Rejoins l'arène</h2>
       <p>Inscris-toi et choisis Tekken comme jeu.</p>
       <RouterLink to="/inscription" class="btn-primary cta-lg">Devenir membre</RouterLink>
@@ -147,6 +147,8 @@
 </template>
 
 <script setup>
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { SwordsIcon, TrophyIcon, CalendarDaysIcon, ArrowRightIcon } from 'lucide-vue-next'
