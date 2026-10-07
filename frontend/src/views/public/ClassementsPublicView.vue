@@ -101,9 +101,9 @@
                 <th class="text-center w-12">Rang</th>
                 <th>Joueur</th>
                 <th class="text-center">Total</th>
-                <th class="text-center">Particip.</th>
+                <th class="text-center hidden sm:table-cell">Particip.</th>
                 <th class="text-center">Moyenne</th>
-                <th class="text-center">Titres</th>
+                <th class="text-center hidden sm:table-cell">Titres</th>
               </tr>
             </thead>
             <tbody>
@@ -119,9 +119,9 @@
                   <div v-if="r.name && r.id && r.name !== r.id" class="pl-id">{{ r.id }}</div>
                 </td>
                 <td class="text-center font-bold">{{ r.total }}</td>
-                <td class="text-center">{{ r.participations }}</td>
+                <td class="text-center hidden sm:table-cell">{{ r.participations }}</td>
                 <td class="text-center">{{ Number(r.moyenne || 0).toFixed(2) }}</td>
-                <td class="text-center" style="color:var(--muted)">{{ (r.won_d1 || 0) }}/{{ (r.won_d2 || 0) }}</td>
+                <td class="text-center hidden sm:table-cell" style="color:var(--muted)">{{ (r.won_d1 || 0) }}/{{ (r.won_d2 || 0) }}</td>
               </tr>
             </tbody>
           </table>

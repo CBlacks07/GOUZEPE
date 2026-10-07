@@ -11,7 +11,7 @@
       <template v-else>
         <!-- En-tête -->
         <header class="pp-head">
-          <span class="pp-avatar">{{ initials }}</span>
+          <span class="pp-avatar"><img v-if="avatarSrc" :src="avatarSrc" :alt="data.player.name || data.player.id" class="pp-avatar-img" /><template v-else>{{ initials }}</template></span>
           <div class="min-w-0">
             <h1 class="pp-name">{{ data.player.id }}</h1>
             <p class="pp-sub">
@@ -104,6 +104,11 @@ const oppId = ref('')
 const fo = ref(null)
 const foLoading = ref(false)
 
+const avatarSrc = computed(() => {
+  const u = data.value.player?.avatar
+  if (!u) return ''
+  return /^https?:\/\//.test(u) ? u : resolveBaseURL() + (u.startsWith('/') ? u : '/' + u)
+})
 const initials = computed(() => String(data.value.player?.id || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() || '?')
 
 function fmtShort(d) { try { return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) } catch (_) { return d } }
@@ -141,10 +146,11 @@ watch(() => route.params.id, load)
 .back:hover { color: var(--accent-l); }
 .empty { color: var(--muted); padding: 2rem 0; }
 .muted { color: var(--muted); font-size: .85rem; }
-.mt { margin-top: .8rem; }
+.mt { margin-top: 1.35rem; }
 
 .pp-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
-.pp-avatar { flex: none; width: 3.4rem; height: 3.4rem; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-title); font-weight: 800; font-size: 1.1rem; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-l, var(--accent))); }
+.pp-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.pp-avatar { overflow: hidden; flex: none; width: 3.4rem; height: 3.4rem; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-title); font-weight: 800; font-size: 1.1rem; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-l, var(--accent))); }
 .pp-name { font-family: var(--font-title); font-weight: 800; font-size: 1.6rem; margin: 0; line-height: 1.1; }
 .pp-sub { font-size: .85rem; color: var(--muted); margin: .15rem 0 0; }
 .pp-rank { color: var(--accent-l, var(--accent)); font-weight: 600; }
