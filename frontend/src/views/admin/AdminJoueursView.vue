@@ -280,7 +280,8 @@ useSessionState('efoot.ui.admin.joueurs.v1', {
 const filtered = computed(() => {
   const q = search.value.toLowerCase()
   return players.value.filter(p =>
-    !q || (p.player_id || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q)
+    (poleFilter.value === 'all' || (p.main_game || 'efoot') === poleFilter.value) &&
+    (!q || (p.player_id || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q))
   )
 })
 const filteredMembers = computed(() => filtered.value.filter(p => (p.role || 'MEMBRE').toUpperCase() !== 'INVITE'))
