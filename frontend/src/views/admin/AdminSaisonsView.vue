@@ -16,7 +16,7 @@
         </div>
       </div>
 
-      <div v-if="loadingSeasons" class="empty"><Loader2Icon class="w-5 h-5 animate-spin inline" /> Chargement…</div>
+      <SkeletonBlock v-if="loadingSeasons" :count="4" />
       <div v-else-if="!seasons.length" class="empty">Aucune saison. Crée la première pour commencer.</div>
 
       <div v-else class="grid-layout">
@@ -118,6 +118,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAPI } from '@/composables/useAPI'
 import { useToast } from '@/composables/useToast'

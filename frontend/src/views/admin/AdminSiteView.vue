@@ -2,14 +2,15 @@
   <AppLayout season-label="Apparence du site">
     <div class="page-wrap site-admin">
 
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-5 site-bar">
         <div>
           <h1 class="text-xl font-bold" style="font-family:var(--font-title);letter-spacing:.04em;text-transform:uppercase">Apparence &amp; Contenu du site</h1>
           <p class="text-sm" style="color:var(--muted)">Personnalise textes, logo, fond et couleurs. Les changements s'appliquent à tout le site.</p>
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center">
+          <span v-if="dirty" class="dirty-tag">Modifications non enregistrées</span>
           <button class="btn" @click="resetDefaults">Réinitialiser</button>
-          <button class="btn-primary" :disabled="saving" @click="save">
+          <button class="btn-primary" :disabled="saving || !dirty" title="Enregistrer (Ctrl+S)" @click="save">
             <Loader2Icon v-if="saving" class="w-4 h-4 animate-spin" /> Enregistrer
           </button>
         </div>
@@ -265,7 +266,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { Loader2Icon, UploadIcon, PlusIcon, XIcon, ArrowLeftIcon } from 'lucide-vue-next'
 import { useAPI, mediaUrl } from '@/composables/useAPI'
@@ -282,6 +284,16 @@ const msg = ref('')
 const msgOk = ref(true)
 
 const resolveUrl = mediaUrl
+
+// Suivi des modifications : instantané JSON des réglages au dernier chargement / enregistrement
+const saved = ref(JSON.stringify(form.value))
+const dirty = computed(() => JSON.stringify(form.value) !== saved.value)
+function onBeforeUnload(e) { if (dirty.value) { e.preventDefault(); e.returnValue = '' } }
+function onKey(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (dirty.value && !saving.value) save() }
+}
+onBeforeRouteLeave(() => !dirty.value || confirm('Des modifications ne sont pas enregistrées. Quitter la page ?'))
+onBeforeUnmount(() => { window.removeEventListener('beforeunload', onBeforeUnload); window.removeEventListener('keydown', onKey) })
 
 async function onUpload(e, assign) {
   const file = e.target.files?.[0]
@@ -304,6 +316,7 @@ async function save() {
   try {
     await api.put('/admin/site-settings', { settings: form.value })
     site.setLocal(clone(form.value))
+    saved.value = JSON.stringify(form.value)
     msg.value = 'Réglages enregistrés ✓'; msgOk.value = true
   } catch (err) {
     msg.value = err.response?.data?.error || 'Erreur lors de l\'enregistrement'; msgOk.value = false
@@ -327,11 +340,16 @@ function resetDefaults() {
 onMounted(() => {
   // Part des réglages actuels (déjà chargés au démarrage)
   form.value = clone({ ...DEFAULTS, ...site.settings })
+  saved.value = JSON.stringify(form.value)
+  window.addEventListener('beforeunload', onBeforeUnload)
+  window.addEventListener('keydown', onKey)
 })
 </script>
 
 <style scoped>
 .site-admin { max-width: none; }
+.site-bar { position: sticky; top: 0; z-index: 20; padding: .6rem 0; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); }
+.dirty-tag { font-size: .75rem; font-weight: 600; color: #f5b94a; }
 .site-grid { display: grid; gap: .75rem; grid-template-columns: 1fr; }
 /* Colonnes continues : les cartes de hauteurs inégales se rangent sans trous */
 @media (min-width: 1100px) { .site-grid { display: block; column-count: 2; column-gap: .75rem; } .site-grid > .card { break-inside: avoid; margin-bottom: .75rem; } }

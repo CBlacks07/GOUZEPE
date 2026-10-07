@@ -48,7 +48,7 @@
           </button>
         </div>
 
-        <div v-if="loading" class="text-center text-gz-muted py-8">Chargement…</div>
+        <SkeletonBlock v-if="loading" :count="4" />
         <div v-else-if="!items.length" class="text-center text-gz-muted py-8">Aucune annonce.</div>
         <div v-else class="flex flex-col gap-2">
           <div v-for="n in items" :key="n.id" class="news-row">
@@ -81,6 +81,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { useAPI } from '@/composables/useAPI'
 import { Loader2Icon, PlusIcon, CheckIcon, RefreshCwIcon, PencilIcon, Trash2Icon, ArrowLeftIcon } from 'lucide-vue-next'
 
