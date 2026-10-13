@@ -690,3 +690,32 @@ textarea:focus-visible,
 .al-empty strong { display: block; color: var(--text); margin-bottom: .25rem; }
 .al-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .75rem; align-items: end; }
 @media (max-width: 640px) { .al-table thead th, .al-table tbody td { padding: .6rem .7rem; } .al-search { max-width: none; } }
+
+/* ── Demandes d'adhésion + pagination (Utilisateurs) ── */
+.al-reqs { border: 1px solid var(--border); border-radius: 14px; background: color-mix(in srgb, var(--card) 92%, transparent); padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+.al-reqs.has-pending { border-color: color-mix(in srgb, #f5b94a 55%, var(--border)); background: linear-gradient(180deg, rgba(245, 185, 74, .08), color-mix(in srgb, var(--card) 92%, transparent) 60%); }
+.al-reqs-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .8rem; margin-bottom: .9rem; }
+.al-reqs-title { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; font-weight: 700; font-size: 1.05rem; }
+.al-badge { font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: .2rem .65rem; border-radius: 999px; color: #1a1205; background: #f5b94a; }
+.al-reqs-empty { color: var(--muted); font-size: .88rem; padding: .3rem 0; margin: 0; }
+.al-req-list { display: grid; gap: .75rem; }
+.al-req { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .9rem 1rem; padding: .9rem 1rem; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--bg) 35%, transparent); }
+.al-req-body { flex: 1 1 18rem; min-width: 0; display: grid; gap: .45rem; }
+.al-req-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .8rem; }
+.al-req-name { font-size: 1.02rem; }
+.al-req-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.al-chip { font-size: .72rem; font-weight: 600; padding: .15rem .6rem; border-radius: 999px; background: color-mix(in srgb, var(--border) 45%, transparent); color: var(--text); }
+.al-req-contact { margin: 0; display: grid; gap: .15rem; font-size: .82rem; }
+.al-req-contact > div { display: flex; gap: .6rem; }
+.al-req-contact dt { width: 4.2rem; flex: none; color: var(--muted); }
+.al-req-contact dd { margin: 0; word-break: break-word; }
+.al-req-msg { margin: 0; padding-left: .7rem; border-left: 2px solid var(--accent); color: var(--muted); font-size: .85rem; font-style: italic; }
+.al-req-actions { display: flex; gap: .5rem; flex: none; }
+.al-req-actions.end { flex-direction: column; align-items: flex-end; gap: .35rem; }
+.al-req-btn { min-width: 6.5rem; padding: .55rem 1rem; font-weight: 700; }
+.al-req-reject { border-color: rgba(212, 60, 73, .45); color: #f87171; }
+.al-req-reject:hover { background: rgba(212, 60, 73, .12); }
+.al-more { display: flex; justify-content: center; padding: .8rem; border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent); }
+.al-link { border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent-l); font-size: .72rem; font-weight: 700; padding: .15rem .65rem; border-radius: 999px; cursor: pointer; }
+.al-link:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+@media (max-width: 640px) { .al-req-actions { width: 100%; } .al-req-btn { flex: 1; } }

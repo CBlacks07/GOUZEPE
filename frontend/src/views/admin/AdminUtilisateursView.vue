@@ -20,6 +20,59 @@
         </button>
       </header>
 
+      <!-- Demandes d'adhésion (prioritaires, en haut de page) -->
+      <section class="al-reqs reveal" :class="{ 'has-pending': reqFilter === 'pending' && requests.length }">
+        <div class="al-reqs-head">
+          <div>
+            <h2 class="al-reqs-title">
+              Demandes de membre
+              <span v-if="reqFilter === 'pending' && requests.length" class="al-badge">{{ requests.length }} en attente</span>
+            </h2>
+            <p class="al-muted">Formulaires envoyés depuis la page publique</p>
+          </div>
+          <div class="al-seg" role="group" aria-label="Statut des demandes">
+            <button v-for="o in reqOptions" :key="o.v" :class="{ on: reqFilter === o.v }" :aria-pressed="String(reqFilter === o.v)" @click="setReqFilter(o.v)">{{ o.l }}</button>
+          </div>
+        </div>
+
+        <SkeletonBlock v-if="loadingReqs" :count="1" />
+        <p v-else-if="!requests.length" class="al-reqs-empty">
+          Aucune demande {{ reqFilter === 'pending' ? 'en attente' : reqFilter === 'approved' ? 'approuvée' : 'rejetée' }}.
+        </p>
+        <div v-else class="al-req-list">
+          <article v-for="r in requests" :key="r.id" class="al-req">
+            <span class="al-av" aria-hidden="true">{{ (r.name || '?')[0].toUpperCase() }}</span>
+            <div class="al-req-body">
+              <div class="al-req-top">
+                <strong class="al-req-name">{{ r.name }}</strong>
+                <span class="al-muted">{{ fmtShort(r.created_at) }}</span>
+              </div>
+              <div v-if="r.extra" class="al-req-chips">
+                <span v-if="r.extra.birthdate || r.extra.age" class="al-chip">{{ r.extra.birthdate ? ageFromBirthdate(r.extra.birthdate) : r.extra.age }} ans</span>
+                <span v-if="r.extra.platform" class="al-chip">{{ r.extra.platform }}</span>
+                <span v-if="r.extra.frequency" class="al-chip">{{ freqLabel(r.extra.frequency) }}</span>
+                <span v-if="r.extra.profession" class="al-chip">{{ r.extra.profession }}</span>
+              </div>
+              <dl class="al-req-contact">
+                <div v-if="r.email"><dt>Email</dt><dd>{{ r.email }}</dd></div>
+                <div v-if="r.extra && r.extra.phone"><dt>Tél.</dt><dd>{{ r.extra.phone }}</dd></div>
+                <div v-if="r.extra && r.extra.address"><dt>Adresse</dt><dd>{{ r.extra.address }}</dd></div>
+              </dl>
+              <p v-if="r.message" class="al-req-msg">« {{ r.message }} »</p>
+            </div>
+            <div v-if="reqFilter === 'pending'" class="al-req-actions">
+              <button @click="openApprove(r)" class="btn-primary al-req-btn">Approuver</button>
+              <button @click="openReject(r)" class="btn al-req-btn al-req-reject">Rejeter</button>
+            </div>
+            <div v-else class="al-req-actions end">
+              <span class="al-pill" :class="r.status === 'approved' ? 'ok' : 'admin'">{{ r.status === 'approved' ? 'Approuvée' : 'Rejetée' }}</span>
+              <span v-if="r.player_id" class="al-id">{{ r.player_id }}</span>
+              <span v-if="r.review_message" class="al-muted" style="font-style:italic;max-width:16rem;text-align:right">« {{ r.review_message }} »</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <!-- Création -->
       <section v-if="showCreate" class="al-panel reveal">
         <h2 class="al-panel-title"><UserPlusIcon class="w-4 h-4" /> Créer un utilisateur</h2>
@@ -84,7 +137,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="u in filtered" :key="u.id">
+              <tr v-for="u in visibleUsers" :key="u.id">
                 <td>
                   <div class="al-who">
                     <span class="al-av" aria-hidden="true">{{ (u.email || '?')[0].toUpperCase() }}</span>
@@ -93,12 +146,15 @@
                     </span>
                   </div>
                 </td>
-                <td><span :class="['al-pill', u.role === 'admin' ? 'admin' : 'member']">{{ u.role }}</span></td>
+                <td>
+                  <span v-if="u.role === 'admin'" class="al-pill admin">admin</span>
+                  <span v-else class="al-muted">Membre</span>
+                </td>
                 <td class="hidden sm:table-cell">
                   <span v-if="u.player_id" class="al-id" style="font-size:.8rem">{{ u.player_id }}</span>
-                  <span v-else class="al-pill none">Aucun</span>
+                  <button v-else class="al-link" @click="openEdit(u)">Lier à un joueur</button>
                 </td>
-                <td class="al-muted hidden md:table-cell">{{ fmtDate(u.created_at) }}</td>
+                <td class="al-muted hidden md:table-cell">{{ fmtShort(u.created_at) }}</td>
                 <td>
                   <div class="al-actions">
                     <button @click="openEdit(u)" class="al-icon" :title="'Modifier ' + u.email" :aria-label="'Modifier ' + u.email"><PencilIcon class="w-4 h-4" /></button>
@@ -109,88 +165,10 @@
             </tbody>
           </table>
         </div>
+        <div v-if="filtered.length > visibleUsers.length" class="al-more">
+          <button class="btn text-sm" @click="visibleCount += PAGE">Voir plus ({{ filtered.length - visibleUsers.length }} restants)</button>
+        </div>
         <p v-if="listStatus" class="al-muted" style="padding:.6rem 1rem">{{ listStatus }}</p>
-      </section>
-
-      <!-- Demandes d'inscription -->
-      <section class="card reveal delay-2">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div>
-            <h2 class="font-semibold text-gz-text">Demandes de membre</h2>
-            <p class="text-xs text-gz-muted mt-0.5">Formulaires envoyés depuis la page publique</p>
-          </div>
-          <div class="flex gap-2 items-center">
-            <select v-model="reqFilter" @change="loadRequests" class="input w-36 text-sm">
-              <option value="pending">En attente</option>
-              <option value="approved">Approuvées</option>
-              <option value="rejected">Rejetées</option>
-            </select>
-            <button @click="loadRequests" class="btn flex items-center gap-1">
-              <RefreshCwIcon class="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        <div v-if="loadingReqs" class="text-gz-muted text-sm py-4 text-center">Chargement…</div>
-        <div v-else-if="!requests.length" class="text-gz-muted text-sm py-4 text-center">
-          Aucune demande {{ reqFilter === 'pending' ? 'en attente' : reqFilter === 'approved' ? 'approuvée' : 'rejetée' }}.
-        </div>
-        <div v-else class="space-y-2">
-          <div v-for="r in requests" :key="r.id"
-               class="rounded-xl border border-gz-border/40 p-3 bg-gz-panel/30">
-            <div class="flex flex-wrap items-start justify-between gap-2">
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-semibold text-gz-text">{{ r.name }}</span>
-                  <span class="text-xs text-gz-muted font-mono">{{ r.email }}</span>
-                  <span class="text-xs text-gz-muted">{{ fmtDate(r.created_at) }}</span>
-                </div>
-                <!-- Infos supplémentaires (âge, plateforme, fréquence) -->
-                <div v-if="r.extra" class="flex flex-wrap gap-2 mt-1">
-                  <span v-if="r.extra.birthdate" class="text-xs px-2 py-0.5 rounded-full bg-gz-border/20 text-gz-muted">
-                    {{ ageFromBirthdate(r.extra.birthdate) }} ans
-                  </span>
-                  <span v-else-if="r.extra.age" class="text-xs px-2 py-0.5 rounded-full bg-gz-border/20 text-gz-muted">
-                    {{ r.extra.age }} ans
-                  </span>
-                  <span v-if="r.extra.platform" class="text-xs px-2 py-0.5 rounded-full bg-gz-border/20 text-gz-muted">
-                    {{ r.extra.platform }}
-                  </span>
-                  <span v-if="r.extra.frequency" class="text-xs px-2 py-0.5 rounded-full bg-gz-border/20 text-gz-muted">
-                    {{ freqLabel(r.extra.frequency) }}
-                  </span>
-                </div>
-                <!-- Coordonnées civiles (bulletin d'adhésion) -->
-                <div v-if="r.extra && (r.extra.phone || r.extra.address || r.extra.profession)" class="text-xs text-gz-muted mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                  <span v-if="r.extra.phone">Tél. {{ r.extra.phone }}</span>
-                  <span v-if="r.extra.profession">{{ r.extra.profession }}</span>
-                  <span v-if="r.extra.address">{{ r.extra.address }}</span>
-                </div>
-                <p v-if="r.message" class="text-xs text-gz-muted mt-1 italic">« {{ r.message }} »</p>
-              </div>
-              <div v-if="reqFilter === 'pending'" class="flex gap-1.5 shrink-0">
-                <button @click="openApprove(r)"
-                        class="btn-primary text-xs py-1 px-3">
-                  Approuver
-                </button>
-                <button @click="openReject(r)"
-                        class="btn text-xs py-1 px-3" style="border-color:rgba(212,60,73,.4);color:#d43c49">
-                  Rejeter
-                </button>
-              </div>
-              <div v-else class="flex flex-col items-end gap-1 shrink-0">
-                <span class="text-xs px-2 py-1 rounded-full font-semibold"
-                      :class="r.status === 'approved' ? 'bg-gz-green/15 text-gz-green' : 'bg-gz-red/15 text-gz-red'">
-                  {{ r.status === 'approved' ? 'Approuvée' : 'Rejetée' }}
-                  <span v-if="r.player_id" class="font-mono font-normal opacity-80">· {{ r.player_id }}</span>
-                </span>
-                <span v-if="r.review_message" class="text-xs text-gz-muted italic max-w-xs text-right">
-                  « {{ r.review_message }} »
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
     </div>
 
@@ -306,7 +284,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { useAPI } from '@/composables/useAPI'
@@ -323,6 +301,9 @@ const users      = ref([])
 const players    = ref([])
 const search     = ref('')
 const roleFilter = ref('all')
+const PAGE = 10
+const visibleCount = ref(PAGE)
+const reqOptions = [{ v: 'pending', l: 'En attente' }, { v: 'approved', l: 'Approuvées' }, { v: 'rejected', l: 'Rejetées' }]
 const showCreate = ref(false)
 const roleOptions = [{ v: 'all', l: 'Tous' }, { v: 'admin', l: 'Admins' }, { v: 'member', l: 'Membres' }]
 const loading    = ref(false)
@@ -367,6 +348,22 @@ const filtered = computed(() => {
     (!q || (u.email || '').toLowerCase().includes(q))
   )
 })
+
+const visibleUsers = computed(() => filtered.value.slice(0, visibleCount.value))
+watch([search, roleFilter], () => { visibleCount.value = PAGE })
+
+function setReqFilter(v) {
+  if (reqFilter.value === v) return
+  reqFilter.value = v
+  loadRequests()
+}
+
+function fmtShort(s) {
+  if (!s) return '—'
+  const d = new Date(s)
+  if (Number.isNaN(d.getTime())) return String(s)
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+}
 
 onMounted(async () => {
   await Promise.all([loadUsers(), loadPlayers(), loadRequests()])
