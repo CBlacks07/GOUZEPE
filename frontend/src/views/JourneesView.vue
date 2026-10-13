@@ -664,6 +664,7 @@
 </template>
 
 <script setup>
+import { openDaySheet } from '@/utils/daySheet'
 import { ref, reactive, computed, watch, onMounted, onUnmounted, onActivated } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PronosticsPanel from '@/components/PronosticsPanel.vue'
@@ -678,7 +679,6 @@ import { useSessionState } from '@/composables/useSessionState'
 import { onRealtimeEvent, joinRealtimeRoom, leaveRealtimeRoom } from '@/composables/useRealtimeSocket'
 import { Loader2Icon, Trash2Icon, RefreshCcwIcon, SearchIcon, PrinterIcon, SaveIcon, UsersIcon, MoreVerticalIcon, RefreshCwIcon, TrophyIcon, PencilIcon, SparklesIcon } from 'lucide-vue-next'
 
-const SVG_TROPHY = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>'
 
 const auth   = useAuthStore()
 const api    = useAPI()
@@ -933,15 +933,6 @@ function matchStatusLabel(status) {
   if (st === 'ready') return 'Prêt'
   if (st === 'pending') return 'En attente'
   return st || '—'
-}
-
-function escapeHtml(input) {
-  return String(input ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
 }
 
 function normalizedPlayerId(v) {
@@ -1630,95 +1621,20 @@ async function printDaySheet() {
     toastInfo('Aucune confrontation à imprimer pour cette journée.')
     return
   }
-
-  const splitAndRank = (rows) => {
-    const main = rows.filter(r => r.role !== 'INVITE')
-    const inv  = rows.filter(r => r.role === 'INVITE')
-    main.forEach((r, idx) => { r.RANK = idx + 1 })
-    inv.forEach(r => { r.RANK = '—' })
-    return { main, inv }
-  }
-
-  async function logoDataURL() {
-    const tryFetch = async (path) => {
-      if (!path) return null
-      try {
-        const r = await fetch(path, { cache: 'no-store' })
-        if (!r.ok) return null
-        const blob = await r.blob()
-        return await new Promise((resolve) => {
-          const fr = new FileReader()
-          fr.onload = () => resolve(fr.result)
-          fr.readAsDataURL(blob)
-        })
-      } catch (_) {
-        return null
-      }
-    }
-    const logoPath = mediaUrl(site.settings.brand.logo)
-    return (await tryFetch(logoPath))
-      || (await tryFetch('/assets/logo.png'))
-      || (await tryFetch('/assets/icons/apple-touch-icon.png'))
-      || (await tryFetch('assets/logo.png'))
-      || (await tryFetch('assets/icons/apple-touch-icon.png'))
-  }
-
-  const { main: main1, inv: inv1 } = splitAndRank([...d1Standings.value])
-  const { main: main2, inv: inv2 } = splitAndRank([...d2Standings.value])
-
-  const css = '@page{size:A4 landscape;margin:12mm;}body{font:12px/1.35 "Segoe UI",Roboto,Arial,sans-serif;color:#111;}h1{font-size:18px;margin:0 0 8px;display:flex;align-items:center;gap:8px}h1 img{height:28px} h2{font-size:14px;margin:10px 0 6px;} .tbl{width:100%;border-collapse:collapse;border:1px solid #444;} .tbl th,.tbl td{border:1px solid #444;padding:4px 6px;text-align:center} .tbl thead th{background:#efefef;} .champ{text-align:center;margin:6px 0 10px;font-weight:900;color:#cc0000;font-size:17px;} .verdict{margin-top:8px;font-weight:800;color:#1d4ed8;text-align:center;font-size:15px;} .sepRow td{background:#f7f7f7;font-style:italic} .tbl.match{table-layout:fixed;} .tbl.match td.pl{font-weight:600;} .tbl.match td.pl1{text-align:right;padding-right:14px;} .tbl.match td.pl2{text-align:left;padding-left:14px;} .tbl.match td.sc{font-weight:700;white-space:nowrap;} .tbl.match thead th.pl1{text-align:right;padding-right:14px;} .tbl.match thead th.pl2{text-align:left;padding-left:14px;}'
-
-  const renderMatches = (matches) => {
-    let h = '<table class="tbl match"><colgroup><col style="width:32%"><col style="width:18%"><col style="width:18%"><col style="width:32%"></colgroup><thead><tr><th class="pl1">Joueur 1</th><th>Aller</th><th>Retour</th><th class="pl2">Joueur 2</th></tr></thead><tbody>'
-    for (const m of (matches || [])) {
-      const a = (m.a1 != null || m.a2 != null) ? `${m.a1 ?? ''} - ${m.a2 ?? ''}` : ''
-      const r = (m.r1 != null || m.r2 != null) ? `${m.r1 ?? ''} - ${m.r2 ?? ''}` : ''
-      h += `<tr><td class="pl pl1">${escapeHtml(m.p1 || '')}</td><td class="sc">${escapeHtml(a)}</td><td class="sc">${escapeHtml(r)}</td><td class="pl pl2">${escapeHtml(m.p2 || '')}</td></tr>`
-    }
-    return h + '</tbody></table>'
-  }
-
-  const renderStand = (title, mainRows, invRows) => {
-    let h = `<h2>${escapeHtml(title)}</h2><table class="tbl"><thead><tr><th>Rang</th><th>Nom</th><th>ID</th><th>J</th><th>V</th><th>N</th><th>D</th><th>BM</th><th>BC</th><th>Diff</th><th>PTS</th></tr></thead><tbody>`
-    const nameOf = id => { const p = allPlayers.value.find(x => x.player_id === id); return p?.name || id }
-    const row = r => `<tr><td>${r.RANK}</td><td>${escapeHtml(nameOf(r.id))}</td><td>${escapeHtml(r.id)}</td><td>${r.J}</td><td>${r.V}</td><td>${r.N}</td><td>${r.D}</td><td>${r.BP}</td><td>${r.BC}</td><td>${r.DIFF > 0 ? '+' : ''}${r.DIFF}</td><td>${r.PTS}</td></tr>`
-    for (const r of mainRows) h += row(r)
-    if (invRows.length) {
-      h += '<tr class="sepRow"><td colspan="11">Invités (non classés)</td></tr>'
-      for (const r of invRows) h += row(r)
-    }
-    return h + '</tbody></table>'
-  }
-
-  const c1Id = d1ChampId.value || '—'
-  const c2Id = d2ChampId.value || '—'
-  const team1 = (champTeamD1.value || '').toUpperCase() || '—'
-  const team2 = (champTeamD2.value || '').toUpperCase() || '—'
-  const logo = await logoDataURL()
-
-  let html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>Résultats — ${escapeHtml(selectedDate.value)}</title><style>${css}</style></head><body onload="window.print()">`
-  html += `<h1>${logo ? `<img src="${logo}" alt="logo">` : ''}GOUZEPE GAMING CLUB — Journée du ${escapeHtml(fmtDate(selectedDate.value))}</h1>`
-  html += '<h2>SCORES D1</h2>' + renderMatches(d1Matches.value)
-  html += `<div class="champ">${SVG_TROPHY} ${escapeHtml(c1Id)} — CHAMPION avec ${escapeHtml(team1)}</div>`
-  html += renderStand('CLASSEMENT D1', main1, inv1)
-  html += '<h2>SCORES D2</h2>' + renderMatches(d2Matches.value)
-  html += `<div class="champ">${SVG_TROPHY} ${escapeHtml(c2Id)} — CHAMPION avec ${escapeHtml(team2)}</div>`
-  html += renderStand('CLASSEMENT D2', main2, inv2)
-
-  const bIds = barrage.ids || '—'
-  const bWinner = barrage.winner || '—'
-  html += '<h2>BARRAGES</h2><table class="tbl"><thead><tr><th>Affiche</th><th>Gagnant</th></tr></thead><tbody>'
-  html += `<tr><td>${escapeHtml(bIds)}</td><td style="font-weight:700;color:#16a34a">${escapeHtml(bWinner)}</td></tr></tbody></table>`
-  html += `<div class="verdict">*** ${escapeHtml(barrageLabel.value || '—')}</div>`
-  if (barrage.notes) {
-    html += `<div style="margin-top:8px"><b>Notes :</b><br>${escapeHtml(barrage.notes).replace(/\r?\n/g, '<br>')}</div>`
-  }
-  html += '</body></html>'
-
-  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }))
-  const w = window.open(url, '_blank')
-  if (!w) { toastError('Popup bloquée. Autorise les popups pour imprimer.'); return }
-  w.addEventListener('unload', () => URL.revokeObjectURL(url), { once: true })
+  const ok = await openDaySheet({
+    day: selectedDate.value,
+    d1: d1Matches.value,
+    d2: d2Matches.value,
+    champions: {
+      d1: { id: d1ChampId.value, team: champTeamD1.value },
+      d2: { id: d2ChampId.value, team: champTeamD2.value },
+    },
+    barrage: { ids: barrage.ids, winner: barrage.winner, notes: barrage.notes },
+    roleOf: (id) => (tempGuests.value.some(g => g.player_id === id) ? 'INVITE' : inferRoleForPlayer(id)),
+    nameOf: (id) => { const p = allPlayers.value.find(x => x.player_id === id); return p?.name || id },
+    logoPath: mediaUrl(site.settings.brand.logo),
+  })
+  if (!ok) toastError('Popup bloquée. Autorise les popups pour imprimer.')
 }
 </script>
 

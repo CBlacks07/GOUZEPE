@@ -557,6 +557,7 @@
 </template>
 
 <script setup>
+import { openDaySheet } from '@/utils/daySheet'
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -1116,48 +1117,6 @@ function displayNameOf(id) {
   return inStandings?.name || key
 }
 
-function computeStandingsDay(rows) {
-  const agg = {}
-  const add = (A, B, ga, gb) => {
-    if (ga == null || gb == null) return
-    if (!agg[A]) agg[A] = { J: 0, V: 0, N: 0, D: 0, BP: 0, BC: 0 }
-    if (!agg[B]) agg[B] = { J: 0, V: 0, N: 0, D: 0, BP: 0, BC: 0 }
-    agg[A].J += 1; agg[B].J += 1
-    agg[A].BP += ga; agg[A].BC += gb
-    agg[B].BP += gb; agg[B].BC += ga
-    if (ga > gb) { agg[A].V += 1; agg[B].D += 1 }
-    else if (ga < gb) { agg[B].V += 1; agg[A].D += 1 }
-    else { agg[A].N += 1; agg[B].N += 1 }
-  }
-  for (const m of (rows || [])) {
-    if (!m.p1 || !m.p2) continue
-    if (m.a1 != null && m.a2 != null) add(m.p1, m.p2, m.a1, m.a2)
-    if (m.r1 != null && m.r2 != null) add(m.p2, m.p1, m.r2, m.r1)
-  }
-  const arr = Object.entries(agg).map(([id, x]) => ({
-    id,
-    ...x,
-    PTS: x.V * 3 + x.N,
-    DIFF: x.BP - x.BC,
-    role: isInviteId(id) ? 'INVITE' : (roleById.value.get(String(id)) || 'MEMBRE'),
-  }))
-  arr.sort((a, b) =>
-    b.PTS - a.PTS ||
-    b.DIFF - a.DIFF ||
-    b.BP - a.BP ||
-    String(a.id).localeCompare(String(b.id), 'fr', { sensitivity: 'base' })
-  )
-  return arr
-}
-
-function splitAndRankDaily(st) {
-  const main = st.filter((x) => String(x.role || '').toUpperCase() !== 'INVITE')
-  const inv = st.filter((x) => String(x.role || '').toUpperCase() === 'INVITE')
-  main.forEach((r, idx) => { r.RANK = idx + 1 })
-  inv.forEach((r) => { r.RANK = '—' })
-  return { main, inv }
-}
-
 async function logoDataURL() {
   const tryFetch = async (path) => {
     if (!path) return null
@@ -1186,66 +1145,17 @@ async function printSelectedDay() {
   if (!selectedDay.value) return
   try {
     const { data: payload } = await api.get(`/matchdays/${selectedDay.value}`)
-    const day = selectedDay.value
-
-    const st1 = computeStandingsDay(payload?.d1 || [])
-    const st2 = computeStandingsDay(payload?.d2 || [])
-    const { main: main1, inv: inv1 } = splitAndRankDaily(st1)
-    const { main: main2, inv: inv2 } = splitAndRankDaily(st2)
-
-    const css = '@page{size:A4 landscape;margin:12mm;}body{font:12px/1.35 "Segoe UI",Roboto,Arial,sans-serif;color:#111;}h1{font-size:18px;margin:0 0 8px;display:flex;align-items:center;gap:8px}h1 img{height:28px} h2{font-size:14px;margin:10px 0 6px;} .tbl{width:100%;border-collapse:collapse;border:1px solid #444;} .tbl th,.tbl td{border:1px solid #444;padding:4px 6px;text-align:center} .tbl thead th{background:#efefef;} .champ{text-align:center;margin:6px 0 10px;font-weight:900;color:#cc0000;font-size:17px;} .verdict{margin-top:8px;font-weight:800;color:#1d4ed8;text-align:center;font-size:15px;} .sepRow td{background:#f7f7f7;font-style:italic} .tbl.match{table-layout:fixed;} .tbl.match td.pl{font-weight:600;} .tbl.match td.pl1{text-align:right;padding-right:14px;} .tbl.match td.pl2{text-align:left;padding-left:14px;} .tbl.match td.sc{font-weight:700;white-space:nowrap;} .tbl.match thead th.pl1{text-align:right;padding-right:14px;} .tbl.match thead th.pl2{text-align:left;padding-left:14px;}'
-
-    const renderMatches = (rows) => {
-      let h = '<table class="tbl match"><colgroup><col style="width:32%"><col style="width:18%"><col style="width:18%"><col style="width:32%"></colgroup><thead><tr><th class="pl1">Joueur 1</th><th>Aller</th><th>Retour</th><th class="pl2">Joueur 2</th></tr></thead><tbody>'
-      for (const m of (rows || [])) {
-        const a = (m.a1 != null || m.a2 != null) ? `${m.a1 ?? ''} - ${m.a2 ?? ''}` : ''
-        const r = (m.r1 != null || m.r2 != null) ? `${m.r1 ?? ''} - ${m.r2 ?? ''}` : ''
-        h += `<tr><td class="pl pl1">${escapeHtml(m.p1 || '')}</td><td class="sc">${escapeHtml(a)}</td><td class="sc">${escapeHtml(r)}</td><td class="pl pl2">${escapeHtml(m.p2 || '')}</td></tr>`
-      }
-      return h + '</tbody></table>'
-    }
-
-    const renderStand = (title, mainRows, invRows) => {
-      let h = `<h2>${escapeHtml(title)}</h2><table class="tbl"><thead><tr><th>Rang</th><th>Nom</th><th>ID</th><th>J</th><th>V</th><th>N</th><th>D</th><th>BM</th><th>BC</th><th>Diff</th><th>PTS</th></tr></thead><tbody>`
-      const row = (r) => `<tr><td>${r.RANK}</td><td>${escapeHtml(displayNameOf(r.id))}</td><td>${escapeHtml(r.id)}</td><td>${r.J}</td><td>${r.V}</td><td>${r.N}</td><td>${r.D}</td><td>${r.BP}</td><td>${r.BC}</td><td>${r.DIFF}</td><td>${r.PTS}</td></tr>`
-      for (const r of mainRows) h += row(r)
-      if (invRows.length) {
-        h += '<tr class="sepRow"><td colspan="11">Invités (non classés)</td></tr>'
-        for (const r of invRows) h += row(r)
-      }
-      return h + '</tbody></table>'
-    }
-
-    const c1 = payload?.champions?.d1 || {}
-    const c2 = payload?.champions?.d2 || {}
-    const team1 = (c1.team || '').toUpperCase() || '—'
-    const team2 = (c2.team || '').toUpperCase() || '—'
-    const logo = await logoDataURL()
-
-    let html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>Résultats — ${day}</title><style>${css}</style></head><body onload="window.print()">`
-    html += `<h1>${logo ? `<img src="${logo}" alt="logo">` : ''}GOUZEPE GAMING CLUB — Journée du ${new Date(day).toLocaleDateString('fr-FR')}</h1>`
-    html += '<h2>SCORES D1</h2>' + renderMatches(payload?.d1 || [])
-    html += `<div class="champ">${SVG_TROPHY} ${escapeHtml(c1.id || '—')} — CHAMPION avec ${escapeHtml(team1)}</div>`
-    html += renderStand('CLASSEMENT D1', main1, inv1)
-    html += '<h2>SCORES D2</h2>' + renderMatches(payload?.d2 || [])
-    html += `<div class="champ">${SVG_TROPHY} ${escapeHtml(c2.id || '—')} — CHAMPION avec ${escapeHtml(team2)}</div>`
-    html += renderStand('CLASSEMENT D2', main2, inv2)
-
-    const printBarrageAffiche = payload?.barrage?.ids || '—'
-    // Identifiant du joueur (comme l'affiche juste à côté), pas son nom d'affichage.
-    const printBarrageWinner = payload?.barrage?.winner || '—'
-    html += '<h2>BARRAGES</h2><table class="tbl"><thead><tr><th>Affiche</th><th>Gagnant</th></tr></thead><tbody>'
-    html += `<tr><td>${escapeHtml(printBarrageAffiche)}</td><td style="font-weight:700;color:#16a34a">${escapeHtml(printBarrageWinner)}</td></tr></tbody></table>`
-    html += `<div class="verdict">*** ${escapeHtml(payload?.barrage?.label || '—')}</div>`
-    if (payload?.barrage?.notes) {
-      html += `<div style="margin-top:8px"><b>Notes :</b><br>${escapeHtml(payload.barrage.notes).replace(/\r?\n/g, '<br>')}</div>`
-    }
-    html += '</body></html>'
-
-    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }))
-    const w = window.open(url, '_blank')
-    if (!w) { toastError('Popup bloquée. Autorise les popups pour imprimer.'); return }
-    w.addEventListener('unload', () => URL.revokeObjectURL(url), { once: true })
+    const ok = await openDaySheet({
+      day: selectedDay.value,
+      d1: payload?.d1 || [],
+      d2: payload?.d2 || [],
+      champions: payload?.champions || {},
+      barrage: payload?.barrage || {},
+      roleOf: (id) => (isInviteId(id) ? 'INVITE' : (roleById.value.get(String(id)) || 'MEMBRE')),
+      nameOf: displayNameOf,
+      logoPath: mediaUrl(site.settings.brand.logo),
+    })
+    if (!ok) toastError('Popup bloquée. Autorise les popups pour imprimer.')
   } catch (_) {
     toastError('Erreur lors de l’impression de la journée')
   }
