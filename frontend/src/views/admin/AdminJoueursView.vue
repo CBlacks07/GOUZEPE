@@ -202,6 +202,8 @@
 </template>
 
 <script setup>
+import { useToast } from '@/composables/useToast'
+const { error: toastError } = useToast()
 import { askConfirm } from '@/composables/useConfirm'
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -410,7 +412,7 @@ async function deletePlayer(pid) {
     await api.delete('/admin/players/' + encodeURIComponent(pid))
     players.value = players.value.filter(p => p.player_id !== pid)
   } catch (e) {
-    alert(e.response?.data?.error || 'Erreur')
+    toastError(e.response?.data?.error || 'Erreur')
   }
 }
 </script>

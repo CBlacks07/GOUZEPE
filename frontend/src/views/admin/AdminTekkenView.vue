@@ -358,7 +358,7 @@ async function removeLadder(pid) {
   try {
     await api.delete('/admin/tekken/ladder/' + encodeURIComponent(pid))
     await loadLadder()
-  } catch (e) { alert(e.response?.data?.error || 'Erreur') }
+  } catch (e) { toastError(e.response?.data?.error || 'Erreur') }
 }
 
 async function submitDuel() {
@@ -390,7 +390,7 @@ async function deleteDuel(id) {
   try {
     await api.delete('/admin/tekken/duels/' + id)
     await loadDuels()
-  } catch (e) { alert(e.response?.data?.error || 'Erreur') }
+  } catch (e) { toastError(e.response?.data?.error || 'Erreur') }
 }
 
 onMounted(async () => {
