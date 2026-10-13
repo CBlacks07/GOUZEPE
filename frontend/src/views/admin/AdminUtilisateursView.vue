@@ -58,7 +58,11 @@
                 <div v-if="r.extra && r.extra.phone"><dt>Tél.</dt><dd>{{ r.extra.phone }}</dd></div>
                 <div v-if="r.extra && r.extra.address"><dt>Adresse</dt><dd>{{ r.extra.address }}</dd></div>
               </dl>
-              <p v-if="r.message" class="al-req-msg">« {{ r.message }} »</p>
+              <div v-if="r.message" class="al-req-msgbox">
+                <span class="al-req-msglabel">Message de présentation</span>
+                <span class="al-req-msghint">Réponse à : « Comment as-tu connu le club ? Ton niveau estimé… »</span>
+                <p class="al-req-msg">{{ r.message }}</p>
+              </div>
             </div>
             <div v-if="reqFilter === 'pending'" class="al-req-actions">
               <button @click="openApprove(r)" class="btn-primary al-req-btn">Approuver</button>

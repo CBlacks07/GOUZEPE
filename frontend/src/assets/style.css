@@ -719,3 +719,7 @@ textarea:focus-visible,
 .al-link { border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent-l); font-size: .72rem; font-weight: 700; padding: .15rem .65rem; border-radius: 999px; cursor: pointer; }
 .al-link:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
 @media (max-width: 640px) { .al-req-actions { width: 100%; } .al-req-btn { flex: 1; } }
+.al-req-msgbox { display: grid; gap: .15rem; margin-top: .2rem; padding: .55rem .75rem; border-radius: 10px; background: color-mix(in srgb, var(--accent) 7%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border)); }
+.al-req-msglabel { font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-l); }
+.al-req-msghint { font-size: .72rem; color: var(--muted); }
+.al-req-msgbox .al-req-msg { margin: .2rem 0 0; padding: 0; border: none; font-style: normal; color: var(--text); }
