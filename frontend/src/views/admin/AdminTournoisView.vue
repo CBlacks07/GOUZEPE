@@ -544,6 +544,7 @@
 </template>
 
 <script setup>
+import { askConfirm } from '@/composables/useConfirm'
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
@@ -910,8 +911,10 @@ async function applyLiveParticipants() {
   // Un joueur retiré qui a déjà des résultats : on prévient avant d'effacer.
   const played = removed.filter((token) => matches.value.some((m) =>
     isMatchCompleted(m) && [m.p1_player_id || m.p1_name, m.p2_player_id || m.p2_name].some((x) => lower(x) === lower(token))))
-  if (played.length && !confirm(
-    `${played.join(', ')} ${played.length > 1 ? 'ont' : 'a'} déjà des résultats : ils seront supprimés avec le joueur et le classement sera recalculé.\n\nContinuer ?`)) return
+  if (played.length && !(await askConfirm({
+    title: 'Retirer des joueurs avec résultats',
+    message: `${played.join(', ')} ${played.length > 1 ? 'ont' : 'a'} déjà des résultats : ils seront supprimés avec le joueur et le classement sera recalculé.\n\nContinuer ?`,
+    confirmLabel: 'Retirer et recalculer', danger: true }))) return
 
   savingLiveParticipants.value = true
   saveGuard.begin()
@@ -1077,11 +1080,11 @@ async function deleteTournament() {
   const firstMessage = isMember
     ? `Supprimer le tournoi membre "${selected.value.name}" ?\n\nAttention: cette suppression retirera aussi ses points du classement général.`
     : `Supprimer le tournoi "${selected.value.name}" ?`
-  if (!confirm(firstMessage)) return
+  if (!(await askConfirm({ title: 'Supprimer le tournoi', message: firstMessage, confirmLabel: 'Supprimer', danger: true }))) return
 
   let payload = undefined
   if (isMember) {
-    const second = confirm('Confirmation finale: supprimer ce tournoi membre et recalculer le classement sans ses points ?')
+    const second = await askConfirm({ title: 'Confirmation finale', message: 'Supprimer ce tournoi membre et recalculer le classement sans ses points ?', confirmLabel: 'Oui, supprimer', danger: true })
     if (!second) return
     payload = { confirm_member_delete: true, confirm_points_reset: true }
   }

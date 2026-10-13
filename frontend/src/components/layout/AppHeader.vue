@@ -76,6 +76,7 @@
 </template>
 
 <script setup>
+import { askConfirm } from '@/composables/useConfirm'
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -122,7 +123,7 @@ onMounted(() => { document.addEventListener('click', onDocClick); document.addEv
 onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); document.removeEventListener('keydown', onKey) })
 
 async function handleLogout() {
-  if (!confirm('Voulez-vous vraiment vous déconnecter ?')) return
+  if (!(await askConfirm({ title: 'Déconnexion', message: 'Voulez-vous vraiment vous déconnecter ?', confirmLabel: 'Se déconnecter' }))) return
   await auth.logout()
   router.push('/login')
 }

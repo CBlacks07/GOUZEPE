@@ -202,6 +202,7 @@
 </template>
 
 <script setup>
+import { askConfirm } from '@/composables/useConfirm'
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
@@ -359,7 +360,7 @@ async function saveEdit() {
 
     const body = { name: form.value.name.trim(), role: form.value.role, admission_year: form.value.admission_year, main_game: form.value.main_game }
     if (newId !== oldId) {
-      if (!confirm(`⚠ Modifier l'ID "${oldId}" → "${newId}" ? Cela affectera toutes les références.`)) {
+      if (!(await askConfirm({ title: 'Modifier l\'identifiant', message: `L'ID "${oldId}" deviendra "${newId}".\nCela affectera toutes les références (journées, tournois, classements).`, confirmLabel: 'Modifier l\'ID', danger: true }))) {
         saving.value = false; return
       }
       body.player_id = newId
@@ -390,7 +391,7 @@ async function attachUser() {
 }
 
 async function detachUser() {
-  if (!confirm('Voulez-vous vraiment dissocier le compte utilisateur de ce joueur ?')) return
+  if (!(await askConfirm({ title: 'Dissocier le compte', message: 'Le compte de connexion ne sera plus lié à ce joueur.', confirmLabel: 'Dissocier', danger: true }))) return
   editMsg.value = 'Dissociation…'
   try {
     await api.post('/admin/players/' + encodeURIComponent(editingId.value) + '/detach_user')
@@ -404,7 +405,7 @@ async function detachUser() {
 }
 
 async function deletePlayer(pid) {
-  if (!confirm(`Supprimer le joueur "${pid}" ?`)) return
+  if (!(await askConfirm({ title: 'Supprimer le joueur', message: `Supprimer le joueur "${pid}" ? Cette action est définitive.`, confirmLabel: 'Supprimer', danger: true }))) return
   try {
     await api.delete('/admin/players/' + encodeURIComponent(pid))
     players.value = players.value.filter(p => p.player_id !== pid)

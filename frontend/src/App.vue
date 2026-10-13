@@ -18,6 +18,7 @@
           </Transition>
         </RouterView>
         <AppToast />
+        <AppConfirm />
       </div>
     </div>
   </MotionConfig>
@@ -31,6 +32,7 @@ import { useThemeStore } from '@/stores/theme'
 import { useGameStore } from '@/stores/game'
 import { useSiteSettings } from '@/stores/siteSettings'
 import AppToast from '@/components/ui/AppToast.vue'
+import AppConfirm from '@/components/ui/AppConfirm.vue'
 import { resolveBaseURL } from '@/composables/useAPI'
 
 const theme = useThemeStore()

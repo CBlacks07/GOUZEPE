@@ -190,6 +190,7 @@
 </template>
 
 <script setup>
+import { askConfirm } from '@/composables/useConfirm'
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -331,7 +332,7 @@ async function loadHistory() {
 }
 
 async function deleteDuel(id) {
-  if (!confirm('Supprimer ce duel ?')) return
+  if (!(await askConfirm({ title: 'Supprimer le duel', message: 'Supprimer ce duel ? Cette action est définitive.', confirmLabel: 'Supprimer', danger: true }))) return
   try {
     await api.delete('/duels/' + id)
     success('Duel supprimé')

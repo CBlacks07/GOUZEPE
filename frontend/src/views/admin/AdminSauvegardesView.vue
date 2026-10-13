@@ -137,6 +137,7 @@
 </template>
 
 <script setup>
+import { askConfirm } from '@/composables/useConfirm'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -225,9 +226,7 @@ async function downloadBackup(fileName) {
 }
 
 async function restoreExisting(file) {
-  if (!confirm(`Restaurer la base depuis ${file} ?
-
-ATTENTION : toutes les données actuelles seront remplacées par celles de cette sauvegarde. Pense à créer une sauvegarde avant. Action irréversible.`)) return
+  if (!(await askConfirm({ title: 'Restaurer la base', message: `Restaurer la base depuis ${file} ?\n\nToutes les données actuelles seront remplacées par celles de cette sauvegarde. Pense à créer une sauvegarde avant. Action irréversible.`, confirmLabel: 'Restaurer', danger: true }))) return
   try {
     const { data } = await api.post('/admin/backups/restore-existing', { file })
     toast('Restauration terminee depuis ' + (data.restoredFrom || file), true)
@@ -238,7 +237,7 @@ ATTENTION : toutes les données actuelles seront remplacées par celles de cette
 
 async function deleteBackup(fileName) {
   if (!fileName) return
-  if (!confirm(`Supprimer définitivement la sauvegarde ${fileName} ?`)) return
+  if (!(await askConfirm({ title: 'Supprimer la sauvegarde', message: `Supprimer définitivement la sauvegarde ${fileName} ?`, confirmLabel: 'Supprimer', danger: true }))) return
   try {
     const encoded = encodeURIComponent(fileName)
     const { data } = await api.delete(`/admin/backups/${encoded}`)
@@ -256,9 +255,7 @@ async function restoreFromUpload() {
     return
   }
   const file = inp.files[0]
-  if (!confirm(`Restaurer la base depuis ${file.name} ?
-
-ATTENTION : toutes les données actuelles seront remplacées par celles de ce fichier. Pense à créer une sauvegarde avant. Action irréversible.`)) return
+  if (!(await askConfirm({ title: 'Restaurer la base', message: `Restaurer la base depuis ${file.name} ?\n\nToutes les données actuelles seront remplacées par celles de ce fichier. Pense à créer une sauvegarde avant. Action irréversible.`, confirmLabel: 'Restaurer', danger: true }))) return
 
   try {
     const fd = new FormData()

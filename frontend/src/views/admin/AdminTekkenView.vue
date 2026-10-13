@@ -244,6 +244,7 @@
 </template>
 
 <script setup>
+import { askConfirm } from '@/composables/useConfirm'
 import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
@@ -353,7 +354,7 @@ async function confirmCorrect() {
 }
 
 async function removeLadder(pid) {
-  if (!confirm(`Retirer ${pid} du ladder Tekken ?`)) return
+  if (!(await askConfirm({ title: 'Retirer du ladder', message: `Retirer ${pid} du ladder Tekken ?`, confirmLabel: 'Retirer', danger: true }))) return
   try {
     await api.delete('/admin/tekken/ladder/' + encodeURIComponent(pid))
     await loadLadder()
@@ -385,7 +386,7 @@ async function submitDuel() {
 }
 
 async function deleteDuel(id) {
-  if (!confirm('Supprimer ce duel ? (les ELO ne seront pas recalculés)')) return
+  if (!(await askConfirm({ title: 'Supprimer le duel', message: 'Supprimer ce duel ?\nLes ELO ne seront pas recalculés.', confirmLabel: 'Supprimer', danger: true }))) return
   try {
     await api.delete('/admin/tekken/duels/' + id)
     await loadDuels()

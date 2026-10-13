@@ -288,6 +288,7 @@
 </template>
 
 <script setup>
+import { askConfirm } from '@/composables/useConfirm'
 import { ref, computed, onMounted, watch } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
@@ -541,7 +542,7 @@ async function saveEdit() {
 }
 
 async function deleteUser(id, email) {
-  if (!confirm(`Supprimer l'utilisateur "${email}" ? Cette action est définitive.`)) return
+  if (!(await askConfirm({ title: 'Supprimer l\'utilisateur', message: `Supprimer l'utilisateur "${email}" ? Cette action est définitive.`, confirmLabel: 'Supprimer', danger: true }))) return
   try {
     await api.delete('/admin/users/' + id)
     listStatus.value = 'Utilisateur supprimé'

@@ -79,6 +79,7 @@
 </template>
 
 <script setup>
+import { askConfirm } from '@/composables/useConfirm'
 import { ref, reactive, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
@@ -144,7 +145,7 @@ async function submit() {
 }
 
 async function remove(n) {
-  if (!confirm(`Supprimer l'annonce "${n.title}" ?`)) return
+  if (!(await askConfirm({ title: 'Supprimer l\'annonce', message: `Supprimer l'annonce "${n.title}" ?`, confirmLabel: 'Supprimer', danger: true }))) return
   try {
     await api.delete(`/admin/news/${n.id}`)
     await load()

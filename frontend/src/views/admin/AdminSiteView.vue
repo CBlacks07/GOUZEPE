@@ -266,6 +266,7 @@
 </template>
 
 <script setup>
+import { askConfirm } from '@/composables/useConfirm'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -292,7 +293,7 @@ function onBeforeUnload(e) { if (dirty.value) { e.preventDefault(); e.returnValu
 function onKey(e) {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (dirty.value && !saving.value) save() }
 }
-onBeforeRouteLeave(() => !dirty.value || confirm('Des modifications ne sont pas enregistrées. Quitter la page ?'))
+onBeforeRouteLeave(() => !dirty.value || askConfirm({ title: 'Modifications non enregistrées', message: 'Des modifications ne sont pas enregistrées. Quitter la page quand même ?', confirmLabel: 'Quitter sans enregistrer', cancelLabel: 'Rester', danger: true }))
 onBeforeUnmount(() => { window.removeEventListener('beforeunload', onBeforeUnload); window.removeEventListener('keydown', onKey) })
 
 async function onUpload(e, assign) {
@@ -332,8 +333,8 @@ function removeAt(list, i) {
   if (Array.isArray(list)) list.splice(i, 1)
 }
 
-function resetDefaults() {
-  if (!confirm('Réinitialiser tous les réglages aux valeurs par défaut ?')) return
+async function resetDefaults() {
+  if (!(await askConfirm({ title: 'Réinitialiser les réglages', message: 'Tous les réglages reviendront aux valeurs par défaut (tant que tu n\'enregistres pas, rien n\'est modifié sur le site).', confirmLabel: 'Réinitialiser', danger: true }))) return
   form.value = clone(DEFAULTS)
 }
 

@@ -115,6 +115,7 @@
 </template>
 
 <script setup>
+import { askConfirm } from '@/composables/useConfirm'
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -188,7 +189,7 @@ function selectSeason(id) {
 }
 
 async function deleteDay(day) {
-  if (!confirm(`Supprimer définitivement la journée du ${fmtDay(day)} ?\nSes résultats seront retirés du classement.`)) return
+  if (!(await askConfirm({ title: 'Supprimer la journée', message: `Supprimer définitivement la journée du ${fmtDay(day)} ?\nSes résultats seront retirés du classement.`, confirmLabel: 'Supprimer la journée', danger: true }))) return
   deleting.value = day
   try {
     await api.delete(`/matchdays/${day}`)

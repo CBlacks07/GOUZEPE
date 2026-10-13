@@ -65,6 +65,7 @@
 </template>
 
 <script setup>
+import { askConfirm } from '@/composables/useConfirm'
 import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -135,7 +136,7 @@ const visibleGroups = computed(() => {
 const activeLink = computed(() => bestMatch(route.path, visibleGroups.value.flatMap((g) => g.links)))
 
 async function handleLogout() {
-  if (!confirm('Voulez-vous vraiment vous deconnecter ?')) return
+  if (!(await askConfirm({ title: 'Déconnexion', message: 'Voulez-vous vraiment vous déconnecter ?', confirmLabel: 'Se déconnecter' }))) return
   await auth.logout()
   router.push('/login')
 }

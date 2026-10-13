@@ -664,6 +664,7 @@
 </template>
 
 <script setup>
+import { askConfirm } from '@/composables/useConfirm'
 import { openDaySheet } from '@/utils/daySheet'
 import { ref, reactive, computed, watch, onMounted, onUnmounted, onActivated } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
@@ -1361,22 +1362,22 @@ function addMatch(div) {
   onMatchInput()
 }
 
-function clearScores(div) {
-  if (!confirm(`Effacer tous les scores ${div.toUpperCase()} ?`)) return
+async function clearScores(div) {
+  if (!(await askConfirm({ title: 'Effacer les scores', message: `Effacer tous les scores ${div.toUpperCase()} ?`, confirmLabel: 'Effacer', danger: true }))) return
   const matches = div === 'd1' ? d1Matches : d2Matches
   matches.value.forEach(m => { m.a1 = null; m.a2 = null; m.r1 = null; m.r2 = null })
   onMatchInput()
 }
 
-function clearAllMatches() {
-  if (!confirm('Supprimer toutes les confrontations (D1 & D2) ?')) return
+async function clearAllMatches() {
+  if (!(await askConfirm({ title: 'Supprimer les confrontations', message: 'Supprimer toutes les confrontations (D1 & D2) ?', confirmLabel: 'Tout supprimer', danger: true }))) return
   d1Matches.value = []
   d2Matches.value = []
   onMatchInput()
 }
 
-function removeMatch(div, i) {
-  if (!confirm('Supprimer cette confrontation ?')) return
+async function removeMatch(div, i) {
+  if (!(await askConfirm({ title: 'Supprimer la confrontation', message: 'Supprimer cette confrontation ?', confirmLabel: 'Supprimer', danger: true }))) return
   if (div === 'd1') d1Matches.value.splice(i, 1)
   else d2Matches.value.splice(i, 1)
   onMatchInput()
